@@ -1,0 +1,11 @@
+# IDE Generated
+.idea/
+
+# Project Generated
+target/
+test_run_dir/
+
+# Package
+*.jar
+*.war
+*.ear
