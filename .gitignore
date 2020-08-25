@@ -4,8 +4,17 @@
 # Project Generated
 target/
 test_run_dir/
+build/
 
 # Package
 *.jar
 *.war
 *.ear
+
+# Verilog and FIRRTL
+*.v
+*.sv
+*.fir
+
+# Javascript generate by chisel
+*.anno.json
