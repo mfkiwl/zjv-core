@@ -5,7 +5,7 @@
 // Christopher Celio
 // 2012 Jan 11
 
-package Sodor
+package rv32_1stage
 {
 
 import chisel3._

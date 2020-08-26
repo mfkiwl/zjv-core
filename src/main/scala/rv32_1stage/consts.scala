@@ -5,7 +5,7 @@
 // Christopher Celio
 // 2011 May 28
 
-package Sodor
+package rv32_1stage
 package constants
 {
 
