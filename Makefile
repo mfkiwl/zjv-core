@@ -11,20 +11,25 @@ VSRC_DIR := $(WORK_DIR)/verilog/$(TARGET_CORE)
 VERILATOR_VSRC_DIR	:=	$(SRC_DIR)/main/verilator/vsrc
 VERILATOR_CSRC_DIR	:=	$(SRC_DIR)/main/verilator/csrc
 VERILATOR_DEST_DIR	:=	$(WORK_DIR)/verilator
-VERILATOR_CXXFLAGS	:=	-O3 -std=c++11 -g -I$(VERILATOR_CSRC_DIR) -I$(VERILATOR_DEST_DIR)/build -I$(CURDIR)/riscv-isa-sim
-VERILATOR_LDFLAGS 	:=	-lpthread
+VERILATOR_CXXFLAGS	:=	-O3 -std=c++11 -g -I$(VERILATOR_CSRC_DIR) -I$(VERILATOR_DEST_DIR)/build -I$(CURDIR)/riscv-isa-sim -I$(WORK_DIR)/fesvr -I$(CURDIR)/riscv-isa-sim/softfloat
+VERILATOR_LDFLAGS 	:=	-lpthread -ldl
 VERILATOR_SOURCE	:=	$(VERILATOR_CSRC_DIR)/emulator.cpp \
 						$(VERILATOR_VSRC_DIR)/SimDTM.v \
 						$(VERILATOR_CSRC_DIR)/SimDTM.cc
 
 #$(sort $(wildcard $(VERILATOR_CSRC_DIR)/*.cpp))
 
+FESVR_DEST_DIR := $(WORK_DIR)/fesvr
+libfesvr := $(WORK_DIR)/fesvr/libfesvr.a
+libriscv := $(WORK_DIR)/fesvr/libriscv.a
+libsoftfloat := $(WORK_DIR)/fesvr/libsoftfloat.a
+
 VERILATOR_FLAGS := --cc --exe --top-module Top 	\
 				  --assert --x-assign unique    \
 				  --output-split 20000 -O3    	\
 				  -I$(VERILATOR_VSRC_DIR) 	  	\
 				  -CFLAGS "$(VERILATOR_CXXFLAGS)" \
-				  -LDFLAGS "$(WORK_DIR)/fesvr/libfesvr.a $(VERILATOR_LDFLAGS)"
+				  -LDFLAGS "$(libfesvr) $(libriscv) $(libsoftfloat)  $(VERILATOR_LDFLAGS) "
 
 .PHONY: clean build generate_verilog
 
@@ -37,16 +42,14 @@ $(VSRC_DIR)/Top.v:
 	sbt "test:runMain $(TARGET_CORE).elaborate"
 
 generate_emulator: $(VERILATOR_DEST_DIR)/emulator
-
-FESVR_DEST_DIR := $(WORK_DIR)/fesvr
-libfesvr := $(WORK_DIR)/fesvr/libfesvr.a
+	$^ ./rv32mi-p-csr
 
 $(FESVR_DEST_DIR)/Makefile: $(CURDIR)/riscv-isa-sim/configure
 	mkdir -p $(FESVR_DEST_DIR)
-	cd $(FESVR_DEST_DIR) && $< --enable-sodor
+	cd $(FESVR_DEST_DIR) && $< --enable-sodor --enable-commitlog
 
 $(WORK_DIR)/fesvr/libfesvr.a: $(FESVR_DEST_DIR)/Makefile
-	$(MAKE) -C $(FESVR_DEST_DIR) $(notdir $(libfesvr))
+	$(MAKE) -C $(FESVR_DEST_DIR) $(notdir $(libfesvr)) $(notdir $(libriscv)) $(notdir $(libsoftfloat)) 
 
 
 $(VERILATOR_DEST_DIR)/emulator: $(VSRC_DIR)/Top.v $(WORK_DIR)/fesvr/libfesvr.a

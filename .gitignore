@@ -1,10 +1,13 @@
 # IDE Generated
 .idea/
+.vscode/
 
 # Project Generated
 target/
 test_run_dir/
 build/
+test/
+log
 
 # Package
 *.jar

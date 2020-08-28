@@ -41,6 +41,7 @@ void memif_t::read(addr_t addr, size_t len, void* bytes)
 
 void memif_t::write(addr_t addr, size_t len, const void* bytes)
 {
+  printf("Load elf = %p - %lx\n", addr, len);
   size_t align = cmemif->chunk_align();
   if (len && (addr & (align-1)))
   {

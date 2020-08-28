@@ -5,15 +5,25 @@ This file is under MIT License, see http://phvntom.tech/LICENSE.txt
 Recording some scala features Here
 
 [Referencs]
-    https://docs.scala-lang.org/tour/classes.html
+    https://docs.scala-lang.org/tour/tour-of-scala.html
+    https://docs.scala-lang.org/overviews/scala-book/introduction.html
 ```
+### Trait
+Traits are used to share interfaces and fields between classes. They are similar to Java 8s interfaces. Classes and objects can extend traits, but traits cannot be instantiated and therefore have no parameters.
+
+
+### Abtract Class
+But because traits are so powerful, you rarely need to use an abstract class. In fact, you only need to use an abstract class when:
+
+- You want to create a base class that requires constructor arguments
+- Your Scala code will be called from Java code
 
 ### Case Class
 Case classes are like regular classes with a few key differences which we will go over. 
 
 Case classes are good for modeling immutable data. 
 A minimal case class requires the keywords `case class`, an identifier, and a parameter list (which may be empty).
-When you create a case class with parameters, the parameters are public `val`s.
+** When you create a case class with parameters, the parameters are public `val`s. **
 
 ```scala
 case class Book(isbn: String)

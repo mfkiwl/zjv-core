@@ -98,6 +98,12 @@ void sim_t::main()
   }
 }
 
+void sim_t::difftest_setup()
+{
+  set_procs_debug(true);
+  start();
+}
+
 int sim_t::run()
 {
   host = context_t::current();

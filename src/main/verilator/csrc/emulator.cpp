@@ -14,8 +14,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "riscv/sim.h"
+#include <dlfcn.h>
+#include <iostream>
+
 
 extern dtm_t *dtm;
+
+sim_t *sim;
+
 uint64_t trace_count = 0;
 double sc_time_stamp ()
 {
@@ -83,6 +90,26 @@ int main(int argc, char** argv)
    }
 #endif
 
+   reg_t size = reg_t(2048) << 20;
+   std::vector<std::pair<reg_t, mem_t*>> mems(1, std::make_pair(reg_t(DRAM_BASE), new mem_t(size)));
+   std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices;
+   std::vector<std::string> htif_args((const char*const*)argv+1, (const char*const*)argv + argc);
+   std::vector<int> hartids;
+     debug_module_config_t dm_config = {
+    .progbufsize = 2,
+    .max_bus_master_bits = 0,
+    .require_authentication = false,
+    .abstract_rti = 0,
+    .support_hasel = true,
+    .support_abstract_csr_access = true,
+    .support_haltgroups = true
+  };
+ 
+   sim = new sim_t("RV32IM", "M", "", 1, false, reg_t(-1), mems, plugin_devices, htif_args, hartids, dm_config);
+
+   sim->set_log_commits(true);
+   sim->difftest_setup();
+
    signal(SIGTERM, handle_sigterm);
 
    // reset for a few cycles to support pipelined reset
@@ -110,6 +137,9 @@ int main(int argc, char** argv)
          tfp->dump(static_cast<vluint64_t>(trace_count * 2 + 1));
 #endif
       trace_count++;
+
+      sim->difftest_continue(1);
+
       if (max_cycles != 0 && trace_count == max_cycles)
       {
          failure = "timeout";
