@@ -33,8 +33,8 @@ You can find more details in RISC-V Spec I && II, see https://github.com/riscv/r
  slti:                                    2
  sltiu:                                   3
  xori:                                    4
- srli:    000000  shamt                   5
- srai:    010000  shamt                   5
+ srli:    000000(0)  shamt                5        /* RV64 shamt is 6 bits */
+ srai:    010000(0)  shamt                5
  ori:                                     6
  andi:                                    7
 ```

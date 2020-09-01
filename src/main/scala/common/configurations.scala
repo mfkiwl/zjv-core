@@ -15,5 +15,4 @@ case class SodorConfiguration()
    val usingUser = false
 }
 
-
 }
