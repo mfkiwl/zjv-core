@@ -2,7 +2,6 @@ package common
 
 import chisel3._
 import chisel3.util
-import jdk.internal.module.IllegalAccessLogger.Mode
 
 trait RISCVConfig {
   var isa: String = "RV64MI"
@@ -11,6 +10,7 @@ trait RISCVConfig {
 }
 
 trait projectConfig {
+  val startAddr = 0x80000000L
   var debug: Boolean = false
   var fpga: Boolean = false
   var board: String = "None"
