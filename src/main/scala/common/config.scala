@@ -11,6 +11,7 @@ trait RISCVConfig {
 }
 
 trait projectConfig {
+  val startAddr = 0x80000000L
   var debug: Boolean = false
   var fpga: Boolean = false
   var board: String = "None"

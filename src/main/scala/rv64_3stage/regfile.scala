@@ -23,5 +23,4 @@ class RegFile extends Module with phvntomParams {
   when(io.wen & io.rd_addr.orR) {
     regs(io.rd_addr) := io.rd_data
   }
-  
 }
