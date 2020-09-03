@@ -1,0 +1,4 @@
+[submodule "riscv-isa-sim"]
+	path = riscv-isa-sim
+	url = https://github.com/phantom-v/riscv-isa-sim.git
+	branch = difftest

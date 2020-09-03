@@ -90,25 +90,41 @@ int main(int argc, char** argv)
    }
 #endif
 
+   const char* isa = "RV32IM";
+   const char* priv = "M";
+   const char* varch = "vlen:128,elen:64,slen:128";
+   size_t nprocs = 1;
+   bool halted = false;
+   reg_t start_pc = reg_t(-1);
+   bool real_time_clint = false;
+   reg_t initrd_start = 0, initrd_end = 0;
+   const char* bootargs = NULL;
    reg_t size = reg_t(2048) << 20;
    std::vector<std::pair<reg_t, mem_t*>> mems(1, std::make_pair(reg_t(DRAM_BASE), new mem_t(size)));
    std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices;
    std::vector<std::string> htif_args((const char*const*)argv+1, (const char*const*)argv + argc);
    std::vector<int> hartids;
-     debug_module_config_t dm_config = {
-    .progbufsize = 2,
-    .max_bus_master_bits = 0,
-    .require_authentication = false,
-    .abstract_rti = 0,
-    .support_hasel = true,
-    .support_abstract_csr_access = true,
-    .support_haltgroups = true
-  };
+   debug_module_config_t dm_config = {
+      .progbufsize = 2,
+      .max_bus_master_bits = 0,
+      .require_authentication = false,
+      .abstract_rti = 0,
+      .support_hasel = true,
+      .support_abstract_csr_access = true,
+      .support_haltgroups = true
+   };
+   const char *log_path = nullptr;
+   bool dtb_enabled = true;
+   const char* dtb_file = NULL;
  
-   sim = new sim_t("RV32IM", "M", "", 1, false, reg_t(-1), mems, plugin_devices, htif_args, hartids, dm_config);
+   sim = new sim_t(isa, priv, varch, nprocs, halted, real_time_clint, initrd_start, initrd_end, bootargs, start_pc, 
+                   mems, plugin_devices, htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file);
 
-   sim->set_log_commits(true);
-   sim->difftest_setup();
+sim->set_log_commits(true);
+   sim->run();
+   std::cout << "Done" << std::endl;
+   // sim->set_log_commits(true);
+   // sim->difftest_setup();
 
    signal(SIGTERM, handle_sigterm);
 
@@ -123,6 +139,7 @@ int main(int argc, char** argv)
   }
 
    while (!dtm->done() && !dut.io_success && !Verilated::gotFinish()) {
+      std::cout << "Done" << std::endl;
       dut.clock = 0;
       dut.eval();
 #if VM_TRACE
@@ -138,7 +155,7 @@ int main(int argc, char** argv)
 #endif
       trace_count++;
 
-      sim->difftest_continue(1);
+      // sim->difftest_continue(1);
 
       if (max_cycles != 0 && trace_count == max_cycles)
       {
@@ -173,6 +190,12 @@ int main(int argc, char** argv)
 #endif
 
    delete dtm;
+
+   for (auto& mem : mems)
+      delete mem.second;
+
+   for (auto& plugin_device : plugin_devices)
+      delete plugin_device.second;
 
    return 0;
 }
