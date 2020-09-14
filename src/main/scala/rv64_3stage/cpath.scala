@@ -50,19 +50,28 @@ object ControlConst {
   val BRS2 = 2.U(2.W)
 
   // ALU.io.aluType
-  val aluXXX = 0.U(4.W)
-  val aluADD  =  1.U(4.W)
-  val aluSUB  =  2.U(4.W)
-  val aluSLL  =  3.U(4.W)
-  val aluSLT  =  4.U(4.W)
-  val aluSLTU =  5.U(4.W)
-  val aluXOR  =  6.U(4.W)
-  val aluSRL  =  7.U(4.W)
-  val aluSRA  =  8.U(4.W)
-  val aluOR   =  9.U(4.W)
-  val aluAND  = 10.U(4.W)
-  val aluCPA  = 11.U(4.W)
-  val aluCPB  = 12.U(4.W)
+  val aluXXX   =  0.U(5.W)
+  val aluADD   =  1.U(5.W)
+  val aluSUB   =  2.U(5.W)
+  val aluSLL   =  3.U(5.W)
+  val aluSLT   =  4.U(5.W)
+  val aluSLTU  =  5.U(5.W)
+  val aluXOR   =  6.U(5.W)
+  val aluSRL   =  7.U(5.W)
+  val aluSRA   =  8.U(5.W)
+  val aluOR    =  9.U(5.W)
+  val aluAND   = 10.U(5.W)
+  val aluCPA   = 11.U(5.W)
+  val aluCPB   = 12.U(5.W)
+  val aluADDIW = 13.U(5.W)
+  val aluSLLIW = 14.U(5.W)
+  val aluSRLIW = 15.U(5.W)
+  val aluSRAIW = 16.U(5.W)
+  val aluADDW  = 17.U(5.W)
+  val aluSUBW  = 18.U(5.W)
+  val aluSLLW  = 19.U(5.W)
+  val aluSRLW  = 20.U(5.W)
+  val aluSRAW  = 21.U(5.W)
 
   // io.stType
   val stXXX = 0.U(3.W)
@@ -164,15 +173,15 @@ class ControlPath extends Module with phvntomParams {
         LWU       -> List(instXXX, pcBubble, True,  brXXX,    ARS1,    BXXX, aluADD,  stXXX,    ldWordU,  wbMEM, True),
         LD        -> List(instXXX, pcBubble, True,  brXXX,    ARS1,    BXXX, aluADD,  stXXX,    ldDouble, wbMEM, True),
         SD        -> List(instXXX, pcPlus4,  False, brXXX,    ARS1,    BXXX, aluADD,  stDouble, ldXXX,    wbXXX, False),
-        ADDIW     -> List(IType,   pcPlus4,  False, brXXX,    ARS1,    BIMM, aluADD,  stXXX,    ldXXX,    wbALU, True),
-        SLLIW     -> List(IType,   pcPlus4,  False, brXXX,    ARS1,    BIMM, aluSLL,  stXXX,    ldXXX,    wbALU, True),
-        SRLIW     -> List(IType,   pcPlus4,  False, brXXX,    ARS1,    BIMM, aluSRL,  stXXX,    ldXXX,    wbALU, True),
-        SRAIW     -> List(IType,   pcPlus4,  False, brXXX,    ARS1,    BIMM, aluSRA,  stXXX,    ldXXX,    wbALU, True),
-        ADDW      -> List(instXXX, pcPlus4,  False, brXXX,    ARS1,    BXXX, aluXXX,  stXXX,    ldXXX,    wbALU, True),
-        SUBW      -> List(instXXX, pcPlus4,  False, brXXX,    ARS1,    BXXX, aluXXX,  stXXX,    ldXXX,    wbALU, True),
-        SLLW      -> List(instXXX, pcPlus4,  False, brXXX,    ARS1,    BXXX, aluXXX,  stXXX,    ldXXX,    wbALU, True),
-        SRLW      -> List(instXXX, pcPlus4,  False, brXXX,    ARS1,    BXXX, aluXXX,  stXXX,    ldXXX,    wbALU, True),
-        SRAW      -> List(instXXX, pcPlus4,  False, brXXX,    ARS1,    BXXX, aluXXX,  stXXX,    ldXXX,    wbALU, True),
+        ADDIW     -> List(IType,   pcPlus4,  False, brXXX,    ARS1,    BIMM, aluADDIW,  stXXX,    ldXXX,    wbALU, True),
+        SLLIW     -> List(IType,   pcPlus4,  False, brXXX,    ARS1,    BIMM, aluSLLIW,  stXXX,    ldXXX,    wbALU, True),
+        SRLIW     -> List(IType,   pcPlus4,  False, brXXX,    ARS1,    BIMM, aluSRLIW,  stXXX,    ldXXX,    wbALU, True),
+        SRAIW     -> List(IType,   pcPlus4,  False, brXXX,    ARS1,    BIMM, aluSRAIW,  stXXX,    ldXXX,    wbALU, True),
+        ADDW      -> List(instXXX, pcPlus4,  False, brXXX,    ARS1,    BXXX, aluADDW,  stXXX,    ldXXX,    wbALU, True),
+        SUBW      -> List(instXXX, pcPlus4,  False, brXXX,    ARS1,    BXXX, aluSUBW,  stXXX,    ldXXX,    wbALU, True),
+        SLLW      -> List(instXXX, pcPlus4,  False, brXXX,    ARS1,    BXXX, aluSLLW,  stXXX,    ldXXX,    wbALU, True),
+        SRLW      -> List(instXXX, pcPlus4,  False, brXXX,    ARS1,    BXXX, aluSRLW,  stXXX,    ldXXX,    wbALU, True),
+        SRAW      -> List(instXXX, pcPlus4,  False, brXXX,    ARS1,    BXXX, aluSRAW,  stXXX,    ldXXX,    wbALU, True),
         FENCE_I   -> List(IType,   pcBubble, True,  brXXX,    AXXX,    BXXX, aluXXX,  stXXX,    ldXXX,    wbXXX, False),
         CSRRW     -> List(IType,   pcBubble, True,  brXXX,    ARS1,    BXXX, aluXXX,  stXXX,    ldXXX,    wbCSR, True),
         CSRRS     -> List(IType,   pcBubble, True,  brXXX,    ARS1,    BXXX, aluXXX,  stXXX,    ldXXX,    wbCSR, True),

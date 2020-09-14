@@ -125,7 +125,7 @@ class CoreTester(core: Core) extends PeekPokeTester(core) {
 
     step(1)
 
-  } while (true)
+  } while (instr != 0x0000806b)
 
 }
 
