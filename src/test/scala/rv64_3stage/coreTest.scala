@@ -53,6 +53,8 @@ class SimMem(val starAddr: Long) {
     val idx = index >> 2
     val offset = index & 0x3
 
+    require(idx < mem.size)
+
     var rdata = 0L
     if (isDouble(mask)) {
       rdata = (mem(idx) << 32) | mem(idx+1)
@@ -74,6 +76,8 @@ class SimMem(val starAddr: Long) {
     val index = (addr-starAddr).toInt
     val idx = index >> 2
     val offset = index & 0x3
+
+    require(idx < mem.size)
 
     if (isDouble(mask)) {
       val high:Int = (wdata >> 32).toInt

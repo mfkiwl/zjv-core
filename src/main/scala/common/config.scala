@@ -2,7 +2,6 @@ package common
 
 import chisel3._
 import chisel3.util
-import jdk.internal.module.IllegalAccessLogger.Mode
 
 trait RISCVConfig {
   var isa: String = "RV64MI"

@@ -128,8 +128,8 @@ class ControlPath extends Module with phvntomParams {
 
   val controlSignal = ListLookup(io.inst,
                      List(instXXX, pcPlus4, False, brXXX, AXXX, BXXX, aluXXX, stXXX, ldXXX, wbXXX, False),
-    Array(         /*      Inst  |   PC   | Bubble | Branch |   A    |  */
-                   /*      Type  | Select |        | Type   | Select |  */
+    Array(         /*      Inst  |   PC   |  Bubble | Branch |   A    |   B    |  alu   |  st  |     ld    |    wb   |  wb    |  */
+                   /*      Type  | Select |         |  Type  | Select | Select |  Type  | Type |    Type   |  Select | Enable |  */
         LUI       -> List(UType,   pcPlus4,  False, brXXX,    AXXX,    BIMM, aluCPB,  stXXX,    ldXXX,    wbALU, True),
         AUIPC     -> List(UType,   pcPlus4,  False, brXXX,    AXXX,    BIMM, aluCPB,  stXXX,    ldXXX,    wbALU, True),
         JAL       -> List(JType,   pcJump,   True,  brXXX,    APC,     BIMM, aluADD,  stXXX,    ldXXX,    wbPC,  True),
