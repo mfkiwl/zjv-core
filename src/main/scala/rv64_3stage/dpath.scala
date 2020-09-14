@@ -3,6 +3,7 @@ package rv64_3stage
 import Common.Str
 import chisel3._
 import chisel3.util._
+import chisel3.util.experimental.BoringUtils
 import ControlConst._
 
 class BrCondIO extends Bundle with phvntomParams {
@@ -232,6 +233,7 @@ class DataPath extends Module with phvntomParams {
     wb_inst := exe_inst
     wb_wdata := rs2
 
+    wen := io.ctrl.wbEnable
     wb_stType := io.ctrl.stType
     wb_ldType := io.ctrl.ldType
     wb_select := io.ctrl.wbSelect
@@ -277,5 +279,13 @@ class DataPath extends Module with phvntomParams {
     regFile.io.rd_data
   )
 
-
+  val regs_copy = Wire(Vec(32, UInt(xlen.W)))
+  for (i <- 0 until 32){
+    regs_copy(i.U) := 0.U
+  }
+  BoringUtils.bore(regFile.regs, Seq(regs_copy))
+  // BoringUtils.addSink(regs_copy, "uniqueId")
+  for (i <- 0 until 32){
+    printf("reg[%d] = %x\n", i.U, regs_copy(i.U))
+  }
 }

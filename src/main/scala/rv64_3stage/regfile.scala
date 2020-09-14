@@ -3,6 +3,7 @@ package rv64_3stage
 import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.util._
+import chisel3.util.experimental.BoringUtils
 
 class RegFileIO extends Bundle with phvntomParams {
   val rs1_addr = Input(UInt(5.W))
@@ -23,4 +24,9 @@ class RegFile extends Module with phvntomParams {
   when(io.wen & io.rd_addr.orR) {
     regs(io.rd_addr) := io.rd_data
   }
+  // BoringUtils.addSource(regs, "uniqueId")
+  // for (i <- 0 until 32){
+  //   printf("regfile[%d] = %x\n", i.U, regs(i.U))
+  // }
+  // regs(2):=1.U
 }
