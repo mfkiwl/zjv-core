@@ -18,7 +18,7 @@ class CoreIO extends Bundle with phvntomParams {
 class Core extends Module with phvntomParams {
   val io = IO(new CoreIO)
 
-  val dpath = Module(new DataPath)
+  val dpath = Module(new DataPath(true))
   val cpath = Module(new ControlPath)
 
   dpath.io.ctrl <> cpath.io

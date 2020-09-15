@@ -129,7 +129,7 @@ class DataPathIO extends Bundle with phvntomParams {
   val dmem = Flipped(new MemIO)
 }
 
-class DataPath extends Module with phvntomParams {
+class DataPath(var debug_flag: Boolean) extends Module with phvntomParams {
   val io = IO(new DataPathIO)
 
   // Module Used
@@ -153,6 +153,15 @@ class DataPath extends Module with phvntomParams {
   val wb_ldType = Reg(UInt())
   val wb_select = Reg(UInt())
   val wen = Reg(Bool())
+  
+    // Debug Trace Interface
+    val dbg_wb_pc = RegInit(0.U(xlen.W))
+    val dbg_wb_inst = RegInit(0.U(xlen.W))
+    val dbg_wb_dest_reg = RegInit(0.U(5.W))
+    val dbg_wb_write_data = RegInit(0.U(xlen.W))
+    val dbg_wb_mem_addr = RegInit(0.U(xlen.W))
+    val dbg_wb_inst_type = RegInit(0.U(3.W))
+    val dbg_wb_reg_wen = RegInit(0.U(1.W))
 
   // ******************************
   //    Instruction Fetch Stage
@@ -266,18 +275,35 @@ class DataPath extends Module with phvntomParams {
     )
   )
 
-  printf(
-    "if_pc=[%x] if_inst=%x exe_pc=[%x] Inst=%x stall=%x instRype=%x pcSelect=%x rd_addr=%x rd_data=%x\n",
-    if_pc,
-    if_inst,
-    exe_pc,
-    exe_inst,
-    stall,
-    io.ctrl.instType,
-    io.ctrl.pcSelect,
-    regFile.io.rd_addr,
-    regFile.io.rd_data
-  )
+  // ******************************
+  //        Dummy Debug Stage
+  // ******************************
+  // these registers are at the end of the WB stage
+  // meaning that they are at the right of the schematic
+  if (debug_flag == true) {
+    when (!stall) {
+      dbg_wb_pc := wb_pc
+      dbg_wb_inst := wb_inst
+      dbg_wb_dest_reg := rd_addr
+      dbg_wb_reg_wen := wen
+      dbg_wb_write_data := Mux(wen, regFile.io.rd_data, wb_alu)
+      dbg_wb_mem_addr := wb_alu
+      dbg_wb_inst_type := 0.U(3.W)
+    }
+  }
+
+  if (debug_flag == true) {
+    printf("pc=[%x] inst=%x dest_reg=[%x] wen=%x " +
+      "write_data=%x mem_addr=%x dbg_type=%x\n",
+      dbg_wb_pc,
+      dbg_wb_inst,
+      dbg_wb_dest_reg,
+      dbg_wb_reg_wen,
+      dbg_wb_write_data,
+      dbg_wb_mem_addr,
+      dbg_wb_inst_type
+    )
+  }
 
   val regs_copy = Wire(Vec(32, UInt(xlen.W)))
   for (i <- 0 until 32){
