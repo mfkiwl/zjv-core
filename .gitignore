@@ -13,9 +13,7 @@ log
 *.war
 *.ear
 
-# Verilog and FIRRTL
-*.v
-*.sv
+# FIRRTL
 *.fir
 
 # Javascript generate by chisel
