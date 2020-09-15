@@ -5,7 +5,7 @@
 WORK_DIR	:=	$(CURDIR)/build
 SRC_DIR		:=	$(CURDIR)/src
 
-TARGET_CORE ?= rv32_1stage
+TARGET_CORE ?= rv64_3stage
 VSRC_DIR := $(WORK_DIR)/verilog/$(TARGET_CORE)
 
 # DiffTest
@@ -20,11 +20,11 @@ libsoftfloat 	:= $(SPIKE_DEST_DIR)/libsoftfloat.a
 VERILATOR_VSRC_DIR	:=	$(SRC_DIR)/main/verilator/vsrc
 VERILATOR_CSRC_DIR	:=	$(SRC_DIR)/main/verilator/csrc
 VERILATOR_DEST_DIR	:=	$(WORK_DIR)/verilator
-VERILATOR_CXXFLAGS	:=	-O3 -std=c++11 -g -I$(VERILATOR_CSRC_DIR) -I$(VERILATOR_DEST_DIR)/build -I$(SPIKE_SRC_DIR) -I$(SPIKE_DEST_DIR) -I$(SPIKE_SRC_DIR)/softfloat
-VERILATOR_LDFLAGS 	:=	-lpthread -ldl
+VERILATOR_CXXFLAGS	:=	-O3 -std=c++11 -g -I$(VERILATOR_CSRC_DIR) -I$(VERILATOR_DEST_DIR)/build -I$(SPIKE_SRC_DIR) -I$(SPIKE_SRC_DIR)/softfloat -I$(SPIKE_DEST_DIR)
+VERILATOR_LDFLAGS 	:=	-lpthread -ldl -L$(SPIKE_DEST_DIR) -lfesvr -lriscv -lfdt -lsoftfloat
 VERILATOR_SOURCE	:=	$(VERILATOR_CSRC_DIR)/emulator.cpp \
-						$(VERILATOR_VSRC_DIR)/SimDTM.v \
-						$(VERILATOR_CSRC_DIR)/SimDTM.cc
+						$(VERILATOR_VSRC_DIR)/SimMem.v \
+						$(VERILATOR_CSRC_DIR)/SimMem.cpp
 #$(sort $(wildcard $(VERILATOR_CSRC_DIR)/*.cpp))
 
 VERILATOR_FLAGS := --cc --exe --top-module Top 	\
@@ -32,7 +32,7 @@ VERILATOR_FLAGS := --cc --exe --top-module Top 	\
 				  --output-split 20000 -O3    	\
 				  -I$(VERILATOR_VSRC_DIR) 	  	\
 				  -CFLAGS "$(VERILATOR_CXXFLAGS)" \
-				  -LDFLAGS "$(libfesvr) $(libriscv) $(libsoftfloat) $(libfdt) $(VERILATOR_LDFLAGS) "
+				  -LDFLAGS "$(libfesvr) $(libriscv) $(libsoftfloat) $(libfdt) $(VERILATOR_LDFLAGS)"
 
 .PHONY: clean build generate_verilog
 
@@ -42,7 +42,7 @@ generate_verilog: $(VSRC_DIR)/Top.v
 
 $(VSRC_DIR)/Top.v:
 	mkdir -p $(WORK_DIR)
-	sbt "test:runMain $(TARGET_CORE).elaborate"
+	sbt "runMain $(TARGET_CORE).elaborate"
 
 generate_emulator: $(VERILATOR_DEST_DIR)/emulator
 	$^ ./test/rv32mi-p-csr

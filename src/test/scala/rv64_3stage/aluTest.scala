@@ -39,7 +39,7 @@ class ALUTester(c: ALU) extends PeekPokeTester(c)  {
       step(1)
 
 //      println(f"[${opType(i)} rs1: ${rs1}%16x rs2: ${rs2}%16x rd: $rd%16x zero ${(rd==0).toInt}")
-      expect(c.io.out, rd )
+      expect(c.io.out, rd)
       expect(c.io.zero, rd==0 )
     }
   }

@@ -6,7 +6,6 @@
 //#include "disasm.h" // disabled for now... need to update to the current ISA/ABI in common/disasm.*
 #include "VTop.h" // chisel-generated code...
 #include "verilator.h"
-#include <fesvr/dtm.h>
 #include "verilated.h"
 #include <fcntl.h>
 #include <signal.h>
@@ -14,12 +13,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "riscv/sim.h"
+#include <riscv/sim.h>
+#include <fesvr/htif.h>
+#include <fesvr/context.h>
 #include <dlfcn.h>
 #include <iostream>
-
-
-extern dtm_t *dtm;
 
 sim_t *sim;
 
@@ -29,15 +27,7 @@ double sc_time_stamp ()
   return double( trace_count );
 }
 
-void handle_sigterm(int sig)
-{
-   dtm->stop();
-}
 
-extern "C" int vpi_get_vlog_info(void* arg)
-{
-  return 0;
-}
 
 int main(int argc, char** argv)
 {
@@ -75,10 +65,6 @@ int main(int argc, char** argv)
    }
 
    VTop dut; // design under test, aka, your chisel code
-
-   //Instantiated DTM
-   dtm = new dtm_t(htif_argc, argv);
-   fprintf(stderr, "Instantiated DTM.\n");
 
 #if VM_TRACE
    Verilated::traceEverOn(true); // Verilator must compute traced signals
@@ -120,13 +106,12 @@ int main(int argc, char** argv)
    sim = new sim_t(isa, priv, varch, nprocs, halted, real_time_clint, initrd_start, initrd_end, bootargs, start_pc, 
                    mems, plugin_devices, htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file);
 
-sim->set_log_commits(true);
+   sim->set_log_commits(true);
    sim->run();
+
    std::cout << "Done" << std::endl;
    // sim->set_log_commits(true);
    // sim->difftest_setup();
-
-   signal(SIGTERM, handle_sigterm);
 
    // reset for a few cycles to support pipelined reset
    for (int i = 0; i < 10; i++) {
@@ -138,8 +123,8 @@ sim->set_log_commits(true);
     dut.reset = 0;
   }
 
-   while (!dtm->done() && !dut.io_success && !Verilated::gotFinish()) {
-      std::cout << "Done" << std::endl;
+   while (!Verilated::gotFinish()) {
+      std::cout << "Step" << std::endl;
       dut.clock = 0;
       dut.eval();
 #if VM_TRACE
@@ -176,20 +161,11 @@ sim->set_log_commits(true);
       fprintf(logfile, "*** FAILED *** (%s) after %lld cycles\n", failure, (long long)trace_count);
       return -1;
    }
-   else if (dtm->exit_code() <= 1)
-   {
-      fprintf(logfile, "*** PASSED ***\n");
-   }
-   else 
-   {
-     return dtm->exit_code();
-   }
+
 
 #if 0
 
 #endif
-
-   delete dtm;
 
    for (auto& mem : mems)
       delete mem.second;

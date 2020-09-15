@@ -1,6 +1,5 @@
 package rv64_3stage
 
-import Common.Str
 import chisel3._
 import chisel3.util._
 import ControlConst._
@@ -110,8 +109,7 @@ class DataPath extends Module with phvntomParams {
   val wb_wdata = Reg(UInt(xlen.W))
 
   // Control Signal of Write Back Stage (1 cycle delay)
-  val wb_stType = Reg(UInt())
-  val wb_ldType = Reg(UInt())
+  val wb_memType = Reg(UInt())
   val wb_select = Reg(UInt())
   val wen       = Reg(Bool())
 
@@ -119,7 +117,7 @@ class DataPath extends Module with phvntomParams {
   //    Instruction Fetch Stage
   // ******************************
 
-  val stall = !io.imem.resp.valid || ((wb_stType.orR || wb_ldType.orR) && !io.dmem.resp.valid)
+  val stall = !io.imem.resp.valid || (wb_memType.orR && !io.dmem.resp.valid)
   val if_pc = RegInit(UInt(xlen.W), startAddr)
   val if_pc_4 = if_pc + 4.U(xlen.W)
   val if_npc  = Mux(stall, if_pc,
@@ -138,9 +136,9 @@ class DataPath extends Module with phvntomParams {
   io.imem.req.bits.data := DontCare
   val if_inst = io.imem.resp.bits.data
 
-  io.imem.req.valid     := true.B
-  io.imem.req.bits.wen  := false.B
-  io.imem.req.bits.mask := ldWordU
+  io.imem.req.valid      := true.B
+  io.imem.req.bits.wen   := false.B
+  io.imem.req.bits.wtype := memWordU
 
   when (!stall) {
     exe_pc := if_pc
@@ -185,9 +183,9 @@ class DataPath extends Module with phvntomParams {
     wb_inst := exe_inst
     wb_wdata := rs2
 
-    wb_stType := io.ctrl.stType
-    wb_ldType := io.ctrl.ldType
+    wb_memType := io.ctrl.memType
     wb_select := io.ctrl.wbSelect
+    wen := io.ctrl.wbEnable
   }
 
   // ******************************
@@ -200,9 +198,9 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.addr := wb_alu
   io.dmem.req.bits.data := wb_wdata
 
-  io.dmem.req.valid    := wb_stType.orR || wb_ldType.orR
-  io.dmem.req.bits.wen := wb_stType.orR
-  io.dmem.req.bits.mask := Mux(wb_stType.orR, wb_stType, wb_ldType)
+  io.dmem.req.valid      := wb_memType.orR
+  io.dmem.req.bits.wen   := wb_memType.orR
+  io.dmem.req.bits.wtype := wb_memType
 
   regFile.io.wen := wen
   regFile.io.rd_addr := rd_addr

@@ -48,7 +48,7 @@ class SimMem(val starAddr: Long) {
     }
   }
 
-  def read(addr: Long, mask: Int): Long = {
+  def read(addr: Long, wtype: Int): Long = {
     val index = (addr-starAddr).toInt
     val idx = index >> 2
     val offset = index & 0x3
@@ -56,30 +56,30 @@ class SimMem(val starAddr: Long) {
     require(idx < mem.size)
 
     var rdata = 0L
-    if (isDouble(mask)) {
+    if (isDouble(wtype)) {
       rdata = (mem(idx) << 32) | mem(idx+1)
     }
     else {
       val data = mem(idx)
-      rdata = (data >> (offset*8)) & getMask(mask)
+      rdata = (data >> (offset*8)) & getMask(type)
     }
 
     //println(f"rdataAlign = 0x$rdataAlign%08x")
 
-    if (isSigned(mask)) {
+    if (isSigned(wtype)) {
       // TODO
     }
     rdata
   }
 
-  def write(addr: Long, mask: Int, wdata: Long) = {
+  def write(addr: Long, wtype: Int, wdata: Long) = {
     val index = (addr-starAddr).toInt
     val idx = index >> 2
     val offset = index & 0x3
 
     require(idx < mem.size)
 
-    if (isDouble(mask)) {
+    if (isDouble(wtype)) {
       val high:Int = (wdata >> 32).toInt
       val low:Int = (wdata).toInt
 
@@ -90,7 +90,7 @@ class SimMem(val starAddr: Long) {
 
     }
     val oldData = mem(idx)
-    val dataMask = getMask(mask) << (offset * 8)
+    val dataMask = getMask(wtype) << (offset * 8)
     val newData = (oldData & ~dataMask) | (wdata << (offset * 8) & dataMask)
     mem(idx) = newData.toInt
     //println(f"wdata = 0x$wdata%08x, realWdata = 0x$newData%08x")
@@ -108,13 +108,13 @@ class CoreTester(core: Core) extends PeekPokeTester(core) {
   do {
     pc = peek(core.io.imem.req.bits.addr).toLong
     poke(core.io.imem.resp.valid, peek(core.io.imem.req.valid))
-    instr = mem.read(pc, peek(core.io.imem.req.bits.mask).toLong)
+    instr = mem.read(pc, peek(core.io.imem.req.bits.wtype).toLong)
     poke(core.io.imem.resp.bits.data, instr)
 
     poke(core.io.dmem.resp.valid, peek(core.io.dmem.req.valid))
     if (peek(core.io.dmem.req.valid).toInt == 1) {
       val dmemAddr = peek(core.io.dmem.req.bits.addr).toLong
-      val size = peek(core.io.dmem.req.bits.mask).toInt
+      val size = peek(core.io.dmem.req.bits.wtype).toInt
 
       if (peek(core.io.dmem.req.bits.wen) == 1) {
         val wdata = peek(core.io.dmem.req.bits.data).toLong
