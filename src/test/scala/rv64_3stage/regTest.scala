@@ -1,6 +1,5 @@
 package rv64_3stage
 
-import Common.Util.intToBoolean
 import chisel3._
 import chisel3.util._
 import chisel3.iotesters._
@@ -17,7 +16,7 @@ class RegFileTester(c: RegFile) extends PeekPokeTester(c) {
     var rs1_data = 0L
     var rs2_data = 0L
 
-    if (wen && (rd_addr != 0)) {
+    if ((wen == 1) && (rd_addr != 0)) {
 //      println(f"Write $rd_data to $rd_addr")
       reg(rd_addr) = rd_data
     }

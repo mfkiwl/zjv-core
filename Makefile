@@ -23,8 +23,8 @@ VERILATOR_DEST_DIR	:=	$(WORK_DIR)/verilator
 VERILATOR_CXXFLAGS	:=	-O3 -std=c++11 -g -I$(VERILATOR_CSRC_DIR) -I$(VERILATOR_DEST_DIR)/build -I$(SPIKE_SRC_DIR) -I$(SPIKE_SRC_DIR)/softfloat -I$(SPIKE_DEST_DIR)
 VERILATOR_LDFLAGS 	:=	-lpthread -ldl -L$(SPIKE_DEST_DIR) -lfesvr -lriscv -lfdt -lsoftfloat
 VERILATOR_SOURCE	:=	$(VERILATOR_CSRC_DIR)/emulator.cpp \
-						$(VERILATOR_VSRC_DIR)/SimMem.v \
-						$(VERILATOR_CSRC_DIR)/SimMem.cpp
+						$(VERILATOR_VSRC_DIR)/simmem.v \
+						$(VERILATOR_CSRC_DIR)/simmem.cpp
 #$(sort $(wildcard $(VERILATOR_CSRC_DIR)/*.cpp))
 
 VERILATOR_FLAGS := --cc --exe --top-module Top 	\
@@ -40,7 +40,7 @@ all: generate_verilog
 
 generate_verilog: $(VSRC_DIR)/Top.v
 
-$(VSRC_DIR)/Top.v:
+$(VSRC_DIR)/Top.v: $(SRC_DIR)/main/scala
 	mkdir -p $(WORK_DIR)
 	sbt "runMain $(TARGET_CORE).elaborate"
 

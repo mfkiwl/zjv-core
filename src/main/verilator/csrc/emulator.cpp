@@ -14,10 +14,8 @@
 #include <unistd.h>
 
 #include <riscv/sim.h>
-#include <fesvr/htif.h>
-#include <fesvr/context.h>
-#include <dlfcn.h>
 #include <iostream>
+#include <unistd.h>
 
 sim_t *sim;
 
@@ -64,6 +62,9 @@ int main(int argc, char** argv)
       argv[i++] = argv[optind++];
    }
 
+   extern void init_ram(const char *img);
+   init_ram(NULL);
+
    VTop dut; // design under test, aka, your chisel code
 
 #if VM_TRACE
@@ -107,9 +108,9 @@ int main(int argc, char** argv)
                    mems, plugin_devices, htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file);
 
    sim->set_log_commits(true);
-   sim->run();
+   // sim->run();
 
-   std::cout << "Done" << std::endl;
+
    // sim->set_log_commits(true);
    // sim->difftest_setup();
 
@@ -123,8 +124,9 @@ int main(int argc, char** argv)
     dut.reset = 0;
   }
 
+  std::cout << "Init Done" << std::endl;
+
    while (!Verilated::gotFinish()) {
-      std::cout << "Step" << std::endl;
       dut.clock = 0;
       dut.eval();
 #if VM_TRACE
@@ -141,6 +143,7 @@ int main(int argc, char** argv)
       trace_count++;
 
       // sim->difftest_continue(1);
+      sleep(3);
 
       if (max_cycles != 0 && trace_count == max_cycles)
       {

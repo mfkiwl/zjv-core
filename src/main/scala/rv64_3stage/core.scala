@@ -5,7 +5,7 @@ import chisel3.util._
 import common._
 
 trait phvntomParams {
-  val xlen  = 64
+  val xlen     = 64
   val bitWidth = log2Ceil(xlen)
 }
 

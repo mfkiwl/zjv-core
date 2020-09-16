@@ -6,6 +6,7 @@
 target/
 test_run_dir/
 build/
+toolchain/
 log
 
 # Package

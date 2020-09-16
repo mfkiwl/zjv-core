@@ -61,7 +61,7 @@ class SimMem(val starAddr: Long) {
     }
     else {
       val data = mem(idx)
-      rdata = (data >> (offset*8)) & getMask(type)
+      rdata = (data >> (offset*8)) & getMask(wtype)
     }
 
     //println(f"rdataAlign = 0x$rdataAlign%08x")
