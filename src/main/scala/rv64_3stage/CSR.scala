@@ -86,6 +86,7 @@ class CSRIO extends Bundle with phvntomParams {
   // Exception
   // Excpetion pc
   val pc = Input(UInt(xlen.W))
+  // The address of icache or dcache
   val addr = Input(UInt(xlen.W))
   // The instruction itself
   val inst = Input(UInt(xlen.W))
@@ -94,8 +95,11 @@ class CSRIO extends Bundle with phvntomParams {
   val st_type = Input(UInt(2.W))
   val ld_type = Input(UInt(3.W))
   val pc_check = Input(Bool())
+  // Combinational output, jump to EVEC
   val expt = Output(Bool())
+  // ISR base address
   val evec = Output(UInt(xlen.W))
+  // The pc with
   val epc = Output(UInt(xlen.W))
   // HTIF
   // val host = new HostIO
@@ -109,6 +113,9 @@ class CSR extends Module with phvntomParams {
   val mcauser = RegInit(0.U(xlen.W))
   val mbadaddrr = RegInit(0.U(xlen.W))
   val mstatusr = RegInit(0.U(xlen.W))
+
+  // Constant
+  val mevecr = RegInit(0.U(xlen.W))
 
   // Mapper
   val csr_mapper = Seq(
@@ -156,7 +163,25 @@ class CSR extends Module with phvntomParams {
   io.out := Lookup(csr_addr, 0.U, csr_mapper).asUInt
 
   // Exception and Interrupt output
-  io.expt := 0.B
+  val invalid_ia = io.pc_check & io.addr(1, 0).orR
+  val invalid_la = MuxLookup(io.ld_type, false.B, Seq(
+
+  ))
+  val invalid_sa = MuxLookup(io.st_type, false.B, Seq(
+
+  ))
+  // This might lead to complex combinational logic
+  // Just ignore it now. Who cares?
+  val invalid_csr_op = false.B
+
+  io.expt := io.illegal | invalid_ia | invalid_la | invalid_sa | invalid_csr_op
   io.epc := mepcr
-  io.evec := mepcr
+  io.evec := mevecr
+
+  // Change some registers
+  // Change EPC now
+  // The EPC will change in next cycle just in time
+  when(io.expt) {
+    mepcr := io.pc
+  }
 }
