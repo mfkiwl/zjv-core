@@ -74,6 +74,7 @@ object Cause {
 }
 
 class CSRIO extends Bundle with phvntomParams {
+  // CSRXX
   // Stall signal, this signal freeze all
   val stall = Input(Bool())
   // Command type, eg CSRRW is W
@@ -82,10 +83,13 @@ class CSRIO extends Bundle with phvntomParams {
   val in = Input(UInt(xlen.W))
   // The value of the register of csr_addr
   val out = Output(UInt(xlen.W))
-  // Excpetion
+  // Exception
+  // Excpetion pc
   val pc = Input(UInt(xlen.W))
   val addr = Input(UInt(xlen.W))
+  // The instruction itself
   val inst = Input(UInt(xlen.W))
+  // Is the instruction illegal
   val illegal = Input(Bool())
   val st_type = Input(UInt(2.W))
   val ld_type = Input(UInt(3.W))
@@ -151,5 +155,8 @@ class CSR extends Module with phvntomParams {
   // Output Configuration
   io.out := Lookup(csr_addr, 0.U, csr_mapper).asUInt
 
-  // Exception and Interrupt
+  // Exception and Interrupt output
+  io.expt := 0.B
+  io.epc := mepcr
+  io.evec := mepcr
 }
