@@ -64,23 +64,6 @@ object ControlConst {
   val aluCPA  = 11.U(4.W)
   val aluCPB  = 12.U(4.W)
 
-  // io.stType
-//  val stXXX = 0.U(3.W)
-//  val stByte   = 1.U(3.W)
-//  val stHalf   = 2.U(3.W)
-//  val stWord   = 3.U(3.W)
-//  val stDouble = 4.U(3.W)
-
-  // io.ldType
-//  val ldXXX = 0.U(3.W)
-//  val ldByte   = 1.U(3.W)
-//  val ldHalf   = 2.U(3.W)
-//  val ldWord   = 3.U(3.W)
-//  val ldDouble = 4.U(3.W)
-//  val ldByteU  = 5.U(3.W)
-//  val ldHalfU  = 6.U(3.W)
-//  val ldWordU  = 7.U(3.W)
-
   val memXXX = 0.U(3.W)
   val memByte   = 1.U(3.W)
   val memHalf   = 2.U(3.W)

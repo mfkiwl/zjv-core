@@ -108,13 +108,13 @@ class CoreTester(core: Core) extends PeekPokeTester(core) {
   do {
     pc = peek(core.io.imem.req.bits.addr).toLong
     poke(core.io.imem.resp.valid, peek(core.io.imem.req.valid))
-    instr = mem.read(pc, peek(core.io.imem.req.bits.wtype).toLong)
+    instr = mem.read(pc, peek(core.io.imem.req.bits.memtype).toLong)
     poke(core.io.imem.resp.bits.data, instr)
 
     poke(core.io.dmem.resp.valid, peek(core.io.dmem.req.valid))
     if (peek(core.io.dmem.req.valid).toInt == 1) {
       val dmemAddr = peek(core.io.dmem.req.bits.addr).toLong
-      val size = peek(core.io.dmem.req.bits.wtype).toInt
+      val size = peek(core.io.dmem.req.bits.memtype).toInt
 
       if (peek(core.io.dmem.req.bits.wen) == 1) {
         val wdata = peek(core.io.dmem.req.bits.data).toLong

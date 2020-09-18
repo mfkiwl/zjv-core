@@ -138,7 +138,7 @@ class DataPath extends Module with phvntomParams {
 
   io.imem.req.valid      := true.B
   io.imem.req.bits.wen   := false.B
-  io.imem.req.bits.wtype := memWordU
+  io.imem.req.bits.memtype := memWordU
 
   when (!stall) {
     exe_pc := if_pc
@@ -200,7 +200,7 @@ class DataPath extends Module with phvntomParams {
 
   io.dmem.req.valid      := wb_memType.orR
   io.dmem.req.bits.wen   := wb_memType.orR
-  io.dmem.req.bits.wtype := wb_memType
+  io.dmem.req.bits.memtype := wb_memType
 
   regFile.io.wen := wen
   regFile.io.rd_addr := rd_addr

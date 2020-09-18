@@ -63,7 +63,7 @@ int main(int argc, char** argv)
    }
 
    extern void init_ram(const char *img);
-   init_ram(NULL);
+   init_ram(argv[1]);
 
    VTop dut; // design under test, aka, your chisel code
 
@@ -110,7 +110,6 @@ int main(int argc, char** argv)
    sim->set_log_commits(true);
    // sim->run();
 
-
    // sim->set_log_commits(true);
    // sim->difftest_setup();
 
@@ -124,7 +123,7 @@ int main(int argc, char** argv)
     dut.reset = 0;
   }
 
-  std::cout << "Init Done" << std::endl;
+  printf("[Verilator] Ready to Run\n");
 
    while (!Verilated::gotFinish()) {
       dut.clock = 0;
@@ -143,7 +142,7 @@ int main(int argc, char** argv)
       trace_count++;
 
       // sim->difftest_continue(1);
-      sleep(3);
+      sleep(1);
 
       if (max_cycles != 0 && trace_count == max_cycles)
       {
