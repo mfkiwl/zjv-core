@@ -108,11 +108,31 @@ class CSRIO extends Bundle with phvntomParams {
 class CSR extends Module with phvntomParams {
   val io = IO(new CSRIO)
 
+  // Instantiate some registers to make up a larger one
+  // interrupt enable stack
+  val PRV = RegInit(CSR.PRV_M)
+  val PRV1 = RegInit(CSR.PRV_M)
+  val PRV2 = 0.U(2.W)
+  val PRV3 = 0.U(2.W)
+  val IE = RegInit(false.B)
+  val IE1 = RegInit(false.B)
+  val IE2 = false.B
+  val IE3 = false.B
+  // virtualization management field
+  val VM = 0.U(5.W)
+  // memory privilege
+  val MPRV = false.B
+  // extention context status
+  val XS = 0.U(2.W)
+  val FS = 0.U(2.W)
+  val SD = 0.U(1.W)
+
   // Instantiate the registers defined in CSR
   val mepcr = RegInit(0.U(xlen.W))
   val mcauser = RegInit(0.U(xlen.W))
   val mbadaddrr = RegInit(0.U(xlen.W))
-  val mstatusr = RegInit(0.U(xlen.W))
+  // MSTATUS is composite
+  val mstatusr = Cat(SD, 0.U((xlen - 23).W), VM, MPRV, XS, FS, PRV3, IE3, PRV2, IE2, PRV1, IE1, PRV, IE)
 
   // Constant
   val mevecr = RegInit(0.U(xlen.W))
@@ -141,24 +161,6 @@ class CSR extends Module with phvntomParams {
     CSR.C -> (io.out & ~io.in)
   ))
 
-  // CSR read and write by CSRXX instructions
-  // In fact, I am not sure if Chisel will
-  // interpret this to non-blocking assignment or not
-  // Hopefully, it is non-blocking, but it will still work fine
-  // even if it will turn out to be in blocking mode
-  when(wen) {
-    // Do mapping
-    when(csr_addr === CSR.mepc) {
-      mepcr := wdata
-    }.elsewhen(csr_addr === CSR.mcause) {
-      mcauser := wdata
-    }.elsewhen(csr_addr === CSR.mbadaddr) {
-      mbadaddrr := wdata
-    }.elsewhen(csr_addr === CSR.mstatus) {
-      mstatusr := wdata
-    }
-  }
-
   // Output Configuration
   io.out := Lookup(csr_addr, 0.U, csr_mapper).asUInt
 
@@ -174,6 +176,12 @@ class CSR extends Module with phvntomParams {
   // Just ignore it now. Who cares?
   val invalid_csr_op = false.B
 
+  // Trap and ERET-like signals
+  val is_eret = io.cmd === CSR.P && !csr_addr(0) && !csr_addr(8)
+  val is_ebreak = io.cmd === CSR.P && csr_addr(0) && !csr_addr(8)
+  val is_ecall = io.cmd === CSR.P && !csr_addr(0) && !csr_addr(8)
+  val self_trap = is_eret | is_ebreak | is_ecall
+
   io.expt := io.illegal | invalid_ia | invalid_la | invalid_sa | invalid_csr_op
   io.epc := mepcr
   io.evec := mevecr
@@ -181,7 +189,47 @@ class CSR extends Module with phvntomParams {
   // Change some registers
   // Change EPC now
   // The EPC will change in next cycle just in time
-  when(io.expt) {
-    mepcr := io.pc
+  when(!io.stall) {
+    when(io.expt) {
+      mepcr := Cat(io.pc(31, 2), 0.U(2.W))
+      // This compares one by one, which may lead to combo-delay
+      mcauser := Mux(invalid_ia, Cause.InstAddrMisaligned,
+        Mux(invalid_la, Cause.LoadAddrMisaligned,
+          Mux(invalid_sa, Cause.StoreAddrMisaligned,
+            Mux(is_ecall, Cause.Ecall + PRV,
+              Mux(is_ebreak, Cause.Breakpoint, Cause.IllegalInst)))))
+      PRV := CSR.PRV_M
+      IE := false.B
+      PRV1 := PRV
+      IE1 := IE
+      when(invalid_ia | invalid_la | invalid_sa) {
+        mbadaddrr := io.addr
+      }
+    }.elsewhen(is_eret) {
+      PRV := PRV1
+      IE := IE1
+      PRV1 := CSR.PRV_U
+      IE1 := true.B
+    }.elsewhen(wen) {
+      // CSR read and write by CSRXX instructions
+      // In fact, I am not sure if Chisel will
+      // interpret this to non-blocking assignment or not
+      // Hopefully, it is non-blocking, but it will still work fine
+      // even if it will turn out to be in blocking mode
+      // Do mapping
+      when(csr_addr === CSR.mstatus) {
+        PRV1 := wdata(5, 4)
+        IE1 := wdata(3)
+        PRV := wdata(2, 1)
+        IE := wdata(0)
+      }.elsewhen(csr_addr === CSR.mepc) {
+        mepcr := wdata
+      }.elsewhen(csr_addr === CSR.mcause) {
+        mcauser := wdata
+      }.elsewhen(csr_addr === CSR.mbadaddr) {
+        mbadaddrr := wdata
+      }
+    }
   }
+
 }
