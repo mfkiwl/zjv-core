@@ -1,6 +1,7 @@
 # IDE Generated
 .idea/
 .vscode/
+.metals/
 
 # Project Generated
 target/
