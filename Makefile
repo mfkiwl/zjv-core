@@ -15,23 +15,22 @@ libfdt 			:= $(SPIKE_DEST_DIR)/libfdt.a
 libfesvr 		:= $(SPIKE_DEST_DIR)/libfesvr.a
 libriscv 		:= $(SPIKE_DEST_DIR)/libriscv.a
 libsoftfloat 	:= $(SPIKE_DEST_DIR)/libsoftfloat.a
+libspike        := $(libfdt) $(libfesvr) $(libriscv) $(libsoftfloat)
 
 # Verilator
-VERILATOR_VSRC_DIR	:=	$(SRC_DIR)/main/verilator/vsrc
-VERILATOR_CSRC_DIR	:=	$(SRC_DIR)/main/verilator/csrc
+VERILATOR_SRC_DIR   :=  $(SRC_DIR)/main/verilator
+VERILATOR_VSRC_DIR	:=	$(VERILATOR_SRC_DIR)/vsrc
+VERILATOR_CSRC_DIR	:=	$(VERILATOR_SRC_DIR)/csrc
 VERILATOR_DEST_DIR	:=	$(WORK_DIR)/verilator
 VERILATOR_CXXFLAGS	:=	-O3 -std=c++11 -g -I$(VERILATOR_CSRC_DIR) -I$(VERILATOR_DEST_DIR)/build -I$(SPIKE_SRC_DIR) -I$(SPIKE_SRC_DIR)/softfloat -I$(SPIKE_DEST_DIR)
 VERILATOR_LDFLAGS 	:=	-lpthread -ldl -L$(SPIKE_DEST_DIR) -lfesvr -lriscv -lfdt -lsoftfloat
-VERILATOR_SOURCE	:=	$(VERILATOR_CSRC_DIR)/emulator.cpp \
-						$(VERILATOR_VSRC_DIR)/simmem.v \
-						$(VERILATOR_CSRC_DIR)/simmem.cpp
-#$(sort $(wildcard $(VERILATOR_CSRC_DIR)/*.cpp))
+VERILATOR_SOURCE 	:= $(sort $(wildcard $(VERILATOR_CSRC_DIR)/*.cpp)) $(sort $(wildcard $(VERILATOR_VSRC_DIR)/*.v))
 
 VERILATOR_FLAGS := --cc --exe --top-module Top 	\
 				  --assert --x-assign unique    \
 				  --output-split 20000 -O3    	\
 				  -I$(VERILATOR_VSRC_DIR) 	  	\
-				  -CFLAGS "$(VERILATOR_CXXFLAGS)" \
+				  -CFLAGS "$(VERILATOR_CXXFLAGS) -DPHVNTOM_DEBUG" \
 				  -LDFLAGS "$(libfesvr) $(libriscv) $(libsoftfloat) $(libfdt) $(VERILATOR_LDFLAGS)"
 
 .PHONY: clean build generate_verilog
@@ -49,20 +48,20 @@ generate_emulator: $(VERILATOR_DEST_DIR)/emulator
 
 $(SPIKE_DEST_DIR)/Makefile: $(SPIKE_SRC_DIR)/configure
 	mkdir -p $(SPIKE_DEST_DIR)
-	cd $(SPIKE_DEST_DIR) && $< --enable-sodor --enable-commitlog
+	cd $(SPIKE_DEST_DIR) && $< --enable-commitlog
 
-$(libriscv): $(SPIKE_DEST_DIR)/Makefile
+$(libspike): $(SPIKE_DEST_DIR)/Makefile
 	$(MAKE) -C $(SPIKE_DEST_DIR) $(notdir $(libfesvr)) $(notdir $(libriscv)) $(notdir $(libsoftfloat)) $(notdir $(libfdt)) 
 
 
-$(VERILATOR_DEST_DIR)/emulator: $(VSRC_DIR)/Top.v $(libriscv)
+$(VERILATOR_DEST_DIR)/emulator: $(VSRC_DIR)/Top.v $(libspike) $(VERILATOR_SOURCE)
 	mkdir -p $(VERILATOR_DEST_DIR)
-	verilator $(VERILATOR_FLAGS) -o $(VERILATOR_DEST_DIR)/emulator -Mdir $(VERILATOR_DEST_DIR)/build $^ $(VERILATOR_SOURCE)
+	verilator $(VERILATOR_FLAGS) -o $(VERILATOR_DEST_DIR)/emulator -Mdir $(VERILATOR_DEST_DIR)/build $^
 	$(MAKE) -C $(VERILATOR_DEST_DIR)/build -f $(VERILATOR_DEST_DIR)/build/VTop.mk
 
 how_verilator_work:
 	mkdir -p $(VERILATOR_DEST_DIR)/Hello
-	verilator --cc --exe -Wall -o $(VERILATOR_DEST_DIR)/Hello/Hello -Mdir $(VERILATOR_DEST_DIR)/Hello $(VERILATOR_VSRC_DIR)/Hello.v $(VERILATOR_CSRC_DIR)/Hello.cpp
+	verilator --cc --exe -Wall -o $(VERILATOR_DEST_DIR)/Hello/Hello -Mdir $(VERILATOR_DEST_DIR)/Hello $(VERILATOR_SRC_DIR)/Hello/Hello.v $(VERILATOR_SRC_DIR)/Hello/Hello.cpp
 	$(MAKE) -C $(VERILATOR_DEST_DIR)/Hello -f $(VERILATOR_DEST_DIR)/Hello/VHello.mk
 	$(VERILATOR_DEST_DIR)/Hello/Hello
 

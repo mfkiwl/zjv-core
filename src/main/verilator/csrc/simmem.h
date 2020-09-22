@@ -33,7 +33,7 @@ public:
         }
         printf("\n");    
     }
-    printf("[CHECK] %d\n", mem.size());
+    printf("[CHECK] %ld\n", mem.size());
   }
 
   size_t get_base() {return base;}

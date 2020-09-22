@@ -3,6 +3,7 @@ package rv64_3stage
 import chisel3._
 import chisel3.util._
 import ControlConst._
+import chisel3.util.experimental.BoringUtils
 
 class BrCondIO extends Bundle with phvntomParams {
   val rs1 = Input(UInt(xlen.W))
@@ -144,7 +145,7 @@ class DataPath extends Module with phvntomParams {
     exe_pc := if_pc
     exe_inst := if_inst
   } .elsewhen(io.ctrl.bubble && brCond.io.branch) {
-    exe_pc := "hdeadbeef".U
+    exe_pc := if_pc
     exe_inst := BUBBLE
   }
 
@@ -210,15 +211,30 @@ class DataPath extends Module with phvntomParams {
                                   wbPC   -> wb_pc_4,
                                   wbCSR  -> 0.U(xlen.W)  /*TODO*/ ))
 
-  printf("if_pc=[%x] if_inst=%x exe_pc=[%x] Inst=%x stall=%x instRype=%x pcSelect=%x\n",
-    if_pc,
-    if_inst,
-    exe_pc,
-    exe_inst,
-    stall,
-    io.ctrl.instType,
-    io.ctrl.pcSelect
-  )
+
+  // Difftest
+  if (diffTest) {
+    val dtest_pc = Reg(UInt(xlen.W))
+    val dtest_inst = Reg(UInt(xlen.W))
+
+    when (!stall) {
+      dtest_pc   := wb_pc
+      dtest_inst := wb_inst
+    }
+
+    BoringUtils.addSource(dtest_pc,   "difftestPc")
+    BoringUtils.addSource(dtest_inst, "difftestInst")
+  }
+
+//  printf("if_pc=[%x] if_inst=%x exe_pc=[%x] Inst=%x stall=%x instRype=%x pcSelect=%x\n",
+//    if_pc,
+//    if_inst,
+//    exe_pc,
+//    exe_inst,
+//    stall,
+//    io.ctrl.instType,
+//    io.ctrl.pcSelect
+//  )
 
 
 }

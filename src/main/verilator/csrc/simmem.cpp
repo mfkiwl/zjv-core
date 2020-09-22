@@ -16,19 +16,30 @@ void init_ram(const char *img) {
   load_elf(img, memif, &entry);
 
   printf("[SimMem] load elf %s\n", img);
-
-  //  mem->mem_check();
-
 }
+
+const char* getType(unsigned long memtype) {
+  if      (memtype == memByte)      return "byte";     
+  else if (memtype == memByteU)     return "unsigned byte";  
+  else if (memtype == memHalf)      return "half";  
+  else if (memtype == memHalfU)     return "unsigned half"; 
+  else if (memtype == memWord)      return "word";  
+  else if (memtype == memWordU)     return "unsigned word"; 
+  else if (memtype == memDouble)    return "double";  
+  else if (memtype == memXXX)       return "default"; 
+  else                              return "ERROR!";
+} 
+
 
 extern "C"
 void SimMemAccess (paddr_t iaddr, paddr_t *idata,  paddr_t itype,
                    paddr_t daddr, paddr_t *drdata, paddr_t dwdata, paddr_t dtype, uint8_t dwen) {
 
-  printf("[Memory Access] \n");
-  printf("iaddr %lx type %lx\n", iaddr, itype);
-  printf("daddr %lx type %lx dwdata %lx wen %d\n", daddr, dtype, dwdata, dwen);
-
+#ifdef PHVNTOM_DEBUG
+//  printf("[Memory Access] \n");
+//  printf("iaddr %lx %s\n", iaddr, getType(itype));
+//  printf("daddr %lx %s dwdata %lx wen %d\n", daddr, getType(dtype), dwdata, dwen);
+#endif
 
 #define RACCESS(addr, memtype, rdata)                                     \
   if      (memtype == memByte)       *rdata = memif->read_int8(addr);     \
@@ -59,48 +70,12 @@ void SimMemAccess (paddr_t iaddr, paddr_t *idata,  paddr_t itype,
   if (iaddr != 0xdeadbeefL) {
     // iaddr = iaddr - mem->get_base();
     RACCESS(iaddr, itype, idata);
-    printf("Read Done %lx -> %lx\n", iaddr, *idata);
   }
 
   if (daddr != 0xdeadbeefL) {
     // daddr = daddr - mem->get_base();
     RACCESS(daddr, dtype, drdata);
     WACCESS(daddr, dtype, dwen, dwdata);
-    printf("Read Done %lx -> %lx\n", daddr, *drdata);
   }
 
 }
-
-
-
-
-/*
-
-// old version
-
-#define RAMSIZE (128 * 1024 * 1024)
-static paddr_t ram[RAMSIZE / sizeof(paddr_t)] = {0x07b08093f8508093L};
-
-extern "C"
-void SimMemAccess (paddr_t iaddr, paddr_t *idata, paddr_t imask,
-                   paddr_t daddr, paddr_t *drdata, paddr_t dwdata, paddr_t dmask, uint8_t dwen) {
-
-  printf("[Memory Access] \n");
-  printf("iaddr %lx imask %lx\n", iaddr, dmask);
-  printf("daddr %lx dmask %lx dwdata %lx wen %d\n", daddr, dmask, dwdata, dwen);
-  if (iaddr >= 0x80000000L || daddr >= 0x80000000L) {
-//    printf("Read imem[%x] = %lx\n", iaddr-0x80000000L, ram[iaddr-0x80000000L]);
-//    printf("Read dmem[%x] = %lx\n", daddr-0x80000000L, ram[daddr-0x80000000L]);
-    if (iaddr-0x80000000 < 10)
-        *idata = ram[iaddr-0x80000000] & imask;
-    if (daddr-0x80000000 < 10)
-        *drdata = ram[daddr-0x80000000] & dmask;
-
-    if (dwen) {
-      ram[daddr] = (ram[daddr-0x80000000] & ~dmask) | (dwdata & dmask);
-    }
-    // printf("Read Done\n");
-  }
-}
-
-*/

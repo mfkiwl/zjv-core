@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <riscv/difftest.h>
 #include <riscv/sim.h>
 #include <iostream>
 #include <unistd.h>
@@ -20,18 +21,12 @@
 sim_t *sim;
 
 uint64_t trace_count = 0;
-double sc_time_stamp ()
-{
-  return double( trace_count );
-}
-
-
 
 int main(int argc, char** argv)
 {
    unsigned random_seed = (unsigned)time(NULL) ^ (unsigned)getpid();
    uint64_t max_cycles = 0;
-   int start = 0;
+
    bool log = false;
    const char* loadmem = NULL;
    FILE *vcdfile = NULL, *logfile = stderr;
@@ -77,7 +72,7 @@ int main(int argc, char** argv)
    }
 #endif
 
-   const char* isa = "RV32IM";
+   const char* isa = "RV64IM";
    const char* priv = "M";
    const char* varch = "vlen:128,elen:64,slen:128";
    size_t nprocs = 1;
@@ -110,20 +105,31 @@ int main(int argc, char** argv)
    sim->set_log_commits(true);
    // sim->run();
 
-   // sim->set_log_commits(true);
-   // sim->difftest_setup();
+   sim->set_log_commits(true);
+   sim->difftest_setup();
 
    // reset for a few cycles to support pipelined reset
    for (int i = 0; i < 10; i++) {
-    dut.reset = 1;
-    dut.clock = 0;
-    dut.eval();
-    dut.clock = 1;
-    dut.eval();
-    dut.reset = 0;
-  }
+     dut.reset = 1;
+     dut.clock = 0;
+     dut.eval();
+     dut.clock = 1;
+     dut.eval();
+     dut.reset = 0;
+   }
 
-  printf("[Verilator] Ready to Run\n");
+   printf("[Verilator] Ready to Run\n");
+
+   reg_t pc;
+   difftest_regs_t record;
+   do {
+      sim->difftest_continue(1);
+      sim->get_regs(&record);
+      pc = record.pc;
+   } while (pc != 0x80000000);
+   printf("[Spike] Ready to Run\n");
+
+   bool start = false;
 
    while (!Verilated::gotFinish()) {
       dut.clock = 0;
@@ -140,6 +146,27 @@ int main(int argc, char** argv)
          tfp->dump(static_cast<vluint64_t>(trace_count * 2 + 1));
 #endif
       trace_count++;
+
+      if (dut.io_difftest_pc == 0x80000000) {
+         start = true;
+         printf("[Phvntom] Ready to Run\n");
+      }
+
+      if (start) {
+         sim->difftest_continue(1);
+         sim->get_regs(&record);
+
+         if(record.pc != dut.io_difftest_pc) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   pc:%lx\n", record.pc);
+            printf("phvntom pc:%lx\n", dut.io_difftest_pc);
+
+            exit(-1);
+         }
+         
+      }
+
+      
 
       // sim->difftest_continue(1);
       sleep(1);

@@ -7,6 +7,9 @@ import common._
 trait phvntomParams {
   val xlen     = 64
   val bitWidth = log2Ceil(xlen)
+  val regNum   = 32
+
+  val diffTest = true
 }
 
 
