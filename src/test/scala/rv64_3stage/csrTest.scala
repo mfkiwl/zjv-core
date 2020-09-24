@@ -13,6 +13,9 @@ class CSRTester(c: CSR) extends PeekPokeTester(c) {
   poke(c.io.stall, 0)
   poke(c.io.cmd, CSR.S)
   poke(c.io.in, 0x1234abcd)
+  poke(c.io.tim_int, 0)
+  poke(c.io.soft_int, 0)
+  poke(c.io.external_int, 0)
   step(1)
   // shoud be 0x1234abcd
   expect(c.io.out, 0x1234abcd)

@@ -1,0 +1,1 @@
+../toolchain/bin/riscv64-unknown-elf-objdump -D rv32mi-p-csr > dump.s
