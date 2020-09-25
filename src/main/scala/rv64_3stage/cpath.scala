@@ -64,7 +64,7 @@ object ControlConst {
   val aluCPA  = 11.U(4.W)
   val aluCPB  = 12.U(4.W)
 
-  val memXXX = 0.U(3.W)
+  val memXXX    = 0.U(3.W)
   val memByte   = 1.U(3.W)
   val memHalf   = 2.U(3.W)
   val memWord   = 3.U(3.W)
