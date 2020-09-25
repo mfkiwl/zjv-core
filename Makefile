@@ -8,6 +8,12 @@ SRC_DIR		:=	$(CURDIR)/src
 TARGET_CORE ?= rv64_3stage
 VSRC_DIR := $(WORK_DIR)/verilog/$(TARGET_CORE)
 
+# Test ELF 
+TEST_SRC_DIR  := $(CURDIR)/test
+TEST_ELF_DIR  := $(WORK_DIR)/test
+TEST_ELF_LIST := $(sort $(wildcard $(TEST_ELF_DIR)/*))
+
+
 # DiffTest
 SPIKE_SRC_DIR 	:= $(CURDIR)/riscv-isa-sim
 SPIKE_DEST_DIR 	:= $(WORK_DIR)/spike
@@ -44,7 +50,7 @@ $(VSRC_DIR)/Top.v: $(SRC_DIR)/main/scala
 	sbt "runMain $(TARGET_CORE).elaborate"
 
 generate_emulator: $(VERILATOR_DEST_DIR)/emulator
-	$^ ./test/rv32mi-p-csr
+	$(foreach elf, $(TEST_ELF_LIST), $^ $(elf))
 
 $(SPIKE_DEST_DIR)/Makefile: $(SPIKE_SRC_DIR)/configure
 	mkdir -p $(SPIKE_DEST_DIR)
@@ -58,6 +64,10 @@ $(VERILATOR_DEST_DIR)/emulator: $(VSRC_DIR)/Top.v $(libspike) $(VERILATOR_SOURCE
 	mkdir -p $(VERILATOR_DEST_DIR)
 	verilator $(VERILATOR_FLAGS) -o $(VERILATOR_DEST_DIR)/emulator -Mdir $(VERILATOR_DEST_DIR)/build $^
 	$(MAKE) -C $(VERILATOR_DEST_DIR)/build -f $(VERILATOR_DEST_DIR)/build/VTop.mk
+
+generate_testcase:
+	mkdir -p $(TEST_ELF_DIR)
+	$(MAKE) -C $(TEST_SRC_DIR)
 
 how_verilator_work:
 	mkdir -p $(VERILATOR_DEST_DIR)/Hello

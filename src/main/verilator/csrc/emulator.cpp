@@ -120,13 +120,12 @@ int main(int argc, char** argv)
 
    printf("[Verilator] Ready to Run\n");
 
-   reg_t pc;
+
    difftest_regs_t record;
    do {
       sim->difftest_continue(1);
       sim->get_regs(&record);
-      pc = record.pc;
-   } while (pc != 0x80000000);
+   } while (record.pc != 0x80000000);
    printf("[Spike] Ready to Run\n");
 
    bool start = false;
@@ -147,14 +146,15 @@ int main(int argc, char** argv)
 #endif
       trace_count++;
 
-      if (dut.io_difftest_pc == 0x80000000) {
+      if (!start && dut.io_difftest_pc == 0x80000000) {
          start = true;
          printf("[Phvntom] Ready to Run\n");
       }
 
       if (start) {
-         sim->difftest_continue(1);
-         sim->get_regs(&record);
+         printf("\t\t [ ROUND %d ]\n", trace_count);
+         printf("spike   pc:%lx\n", record.pc);
+         printf("phvntom pc:%lx\n", dut.io_difftest_pc);
 
          if(record.pc != dut.io_difftest_pc) {
             printf("========== [ Trace ] ==========\n");
@@ -163,6 +163,10 @@ int main(int argc, char** argv)
 
             exit(-1);
          }
+
+         sim->difftest_continue(1);
+         sim->get_regs(&record);
+         printf("\n");
          
       }
 
