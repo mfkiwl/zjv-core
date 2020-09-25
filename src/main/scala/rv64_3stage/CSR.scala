@@ -35,7 +35,7 @@ object CSR {
   val mhartid = 0xf14.U(12.W)
   val mstatus = 0x300.U(12.W)
   val misa = 0x301.U(12.W)
-  val mtdeleg = 0x302.U(12.W)
+  val medeleg = 0x302.U(12.W)
   val mideleg = 0x303.U(12.W)
   val mie = 0x304.U(12.W)
   val mtvec = 0x305.U(12.W)
@@ -161,6 +161,9 @@ class CSRFile extends Module with phvntomParams {
     mstatusr_mie, false.B, mstatusr_sie, false.B)
   val medelegr = RegInit(0.U(xlen.W)) // never delegate the handler to other lower modes currently
   val midelegr = RegInit(0.U(xlen.W)) // so their values are 0
+  val misar = Cat(2.U(2.W), 0.U((xlen - 2 - 13).W), true.B, 0.U(3.W), true.B, 0.U(8.W)) // rv64+im
+  val mvendoridr = 0.U(xlen.W)
+  val marchidr = 0.U(xlen.W)
 
   // Memory-mapped registers, when there are multiple cores
   // these registers should be moved out
@@ -195,6 +198,16 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := mier
   }.elsewhen(io.which_reg === CSR.mstatus) {
     io.rdata := mstatusr
+  }.elsewhen(io.which_reg === CSR.medeleg) {
+    io.rdata := medelegr
+  }.elsewhen(io.which_reg === CSR.mideleg) {
+    io.rdata := midelegr
+  }.elsewhen(io.which_reg === CSR.misa) {
+    io.rdata := misar
+  }.elsewhen(io.which_reg === CSR.mvendorid) {
+    io.rdata := mvendoridr
+  }.elsewhen(io.which_reg === CSR.marchid) {
+    io.rdata := marchidr
   }.otherwise {
     io.rdata := mhartidr
   }

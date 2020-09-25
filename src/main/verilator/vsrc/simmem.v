@@ -21,9 +21,12 @@ module SimMem (
   input  [`XLEN-1:0] dtype,
   input  dwen
 );
-
-  always @(posedge clk) begin
+  always @(*) begin
     SimMemAccess(iaddr, idata, itype, daddr, drdata, dwdata, dtype, dwen);
   end
+
+  /*always @(posedge clk) begin
+    WSimMemAccess(iaddr, idata, itype, daddr, drdata, dwdata, dtype, dwen);
+  end*/
 
 endmodule

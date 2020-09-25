@@ -1,5 +1,6 @@
 #include "VTop__Dpi.h"
 #include "common.h"
+#define VM_TRACE 1
 #if VM_TRACE
 #include <verilated_vcd_c.h>
 #endif
@@ -64,12 +65,14 @@ int main(int argc, char** argv)
 
 #if VM_TRACE
    Verilated::traceEverOn(true); // Verilator must compute traced signals
-   std::unique_ptr<VerilatedVcdFILE> vcdfd(new VerilatedVcdFILE(vcdfile));
-   std::unique_ptr<VerilatedVcdC> tfp(new VerilatedVcdC(vcdfd.get()));
-   if (vcdfile) {
-      dut.trace(tfp.get(), 99);  // Trace 99 levels of hierarchy
-      tfp->open("");
+   VerilatedVcdC* tfp = new VerilatedVcdC;
+   // std::unique_ptr<VerilatedVcdFILE> vcdfd(new VerilatedVcdFILE(vcdfile));
+   // std::unique_ptr<VerilatedVcdC> tfp(new VerilatedVcdC(vcdfd.get()));
+   if (true) {
+      dut.trace(tfp, 99);  // Trace 99 levels of hierarchy
+      tfp->open("sim.vcd");
    }
+   printf("TFP successfully opened sim.vcd\n");
 #endif
 
    const char* isa = "RV64IM";
@@ -151,10 +154,13 @@ int main(int argc, char** argv)
          printf("[Phvntom] Ready to Run\n");
       }
 
+      //printf("\t\t [ ROUND %d ]\n", trace_count);
+      //printf("spike   pc:%08lx\n", record.pc);
+      //printf("phvntom pc:%08lx\n", dut.io_difftest_pc);
+      //printf("phvntom inst:%08lx\n", dut.io_difftest_inst);
+      //printf("\t\t [ GAME_OVER %d ]\n", trace_count);
+
       if (start) {
-         printf("\t\t [ ROUND %d ]\n", trace_count);
-         printf("spike   pc:%lx\n", record.pc);
-         printf("phvntom pc:%lx\n", dut.io_difftest_pc);
 
          if(record.pc != dut.io_difftest_pc) {
             printf("========== [ Trace ] ==========\n");
@@ -164,10 +170,12 @@ int main(int argc, char** argv)
             exit(-1);
          }
 
+         // CHECK_REGISTER_VALUE(2)
+
          sim->difftest_continue(1);
          sim->get_regs(&record);
          printf("\n");
-         
+
       }
 
       

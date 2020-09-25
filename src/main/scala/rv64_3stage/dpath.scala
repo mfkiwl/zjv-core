@@ -100,12 +100,12 @@ class DataPath extends Module with phvntomParams {
   val alu     = Module(new ALU)
 
   /* Fetch / Execute Register */
-  val exe_inst = RegInit(BUBBLE)
-  val exe_pc   = Reg(UInt(xlen.W))
+  val exe_inst = RegInit(UInt(32.W), BUBBLE)
+  val exe_pc   = RegInit(UInt(xlen.W), 0.U)
 
   /* Execute / Write Back Register */
-  val wb_inst = RegInit(BUBBLE)
-  val wb_pc   = Reg(UInt(xlen.W))
+  val wb_inst = RegInit(UInt(32.W), BUBBLE)
+  val wb_pc   = RegInit(UInt(xlen.W), 0.U)
   val wb_alu  = Reg(UInt(xlen.W))
   val wb_wdata = Reg(UInt(xlen.W))
 
@@ -214,12 +214,12 @@ class DataPath extends Module with phvntomParams {
 
   // Difftest
   if (diffTest) {
-    val dtest_pc = Reg(UInt(xlen.W))
-    val dtest_inst = Reg(UInt(xlen.W))
+    val dtest_pc = RegInit(UInt(xlen.W), 0.U)
+    val dtest_inst = RegInit(UInt(xlen.W), 0.U)
 
     when (!stall) {
-      dtest_pc   := wb_pc
-      dtest_inst := wb_inst
+      dtest_pc   := exe_pc
+      dtest_inst := exe_inst
     }
 
     BoringUtils.addSource(dtest_pc,   "difftestPc")
