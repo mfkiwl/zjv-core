@@ -218,8 +218,8 @@ class DataPath extends Module with phvntomParams {
     val dtest_inst = RegInit(UInt(xlen.W), 0.U)
 
     when (!stall) {
-      dtest_pc   := exe_pc
-      dtest_inst := exe_inst
+      dtest_pc   := wb_pc
+      dtest_inst := wb_inst
     }
 
     BoringUtils.addSource(dtest_pc,   "difftestPc")
