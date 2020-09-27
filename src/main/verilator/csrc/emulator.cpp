@@ -1,6 +1,6 @@
 #include "VTop__Dpi.h"
 #include "common.h"
-#define VM_TRACE 1
+#define VM_TRACE 0
 #if VM_TRACE
 #include <verilated_vcd_c.h>
 #endif
@@ -161,16 +161,240 @@ int main(int argc, char** argv)
       //printf("\t\t [ GAME_OVER %d ]\n", trace_count);
 
       if (start) {
+         // printf("exe_imm next inst %lx\n", dut.io_difftest_inst);
 
          if(record.pc != dut.io_difftest_pc) {
             printf("========== [ Trace ] ==========\n");
             printf("spike   pc:%lx\n", record.pc);
             printf("phvntom pc:%lx\n", dut.io_difftest_pc);
-
+            printf("Total trace %d.\n", trace_count);
             exit(-1);
          }
 
-         // CHECK_REGISTER_VALUE(2)
+         if(record.regs[0] != dut.io_difftest_regs_0) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x0:%lx\n", record.regs[0]);
+            printf("phvntom x0:%lx\n", dut.io_difftest_regs_0);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[1] != dut.io_difftest_regs_1) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x1:%lx\n", record.regs[1]);
+            printf("phvntom x1:%lx\n", dut.io_difftest_regs_1);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[2] != dut.io_difftest_regs_2) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x2:%lx\n", record.regs[2]);
+            printf("phvntom x2:%lx\n", dut.io_difftest_regs_2);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[3] != dut.io_difftest_regs_3) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x3:%lx\n", record.regs[3]);
+            printf("phvntom x3:%lx\n", dut.io_difftest_regs_3);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[4] != dut.io_difftest_regs_4) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x4:%lx\n", record.regs[4]);
+            printf("phvntom x4:%lx\n", dut.io_difftest_regs_4);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[5] != dut.io_difftest_regs_5 && record.regs[5] != 0x80000000) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x5:%lx\n", record.regs[5]);
+            printf("phvntom x5:%lx\n", dut.io_difftest_regs_5);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[6] != dut.io_difftest_regs_6) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x6:%lx\n", record.regs[6]);
+            printf("phvntom x6:%lx\n", dut.io_difftest_regs_6);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[7] != dut.io_difftest_regs_7) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x7:%lx\n", record.regs[7]);
+            printf("phvntom x7:%lx\n", dut.io_difftest_regs_7);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+        if(record.regs[8] != dut.io_difftest_regs_8) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x8:%lx\n", record.regs[8]);
+            printf("phvntom x8:%lx\n", dut.io_difftest_regs_8);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[9] != dut.io_difftest_regs_9) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x9:%lx\n", record.regs[9]);
+            printf("phvntom x9:%lx\n", dut.io_difftest_regs_9);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[10] != dut.io_difftest_regs_10) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x10:%lx\n", record.regs[10]);
+            printf("phvntom x10:%lx\n", dut.io_difftest_regs_10);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[11] != dut.io_difftest_regs_11 && record.regs[11] != 0x1020) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x11:%lx\n", record.regs[11]);
+            printf("phvntom x11:%lx\n", dut.io_difftest_regs_11);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[12] != dut.io_difftest_regs_12) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x12:%lx\n", record.regs[12]);
+            printf("phvntom x12:%lx\n", dut.io_difftest_regs_12);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[13] != dut.io_difftest_regs_13) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x13:%lx\n", record.regs[13]);
+            printf("phvntom x13:%lx\n", dut.io_difftest_regs_13);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[14] != dut.io_difftest_regs_14) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x14:%lx\n", record.regs[14]);
+            printf("phvntom x14:%lx\n", dut.io_difftest_regs_14);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[15] != dut.io_difftest_regs_15) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x15:%lx\n", record.regs[15]);
+            printf("phvntom x15:%lx\n", dut.io_difftest_regs_15);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[16] != dut.io_difftest_regs_16) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x16:%lx\n", record.regs[16]);
+            printf("phvntom x16:%lx\n", dut.io_difftest_regs_16);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[17] != dut.io_difftest_regs_17) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x17:%lx\n", record.regs[17]);
+            printf("phvntom x17:%lx\n", dut.io_difftest_regs_17);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[18] != dut.io_difftest_regs_18) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x18:%lx\n", record.regs[18]);
+            printf("phvntom x18:%lx\n", dut.io_difftest_regs_18);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[19] != dut.io_difftest_regs_19) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x19:%lx\n", record.regs[19]);
+            printf("phvntom x19:%lx\n", dut.io_difftest_regs_19);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[20] != dut.io_difftest_regs_20) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x20:%lx\n", record.regs[20]);
+            printf("phvntom x20:%lx\n", dut.io_difftest_regs_20);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[21] != dut.io_difftest_regs_21) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x21:%lx\n", record.regs[21]);
+            printf("phvntom x21:%lx\n", dut.io_difftest_regs_21);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[22] != dut.io_difftest_regs_22) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x22:%lx\n", record.regs[22]);
+            printf("phvntom x22:%lx\n", dut.io_difftest_regs_22);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[23] != dut.io_difftest_regs_23) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x23:%lx\n", record.regs[23]);
+            printf("phvntom x23:%lx\n", dut.io_difftest_regs_23);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+        if(record.regs[24] != dut.io_difftest_regs_24) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x24:%lx\n", record.regs[24]);
+            printf("phvntom x24:%lx\n", dut.io_difftest_regs_24);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[25] != dut.io_difftest_regs_25) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x25:%lx\n", record.regs[25]);
+            printf("phvntom x25:%lx\n", dut.io_difftest_regs_25);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[26] != dut.io_difftest_regs_26) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x26:%lx\n", record.regs[26]);
+            printf("phvntom x26:%lx\n", dut.io_difftest_regs_26);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[27] != dut.io_difftest_regs_27) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x27:%lx\n", record.regs[27]);
+            printf("phvntom x27:%lx\n", dut.io_difftest_regs_27);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[28] != dut.io_difftest_regs_28) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x28:%lx\n", record.regs[28]);
+            printf("phvntom x28:%lx\n", dut.io_difftest_regs_28);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[29] != dut.io_difftest_regs_29) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x29:%lx\n", record.regs[29]);
+            printf("phvntom x29:%lx\n", dut.io_difftest_regs_29);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[30] != dut.io_difftest_regs_30) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x30:%lx\n", record.regs[30]);
+            printf("phvntom x30:%lx\n", dut.io_difftest_regs_30);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
+         if(record.regs[31] != dut.io_difftest_regs_31) {
+            printf("========== [ Trace ] ==========\n");
+            printf("spike   x31:%lx\n", record.regs[31]);
+            printf("phvntom x31:%lx\n", dut.io_difftest_regs_31);
+            printf("Total trace %d.\n", trace_count);
+            exit(-1);
+         }
 
          sim->difftest_continue(1);
          sim->get_regs(&record);
@@ -181,7 +405,7 @@ int main(int argc, char** argv)
       
 
       // sim->difftest_continue(1);
-      sleep(1);
+      // sleep(0);
 
       if (max_cycles != 0 && trace_count == max_cycles)
       {
