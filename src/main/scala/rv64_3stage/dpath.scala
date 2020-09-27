@@ -46,8 +46,10 @@ class ImmExt extends Module with phvntomParams {
   val JImm = Cat(Fill(11, io.inst(31)), io.inst(31), io.inst(19, 12), io.inst(20), io.inst(30, 21), 0.U)
   val ZImm = Cat(Fill(27,0.U), io.inst(19, 15))
 
-  io.out := MuxLookup(io.instType, "hdeadbeef".U, Seq(
+  val imm_32 = MuxLookup(io.instType, "hdeadbeef".U, Seq(
     IType -> IImm, SType -> SImm, BType -> BImm, UType -> UImm, JType -> JImm, ZType -> ZImm ))
+  
+  io.out := Cat(Fill(32, imm_32(31)), imm_32)
 }
 
 class ALUIO() extends Bundle with phvntomParams {

@@ -72,7 +72,7 @@ int main(int argc, char** argv)
             exit(-1);
          } else if (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ) {
             for (int i = 0; i < REG_G_NUM; i++) {
-               printf("[%-4s] = %016lx|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+               printf("[%-3s] = %016lx|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
                if (i % 3 == 2)
                   printf("\n");
             }
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
 
       printf("\n");      
 
-      sleep(1);
+      sleep(0.5);
    }
 
    engine.trace_close();
