@@ -39,6 +39,10 @@ VERILATOR_FLAGS := --cc --exe --top-module Top 	\
 				  -CFLAGS "$(VERILATOR_CXXFLAGS) -DPHVNTOM_DEBUG" \
 				  -LDFLAGS "$(libfesvr) $(libriscv) $(libsoftfloat) $(libfdt) $(VERILATOR_LDFLAGS)"
 
+ifneq (,$(VTRACE))
+VERILATOR_FLAGS += --debug --trace
+endif
+
 .PHONY: clean build generate_verilog
 
 all: generate_verilog

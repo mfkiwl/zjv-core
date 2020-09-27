@@ -23,15 +23,15 @@ object ControlConst {
 
   // ImmExt.io.instType
   val instXXX = 0.U(3.W)
-  val IType = 1.U(3.W)
-  val SType = 2.U(3.W)
-  val BType = 3.U(3.W)
-  val UType = 4.U(3.W)
-  val JType = 5.U(3.W)
-  val ZType = 6.U(3.W) // Zicsr
+  val IType   = 1.U(3.W)
+  val SType   = 2.U(3.W)
+  val BType   = 3.U(3.W)
+  val UType   = 4.U(3.W)
+  val JType   = 5.U(3.W)
+  val ZType   = 6.U(3.W) // Zicsr
 
   // BrCond.io.brType
-  val brXXX = 0.U(3.W)
+  val brXXX    = 0.U(3.W)
   val beqType  = 1.U(3.W)
   val bneType  = 2.U(3.W)
   val bltType  = 3.U(3.W)
@@ -41,7 +41,7 @@ object ControlConst {
 
   // io.ASelect
   val AXXX = 0.U(2.W)
-  val APC = 1.U(2.W)
+  val APC  = 1.U(2.W)
   val ARS1 = 2.U(2.W)
 
   // io.BSelect
@@ -50,7 +50,7 @@ object ControlConst {
   val BRS2 = 2.U(2.W)
 
   // ALU.io.aluType
-  val aluXXX = 0.U(4.W)
+  val aluXXX  = 0.U(4.W)
   val aluADD  =  1.U(4.W)
   val aluSUB  =  2.U(4.W)
   val aluSLL  =  3.U(4.W)
@@ -64,7 +64,7 @@ object ControlConst {
   val aluCPA  = 11.U(4.W)
   val aluCPB  = 12.U(4.W)
 
-  val memXXX = 0.U(3.W)
+  val memXXX    = 0.U(3.W)
   val memByte   = 1.U(3.W)
   val memHalf   = 2.U(3.W)
   val memWord   = 3.U(3.W)
