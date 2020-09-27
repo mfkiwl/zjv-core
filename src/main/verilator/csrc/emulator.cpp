@@ -169,8 +169,7 @@ int main(int argc, char** argv)
       if (start) {
          // printf("inst %lx\n", dut.io_difftest_inst);
 
-         if((record.pc != dut.io_difftest_pc && dut.io_difftest_inst != 0x73) ||
-            (dut.io_difftest_inst == 0x73 && record.pc + 4 != dut.io_difftest_pc)) {   // spike has bug when ECALL
+         if(record.pc != dut.io_difftest_pc && record.pc != dut.io_difftest_pc + 4) {   // spike has bug when ECALL
             printf("========== [ Trace ] ==========\n");
             printf("spike   pc:%lx\n", record.pc);
             printf("phvntom pc:%lx\n", dut.io_difftest_pc);
