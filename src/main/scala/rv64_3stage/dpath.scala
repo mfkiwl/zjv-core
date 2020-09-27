@@ -46,23 +46,12 @@ class ImmExt extends Module with phvntomParams {
   val BImm = Cat(Fill(19, io.inst(31)), io.inst(31), io.inst(7), io.inst(30, 25), io.inst(11, 8), 0.U)
   val UImm = Cat(io.inst(31, 12), Fill(12, 0.U))
   val JImm = Cat(Fill(11, io.inst(31)), io.inst(31), io.inst(19, 12), io.inst(20), io.inst(30, 21), 0.U)
-  val ZImm = Cat(Fill(27, 0.U), io.inst(19, 15))
+  val ZImm = Cat(Fill(27,0.U), io.inst(19, 15))
 
-  // signed
-  val SIImm = Cat(Fill(52, io.inst(31)), io.inst(31, 20))
-  val SSImm = Cat(Fill(52, io.inst(31)), io.inst(31, 25), io.inst(11, 7))
-  val SBImm = Cat(Fill(51, io.inst(31)), io.inst(31), io.inst(7), io.inst(30, 25), io.inst(11, 8), 0.U)
-  val SUImm = Cat(Fill(32, io.inst(31)), io.inst(31, 12), Fill(12, 0.U))
-  val SJImm = Cat(Fill(43, io.inst(31)), io.inst(31), io.inst(19, 12), io.inst(20), io.inst(30, 21), 0.U)
-  val SZImm = Cat(Fill(27, 0.U), io.inst(19, 15))
-
-  when(io.extType === 0.U) {
-    io.out := MuxLookup(io.instType, "hdeadbeef".U, Seq(
-      IType -> IImm, SType -> SImm, BType -> BImm, UType -> UImm, JType -> JImm, ZType -> ZImm))
-  }.otherwise {
-    io.out := MuxLookup(io.instType, "hdeadbeef".U, Seq(
-      IType -> SIImm, SType -> SSImm, BType -> SBImm, UType -> SUImm, JType -> SJImm, ZType -> SZImm))
-  }
+  val imm_32 = MuxLookup(io.instType, "hdeadbeef".U, Seq(
+    IType -> IImm, SType -> SImm, BType -> BImm, UType -> UImm, JType -> JImm, ZType -> ZImm ))
+  
+  io.out := Cat(Fill(32, imm_32(31)), imm_32)
 }
 
 class ALUIO() extends Bundle with phvntomParams {
@@ -240,9 +229,9 @@ class DataPath extends Module with phvntomParams {
     val dtest_pc = RegInit(UInt(xlen.W), 0.U)
     val dtest_inst = RegInit(UInt(xlen.W), 0.U)
 
-    when(!stall) {
-      dtest_pc := wb_pc
-      dtest_inst := immExt.io.out
+    when (!stall) {
+      dtest_pc   := wb_pc
+      dtest_inst := wb_inst
     }
 
     BoringUtils.addSource(dtest_pc, "difftestPc")
