@@ -52,6 +52,7 @@ int main(int argc, char** argv)
    bool startTest = false;
 
    while (!Verilated::gotFinish()) {
+
       engine.emu_step(1);
 
       if (!startTest && engine.emu_get_pc() == 0x80000000) {
