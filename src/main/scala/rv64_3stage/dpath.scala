@@ -162,12 +162,12 @@ class DataPath extends Module with phvntomParams {
   io.imem.req.bits.wen := false.B
   io.imem.req.bits.memtype := memWordU
 
-  when(!stall) {
-    exe_pc := if_pc
-    exe_inst := if_inst
-  }.elsewhen(io.ctrl.bubble && brCond.io.branch) {
+  when((io.ctrl.brType =/= ControlConst.brXXX || io.ctrl.bubble) && brCond.io.branch) {
     exe_pc := if_pc
     exe_inst := BUBBLE
+  }.elsewhen(!stall) {
+    exe_pc := if_pc
+    exe_inst := if_inst
   }
 
   // ******************************
@@ -239,14 +239,17 @@ class DataPath extends Module with phvntomParams {
   if (diffTest) {
     val dtest_pc = RegInit(UInt(xlen.W), 0.U)
     val dtest_inst = RegInit(UInt(xlen.W), 0.U)
+    val dtest_valid = RegInit(Bool(), true.B)
 
+    dtest_valid := !(stall || wb_inst(31, 0) === ControlConst.BUBBLE)
     when(!stall) {
       dtest_pc := wb_pc
-      dtest_inst := immExt.io.out
+      dtest_inst := wb_inst
     }
 
     BoringUtils.addSource(dtest_pc, "difftestPc")
     BoringUtils.addSource(dtest_inst, "difftestInst")
+    BoringUtils.addSource(dtest_valid, "difftestValid")
   }
 
   //  printf("if_pc=[%x] if_inst=%x exe_pc=[%x] Inst=%x stall=%x instRype=%x pcSelect=%x\n",
