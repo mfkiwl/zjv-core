@@ -163,12 +163,15 @@ class DataPath extends Module with phvntomParams {
   io.imem.req.bits.wen := false.B
   io.imem.req.bits.memtype := memWordU
 
-  when((io.ctrl.brType =/= ControlConst.brXXX || io.ctrl.bubble) && brCond.io.branch || io.ctrl.pcSelect === ControlConst.pcJump) {
-    exe_pc := if_pc
-    exe_inst := BUBBLE
-  }.elsewhen(!stall) {
-    exe_pc := if_pc
-    exe_inst := if_inst
+  when(!stall) {
+    when(io.ctrl.bubble || brCond.io.branch) {
+      exe_pc := if_pc
+      exe_inst := BUBBLE
+    }
+    .otherwise {
+      exe_pc := if_pc
+      exe_inst := if_inst
+    }
   }
 
   // ******************************

@@ -36,9 +36,9 @@ void SimMemAccess (paddr_t iaddr, paddr_t *idata,  paddr_t itype,
                    paddr_t daddr, paddr_t *drdata, paddr_t dwdata, paddr_t dtype, uint8_t dwen) {
 
 #ifdef PHVNTOM_DEBUG
-//  printf("[Memory Access] \n");
-//  printf("iaddr %lx %s\n", iaddr, getType(itype));
-//  printf("daddr %lx %s dwdata %lx wen %d\n", daddr, getType(dtype), dwdata, dwen);
+ printf("[Memory Access] \n");
+ printf("iaddr %lx %s\n", iaddr, getType(itype));
+ printf("daddr %lx %s dwdata %lx wen %d\n", daddr, getType(dtype), dwdata, dwen);
 #endif
 
 #define RACCESS(addr, memtype, rdata)                                     \
