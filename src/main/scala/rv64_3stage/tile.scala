@@ -2,18 +2,19 @@ package rv64_3stage
 
 import chisel3._
 import chisel3.util._
+import common._
 
 class TileIO extends Bundle with phvntomParams {
   // TODO
 }
 
 
-class Tile extends Module with phvntomParams {
+class Tile extends Module with phvntomParams with projectConfig{
   val io = IO(new TileIO)
 
   val core = Module(new Core)
 
-  val mem = Module(new simpleMem)
+  val mem = if (fpga) {Module(new FPGAMem)} else{Module(new simpleMem)}
 
   core.reset := reset
 

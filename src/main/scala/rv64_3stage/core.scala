@@ -10,6 +10,7 @@ trait phvntomParams {
   val regNum   = 32
 
   val diffTest = true
+  val pipe     = true
 }
 
 

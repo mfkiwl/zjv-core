@@ -186,7 +186,7 @@ reset_vector:                                                           \
 #define RVTEST_PASS                                                     \
         fence;                                                          \
         li TESTNUM, 1;                                                  \
-        ecall
+        ebreak
 
 #define TESTNUM gp
 #define RVTEST_FAIL                                                     \
