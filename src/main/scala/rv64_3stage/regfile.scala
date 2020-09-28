@@ -5,12 +5,12 @@ import chisel3.util._
 import chisel3.util.experimental.BoringUtils
 
 class RegFileIO extends Bundle with phvntomParams {
-  val rs1_addr = Input(UInt(5.W))
+  val rs1_addr = Input(UInt(regWidth.W))
   val rs1_data = Output(UInt(xlen.W))
-  val rs2_addr = Input(UInt(5.W))
+  val rs2_addr = Input(UInt(regWidth.W))
   val rs2_data = Output(UInt(xlen.W))
   val wen      = Input(Bool())
-  val rd_addr  = Input(UInt(5.W))
+  val rd_addr  = Input(UInt(regWidth.W))
   val rd_data  = Input(UInt(xlen.W))
 }
 
@@ -27,6 +27,4 @@ class RegFile extends Module with phvntomParams {
   if (diffTest) {
     BoringUtils.addSource(VecInit((0 to regNum-1).map(i => regs(i))), "difftestRegs")
   }
-
-
 }

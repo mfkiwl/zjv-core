@@ -20,6 +20,7 @@ object ControlConst {
   val pcBranch = 2.U(3.W)
   val pcJump   = 3.U(3.W)
   val pcEPC    = 4.U(3.W)
+  val pcSelectBits = pcPlus4.getWidth
 
   // ImmExt.io.instType
   val instXXX = 0.U(3.W)
@@ -29,6 +30,7 @@ object ControlConst {
   val UType   = 4.U(3.W)
   val JType   = 5.U(3.W)
   val ZType   = 6.U(3.W) // Zicsr
+  val instBits = instXXX.getWidth
 
   // BrCond.io.brType
   val brXXX    = 0.U(3.W)
@@ -38,16 +40,19 @@ object ControlConst {
   val bgeType  = 4.U(3.W)
   val bltuType = 5.U(3.W)
   val bgeuType = 6.U(3.W)
+  val brBits = brXXX.getWidth
 
   // io.ASelect
   val AXXX = 0.U(2.W)
   val APC  = 1.U(2.W)
   val ARS1 = 2.U(2.W)
+  val ASelectBits = AXXX.getWidth
 
   // io.BSelect
   val BXXX = 0.U(2.W)
   val BIMM = 1.U(2.W)
   val BRS2 = 2.U(2.W)
+  val BSelectBits = BXXX.getWidth
 
   // ALU.io.aluType
   val aluXXX  = 0.U(4.W)
@@ -63,7 +68,9 @@ object ControlConst {
   val aluAND  = 10.U(4.W)
   val aluCPA  = 11.U(4.W)
   val aluCPB  = 12.U(4.W)
+  val aluBits = aluXXX.getWidth
 
+  // io.memType
   val memXXX    = 0.U(3.W)
   val memByte   = 1.U(3.W)
   val memHalf   = 2.U(3.W)
@@ -72,6 +79,7 @@ object ControlConst {
   val memByteU  = 5.U(3.W)
   val memHalfU  = 6.U(3.W)
   val memWordU  = 7.U(3.W)
+  val memBits   = memXXX.getWidth
 
   // io.wbSelect
   val wbXXX = 0.U(3.W)
@@ -79,10 +87,12 @@ object ControlConst {
   val wbMEM = 2.U(3.W)
   val wbPC  = 3.U(3.W)
   val wbCSR = 4.U(3.W)
+  val wbBits = wbXXX.getWidth
 
   // sign extend or unsigned extend
   val unsignedExt = 0.U(1.W)
   val signedExt = 1.U(1.W)
+  val extBits = unsignedExt.getWidth
 
   // Following is From riscv-sodor:
   // The Bubble Instruction (Machine generated NOP)
@@ -98,17 +108,17 @@ object ControlConst {
 
 class ControlPathIO extends Bundle with phvntomParams {
   val inst      = Input(UInt(xlen.W))
-  val instType  = Output(UInt(3.W))
-  val pcSelect  = Output(UInt(2.W))
+  val instType  = Output(UInt(instBits.W))
+  val pcSelect  = Output(UInt(pcSelectBits.W))
   val bubble    = Output(Bool())
-  val brType    = Output(UInt(3.W))
-  val ASelect   = Output(UInt(2.W))
-  val BSelect   = Output(UInt(2.W))
-  val aluType   = Output(UInt(4.W))
-  val memType   = Output(UInt(3.W))
-  val wbSelect  = Output(UInt(3.W))
+  val brType    = Output(UInt(brBits.W))
+  val ASelect   = Output(UInt(ASelectBits.W))
+  val BSelect   = Output(UInt(BSelectBits.W))
+  val aluType   = Output(UInt(aluBits.W))
+  val memType   = Output(UInt(memBits.W))
+  val wbSelect  = Output(UInt(wbBits.W))
   val wbEnable  = Output(Bool())
-  val extType   = Output(UInt(1.W))   // 0 for unsinged, 1 for signed
+  val extType   = Output(UInt(extBits.W))   // 0 for unsinged, 1 for signed
   val ignoreUp  = Output(Bool())
 }
 
