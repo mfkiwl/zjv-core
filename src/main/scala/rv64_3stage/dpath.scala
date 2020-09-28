@@ -8,7 +8,7 @@ import chisel3.util.experimental.BoringUtils
 class BrCondIO extends Bundle with phvntomParams {
   val rs1 = Input(UInt(xlen.W))
   val rs2 = Input(UInt(xlen.W))
-  val brType = Input(UInt(3.W))
+  val brType = Input(UInt(brBits.W))
   val branch = Output(Bool())
 }
 
@@ -32,8 +32,8 @@ class BrCond extends Module with phvntomParams {
 
 class ImmExtIO extends Bundle with phvntomParams {
   val inst = Input(UInt(xlen.W))
-  val instType = Input(UInt(3.W))
-  val extType = Input(UInt(1.W))
+  val instType = Input(UInt(instBits.W))
+  val extType = Input(UInt(extBits.W))
   val out = Output(UInt(xlen.W))
 }
 
@@ -57,7 +57,7 @@ class ImmExt extends Module with phvntomParams {
 class ALUIO() extends Bundle with phvntomParams {
   val a = Input(UInt(xlen.W))
   val b = Input(UInt(xlen.W))
-  val opType = Input(UInt(4.W))
+  val opType = Input(UInt(aluBits.W))
   val ignoreUp = Input(Bool())
   val out = Output(UInt(xlen.W))
   val zero = Output(Bool())
