@@ -51,7 +51,7 @@ int main(int argc, char** argv)
 
    bool startTest = false;
 
-   while (!Verilated::gotFinish()) {
+   while (!engine.is_finish()) {
 
       engine.emu_step(1);
 
@@ -60,20 +60,30 @@ int main(int argc, char** argv)
          printf("[Emu] DiffTest Start \n");
       }
 
-      printf("\t\t [ ROUND %ld ]\n", engine.trace_count);
+      printf("\t\t\t\t [ ROUND %ld ]\n", engine.trace_count);
       printf("zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
       
-      if (startTest) {
+      if (startTest && engine.emu_difftest_valid()) {
          engine.sim_step(1);
-         
-         if(engine.emu_get_pc() != engine.sim_get_pc()) {
-            printf("========== [ Trace ] ==========\n");
-            printf("sim   pc:%lx\n", engine.sim_get_pc());
 
-            exit(-1);
-         } else if (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ) {
+         if (engine.is_finish()) {
+            printf("\n\t\t \x1b[32m========== [ PASS ] ==========\x1b[0m\n");
+            break;
+         }
+         
+         else if((engine.emu_get_pc() != engine.sim_get_pc()) ||
+            (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ) ) {
+            printf("\t\t ========== [ Trace Out ] ==========\n");
+            if (engine.emu_get_pc() != engine.sim_get_pc())
+               printf("emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
+            else
+               printf("emu|sim pc: %016lX|%016lx\n",  engine.emu_get_pc(), engine.sim_get_pc());
+
             for (int i = 0; i < REG_G_NUM; i++) {
-               printf("[%-3s] = %016lx|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+               if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
+                  printf("\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+               else
+                  printf("[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
                if (i % 3 == 2)
                   printf("\n");
             }
@@ -84,10 +94,9 @@ int main(int argc, char** argv)
 
       }
 
-
       printf("\n");      
 
-      sleep(0.5);
+      // sleep(1);
    }
 
    engine.trace_close();

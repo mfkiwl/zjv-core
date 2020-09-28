@@ -5,6 +5,8 @@ import chisel3.util._
 import ControlConst._
 import chisel3.util.experimental.BoringUtils
 
+import common._
+
 class BrCondIO extends Bundle with phvntomParams {
   val rs1 = Input(UInt(xlen.W))
   val rs2 = Input(UInt(xlen.W))
@@ -22,10 +24,10 @@ class BrCond extends Module with phvntomParams {
   val ltu = io.rs1 < io.rs2
   val geu = !ltu
   io.branch :=
-    ((io.brType === beqType) && eq) ||
-      ((io.brType === bneType) && neq) ||
-      ((io.brType === bltType) && lt) ||
-      ((io.brType === bgeType) && ge) ||
+    ((io.brType === beqType) && eq)     ||
+      ((io.brType === bneType) && neq)  ||
+      ((io.brType === bltType) && lt)   ||
+      ((io.brType === bgeType) && ge)   ||
       ((io.brType === bltuType) && ltu) ||
       ((io.brType === bgeuType) && geu)
 }
@@ -110,11 +112,11 @@ class DataPath extends Module with phvntomParams {
   val alu = Module(new ALU)
 
   /* Fetch / Execute Register */
-  val exe_inst = RegInit(UInt(32.W), BUBBLE)
+  val exe_inst = RegInit(UInt(xlen.W), BUBBLE)
   val exe_pc = RegInit(UInt(xlen.W), 0.U)
 
   /* Execute / Write Back Register */
-  val wb_inst = RegInit(UInt(32.W), BUBBLE)
+  val wb_inst = RegInit(UInt(xlen.W), BUBBLE)
   val wb_pc = RegInit(UInt(xlen.W), 0.U)
   val wb_alu = Reg(UInt(xlen.W))
   val wb_wdata = Reg(UInt(xlen.W))
@@ -226,30 +228,33 @@ class DataPath extends Module with phvntomParams {
 
   // Difftest
   if (diffTest) {
-    val dtest_pc = RegInit(UInt(xlen.W), 0.U)
-    val dtest_inst = RegInit(UInt(xlen.W), 0.U)
-    val dtest_valid = RegInit(Bool(), true.B)
+    val dtest_pc      = RegInit(UInt(xlen.W), 0.U)
+    val dtest_inst    = RegInit(UInt(xlen.W), 0.U)
+    val dtest_wbvalid = WireInit(Bool(), false.B)
+    val dtest_trmt    = WireInit(Bool(), false.B)
 
-    dtest_valid := !(stall || wb_inst(31, 0) === ControlConst.BUBBLE)
+    dtest_wbvalid := !(stall || dtest_inst(31, 0) === ControlConst.BUBBLE)
+    dtest_trmt    := dtest_inst(31, 0) === ControlConst.TRMT
+
     when(!stall) {
       dtest_pc := wb_pc
       dtest_inst := wb_inst
     }
 
-    BoringUtils.addSource(dtest_pc, "difftestPc")
-    BoringUtils.addSource(dtest_inst, "difftestInst")
-    BoringUtils.addSource(dtest_valid, "difftestValid")
+    BoringUtils.addSource(dtest_pc,      "difftestPC")
+    BoringUtils.addSource(dtest_inst,    "difftestInst")
+    BoringUtils.addSource(dtest_wbvalid, "difftestValid")
+    BoringUtils.addSource(dtest_trmt,    "difftestTerminate")
+
+    if (pipe) {
+      printf("      if stage \t\t exe stage \t\t wb stage \t\t debug stage\n")
+      printf("pc    %x\t %x\t %x\t %x \n", if_pc, exe_pc, wb_pc, dtest_pc)
+      printf("inst  %x\t %x\t %x\t %x \n", if_inst, exe_inst, wb_inst, dtest_inst)
+      printf("      stall [%c] \t\t\t\t\t\t\t valid [%c]\n\n",
+        Mux(stall, Str("*"), Str(" ")),
+        Mux(dtest_wbvalid, Str("*"), Str(" ")))
+    }
+
   }
-
-  //  printf("if_pc=[%x] if_inst=%x exe_pc=[%x] Inst=%x stall=%x instRype=%x pcSelect=%x\n",
-  //    if_pc,
-  //    if_inst,
-  //    exe_pc,
-  //    exe_inst,
-  //    stall,
-  //    io.ctrl.instType,
-  //    io.ctrl.pcSelect
-  //  )
-
 
 }

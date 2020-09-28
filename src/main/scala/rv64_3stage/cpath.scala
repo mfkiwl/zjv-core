@@ -102,6 +102,8 @@ object ControlConst {
   // between software NOPs and machine-generated Bubbles in the pipeline.
   val BUBBLE  = "b00000000000000000100000000110011".U(32.W)  // 0x000004033
 
+  val TRMT    = "b00000000000100000000000001110011".U(32.W)  // ebreak
+
 }
 
 class ControlPathIO extends Bundle with phvntomParams {

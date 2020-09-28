@@ -1,0 +1,65 @@
+# DiffTest Framework Case
+## Case 1 Mismatch width
+```
+class ControlPathIO extends Bundle with phvntomParams {
+    ...
+  val aluType   = Output(UInt(3.W))     // width should be 4
+    ...
+}
+```
+
+```
+// No Warning During Compiling ...
+sbt "runMain rv64_3stage.elaborate"
+[info] Loading global plugins from /home/phantom/.sbt/1.0/plugins
+[info] Loading settings for project phvntom-build from plugins.sbt ...
+[info] Loading project definition from /home/phantom/mychip/phvntom/project
+[info] Loading settings for project phvntom from build.sbt ...
+[info] Set current project to phvntom-core (in build file:/home/phantom/mychip/phvntom/)
+[warn] Multiple main classes detected.  Run 'show discoveredMainClasses' to see the list
+[info] running rv64_3stage.elaborate 
+[info] [0.001] Elaborating design...
+[info] [0.178] Done elaborating.
+Computed transform order in: 211.0 ms
+Total FIRRTL Compile Time: 1852.5 ms
+[success] Total time: 4 s, completed Sep 28, 2020, 1:57:48 PM
+```
+
+```
+		 [ ROUND 28 ]
+zjv   pc: 0x0000000080000064 (0xffff8137)
+core   0: 0x0000000080000064 (0xffff8137) lui     sp, 0xffff8
+[x0 ] = 0000000000000000|0000000000000000 [ra ] = 0000000000000000|0000000000000000 [sp ] = 0000000000000000|ffffffffffff8000  <<<
+[gp ] = 0000000000000004|0000000000000004 [tp ] = 0000000000000000|0000000000000000 [t0 ] = 0000000000000000|0000000000000000 
+[t1 ] = 0000000000000000|0000000000000000 [t2 ] = 0000000000000000|0000000000000000 [s0 ] = 0000000000000000|0000000000000000 
+[s1 ] = 0000000000000000|0000000000000000 [a0 ] = 0000000000000000|0000000000000000 [a1 ] = 0000000000000000|0000000000000000 
+[a2 ] = 0000000000000000|0000000000000000 [a3 ] = 0000000000000000|0000000000000000 [a4 ] = 0000000000000000|0000000000000000 
+[a5 ] = 0000000000000000|0000000000000000 [a6 ] = 0000000000000000|0000000000000000 [a7 ] = 0000000000000000|0000000000000000 
+[s2 ] = 0000000000000000|0000000000000000 [s3 ] = 0000000000000000|0000000000000000 [s4 ] = 0000000000000000|0000000000000000 
+[s5 ] = 0000000000000000|0000000000000000 [s6 ] = 0000000000000000|0000000000000000 [s7 ] = 0000000000000000|0000000000000000 
+[s8 ] = 0000000000000000|0000000000000000 [s9 ] = 0000000000000000|0000000000000000 [s10] = 0000000000000000|0000000000000000 
+[s11] = 0000000000000000|0000000000000000 [t3 ] = 0000000000000000|0000000000000000 [t4 ] = 000000000000000a|000000000000000a 
+[t5 ] = 000000000000000a|000000000000000a [t6 ] = 0000000000000000|0000000000000000 
+```
+
+## Case 2 Handle Hardware Bundle
+```
+		 [ ROUND 44 ]
+zjv   pc: 0x00000000800000a4 (0x11df1863)
+core   0: 0x00000000800000a4 (0x11df1863) bne     t5, t4, pc + 272
+
+      if stage 		 exe stage 		 wb stage 		 debug stage
+pc    00000000800001b8	 00000000800001b4	 00000000800000a8	 00000000800000a4 
+inst  0000000000018063	 000000000ff0000f	 0000000000004033	 0000000011df1863 
+stall [ ]  valid [*]
+
+		 [ ROUND 45 ]
+zjv   pc: 0x00000000800000a8 (0x00004033)
+core   0: 0x00000000800001b4 (0x0ff0000f) fence
+========== [ Trace ] ==========
+sim   pc:800001b4
+
+```
+
+
+

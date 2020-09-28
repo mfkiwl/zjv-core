@@ -17,6 +17,7 @@ log
 
 # FIRRTL
 *.fir
+*.vcd
 
 # Javascript generate by chisel
 *.anno.json
