@@ -14,7 +14,7 @@ class Tile extends Module with phvntomParams with projectConfig{
 
   val core = Module(new Core)
 
-  val mem = if (fpga) {Module(new FPGAMem)} else{Module(new simpleMem)}
+  val mem = if (fpga) {Module(new FPGAMem)} else {Module(new simpleMem)}
 
   core.reset := reset
 

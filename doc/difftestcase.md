@@ -82,4 +82,8 @@ emu|sim pc: 0000000080000000|0000000080000000
 [t5 ] = 0000000000000000|0000000000000000 [t6 ] = 0000000000000000|0000000000000000 
 ```
 
+```
+AUIPC     -> List(UType,   pcPlus4,  False,   brXXX,    APC/AXXX,     BIMM,   aluADD/aluCPB,  memXXX,    wbALU,   True,    signedExt, False),
+```
+
 

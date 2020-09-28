@@ -17,7 +17,15 @@ rv64i_test_target = \
 	andi \
 	lui \
 	auipc \
-
+	addiw \
+	slliw \
+	srliw \
+	sraiw \
+	addw \
+	srlw \
+	sllw \
+	subw \
+	sraw \
 
 
 rv64i_test_src = $(addsuffix .S, $(rv64i_sc_tests))
