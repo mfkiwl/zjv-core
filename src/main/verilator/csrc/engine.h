@@ -181,12 +181,17 @@ public:
             emu_get_reg( 7); emu_get_reg(17); emu_get_reg(27);
             emu_get_reg( 8); emu_get_reg(18); emu_get_reg(28);
             emu_get_reg( 9); emu_get_reg(19); emu_get_reg(29);
-        emu_state.pc   = zjv->io_difftest_pc;
-        emu_state.inst = zjv->io_difftest_inst;
+        emu_state.pc    = zjv->io_difftest_pc;
+        emu_state.inst  = zjv->io_difftest_inst;
+        emu_state.valid = zjv->io_difftest_valid;
     }
 
     void sim_get_state() {
         spike->get_state(&sim_state);       
+    }
+
+    unsigned long emu_difftest_valid() {
+        return emu_state.valid;
     }
 
     unsigned long emu_get_pc() {
@@ -199,6 +204,10 @@ public:
 
     unsigned long sim_get_pc() {
         return sim_state.pc;
+    }
+
+    bool is_finish() {
+        return Verilated::gotFinish() || zjv->io_difftest_trmt;
     }
 
 

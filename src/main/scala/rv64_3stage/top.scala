@@ -10,7 +10,8 @@ class DiffTestIO extends Bundle with phvntomParams {
   val regs = Output(Vec(regNum, UInt(xlen.W)))
   val pc   = Output(UInt(xlen.W))
   val inst = Output(UInt(xlen.W))
-  val valid = Output(UInt(1.W))
+  val valid = Output(Bool())
+  val trmt = Output(Bool())
 }
 
 class TopIO extends Bundle with phvntomParams {
@@ -26,10 +27,11 @@ class Top extends Module with phvntomParams {
   val tile = Module(new Tile)
 
   val difftest = WireInit(0.U.asTypeOf(new DiffTestIO))
-  BoringUtils.addSink(difftest.regs, "difftestRegs")
-  BoringUtils.addSink(difftest.pc, "difftestPc")
-  BoringUtils.addSink(difftest.inst, "difftestInst")
+  BoringUtils.addSink(difftest.regs,  "difftestRegs")
+  BoringUtils.addSink(difftest.pc,    "difftestPC")
+  BoringUtils.addSink(difftest.inst,  "difftestInst")
   BoringUtils.addSink(difftest.valid, "difftestValid")
+  BoringUtils.addSink(difftest.trmt,  "difftestTerminate")
 
   io.difftest := difftest
 
