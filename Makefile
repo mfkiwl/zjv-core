@@ -54,7 +54,7 @@ $(VSRC_DIR)/Top.v: $(SRC_DIR)/main/scala
 	sbt "runMain $(TARGET_CORE).elaborate"
 
 generate_emulator: $(VERILATOR_DEST_DIR)/emulator
-	$(foreach elf, $(TEST_ELF_LIST), $^ $(elf))
+	$(foreach elf, $(TEST_ELF_LIST), $^ $(elf); sleep 1;)
 
 $(SPIKE_DEST_DIR)/Makefile: $(SPIKE_SRC_DIR)/configure
 	mkdir -p $(SPIKE_DEST_DIR)

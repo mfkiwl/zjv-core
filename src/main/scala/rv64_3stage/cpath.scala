@@ -120,7 +120,7 @@ class ControlPath extends Module with phvntomParams {
     Array(         /*      Inst  |   PC   |  Bubble | Branch |   A    |   B    |  alu   |  Mem  |     wb    |  wb    |  Ext   | ignore  */
                    /*      Type  | Select |         |  Type  | Select | Select |  Type  | Type  |   Select  | Enable |  sign  |  Up     */
         LUI       -> List(UType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbALU,   True,    signedExt, False),
-        AUIPC     -> List(UType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbALU,   True,    signedExt, False),
+        AUIPC     -> List(UType,   pcPlus4,  False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbALU,   True,    signedExt, False),
         JAL       -> List(JType,   pcJump,   True,    brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbPC,    True,    signedExt, False),
         JALR      -> List(IType,   pcJump,   True,    brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbPC,    True,    signedExt, False),
         BEQ       -> List(BType,   pcBranch, False,   beqType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   False,   signedExt, False),

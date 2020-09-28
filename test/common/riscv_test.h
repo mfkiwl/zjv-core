@@ -105,6 +105,13 @@
 
 #define INTERRUPT_HANDLER j other_exception /* No interrupts should occur */
 
+
+#define RVTEST_BARE_CODE_BEGIN                                          \
+.section .text.init;                                                    \
+.align  6;                                                              \
+.globl _start;                                                          \
+_start:                                                                 
+
 #define RVTEST_CODE_BEGIN                                               \
         .section .text.init;                                            \
         .align  6;                                                      \

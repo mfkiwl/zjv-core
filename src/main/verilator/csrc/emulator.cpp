@@ -45,7 +45,7 @@ int main(int argc, char** argv)
       exit(1);
    }
 
-   dtengine_t engine(*(argv+1));
+   dtengine_t engine(argv[1]);
    engine.emu_reset(10);
    printf("[Emu] Reset after 10 cycles \n");
 
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
          engine.sim_step(1);
 
          if (engine.is_finish()) {
-            printf("\n\t\t \x1b[32m========== [ PASS ] ==========\x1b[0m\n");
+            printf("\n\t\t \x1b[32m========== [ %s PASS ] ==========\x1b[0m\n", argv[1]);
             break;
          }
          
