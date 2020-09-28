@@ -1,25 +1,7 @@
-#include "VTop__Dpi.h"
-#include "common.h"
-#define VM_TRACE 1
-#if VM_TRACE
-#include <verilated_vcd_c.h>
-#endif
-//#include "disasm.h" // disabled for now... need to update to the current ISA/ABI in common/disasm.*
-#include "VTop.h" // chisel-generated code...
-#include "verilator.h"
-#include "verilated.h"
-#include <fcntl.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-#include <riscv/difftest.h>
-#include <riscv/sim.h>
-#include <iostream>
-#include <unistd.h>
+#include "engine.h"
 
 sim_t *sim;
+reg_t emu_regs[32];
 
 uint64_t trace_count = 0;
 
@@ -58,161 +40,58 @@ int main(int argc, char** argv)
       argv[i++] = argv[optind++];
    }
 
-   extern void init_ram(const char *img);
-   init_ram(argv[1]);
-
-   VTop dut; // design under test, aka, your chisel code
-
-#if VM_TRACE
-   Verilated::traceEverOn(true); // Verilator must compute traced signals
-   VerilatedVcdC* tfp = new VerilatedVcdC;
-   // std::unique_ptr<VerilatedVcdFILE> vcdfd(new VerilatedVcdFILE(vcdfile));
-   // std::unique_ptr<VerilatedVcdC> tfp(new VerilatedVcdC(vcdfd.get()));
-   if (true) {
-      dut.trace(tfp, 99);  // Trace 99 levels of hierarchy
-      tfp->open("sim.vcd");
-   }
-   printf("TFP successfully opened sim.vcd\n");
-#endif
-
-   const char* isa = "RV64IM";
-   const char* priv = "M";
-   const char* varch = "vlen:128,elen:64,slen:128";
-   size_t nprocs = 1;
-   bool halted = false;
-   reg_t start_pc = reg_t(-1);
-   bool real_time_clint = false;
-   reg_t initrd_start = 0, initrd_end = 0;
-   const char* bootargs = NULL;
-   reg_t size = reg_t(2048) << 20;
-   std::vector<std::pair<reg_t, mem_t*>> mems(1, std::make_pair(reg_t(DRAM_BASE), new mem_t(size)));
-   std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices;
-   std::vector<std::string> htif_args((const char*const*)argv+1, (const char*const*)argv + argc);
-   std::vector<int> hartids;
-   debug_module_config_t dm_config = {
-      .progbufsize = 2,
-      .max_bus_master_bits = 0,
-      .require_authentication = false,
-      .abstract_rti = 0,
-      .support_hasel = true,
-      .support_abstract_csr_access = true,
-      .support_haltgroups = true
-   };
-   const char *log_path = nullptr;
-   bool dtb_enabled = true;
-   const char* dtb_file = NULL;
- 
-   sim = new sim_t(isa, priv, varch, nprocs, halted, real_time_clint, initrd_start, initrd_end, bootargs, start_pc, 
-                   mems, plugin_devices, htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file);
-
-   sim->set_log_commits(true);
-   // sim->run();
-
-   sim->set_log_commits(true);
-   sim->difftest_setup();
-
-   // reset for a few cycles to support pipelined reset
-   for (int i = 0; i < 10; i++) {
-     dut.reset = 1;
-     dut.clock = 0;
-     dut.eval();
-     dut.clock = 1;
-     dut.eval();
-     dut.reset = 0;
+   if (htif_argc != 2) {
+      printf("ARGUMENTS WRONG with %d\n", htif_argc);
+      exit(1);
    }
 
-   printf("[Verilator] Ready to Run\n");
+   dtengine_t engine(*(argv+1));
+   engine.emu_reset(10);
+   printf("[Emu] Reset after 10 cycles \n");
 
-
-   difftest_regs_t record;
-   do {
-      sim->difftest_continue(1);
-      sim->get_regs(&record);
-   } while (record.pc != 0x80000000);
-   printf("[Spike] Ready to Run\n");
-
-   bool start = false;
+   bool startTest = false;
 
    while (!Verilated::gotFinish()) {
-      dut.clock = 0;
-      dut.eval();
-#if VM_TRACE
-      bool dump = tfp && trace_count >= start;
-      if (dump)
-         tfp->dump(static_cast<vluint64_t>(trace_count * 2));
-#endif
-      dut.clock = 1;
-      dut.eval();
-#if VM_TRACE
-      if (dump)
-         tfp->dump(static_cast<vluint64_t>(trace_count * 2 + 1));
-#endif
-      trace_count++;
 
-      if (!start && dut.io_difftest_pc == 0x80000000) {
-         start = true;
-         printf("[Phvntom] Ready to Run\n");
+      engine.emu_step(1);
+
+      if (!startTest && engine.emu_get_pc() == 0x80000000) {
+         startTest = true;
+         printf("[Emu] DiffTest Start \n");
       }
 
-      //printf("\t\t [ ROUND %d ]\n", trace_count);
-      //printf("spike   pc:%08lx\n", record.pc);
-      //printf("phvntom pc:%08lx\n", dut.io_difftest_pc);
-      //printf("phvntom inst:%08lx\n", dut.io_difftest_inst);
-      //printf("\t\t [ GAME_OVER %d ]\n", trace_count);
-
-      if (start) {
-
-         if(record.pc != dut.io_difftest_pc) {
+      printf("\t\t [ ROUND %ld ]\n", engine.trace_count);
+      printf("zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+      
+      if (startTest) {
+         engine.sim_step(1);
+         
+         if(engine.emu_get_pc() != engine.sim_get_pc()) {
             printf("========== [ Trace ] ==========\n");
-            printf("spike   pc:%lx\n", record.pc);
-            printf("phvntom pc:%lx\n", dut.io_difftest_pc);
+            printf("sim   pc:%lx\n", engine.sim_get_pc());
 
+            exit(-1);
+         } else if (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ) {
+            for (int i = 0; i < REG_G_NUM; i++) {
+               printf("[%-3s] = %016lx|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+               if (i % 3 == 2)
+                  printf("\n");
+            }
+            if (REG_G_NUM % 3 != 0)
+            printf("\n");
             exit(-1);
          }
 
-         // CHECK_REGISTER_VALUE(2)
-
-         sim->difftest_continue(1);
-         sim->get_regs(&record);
-         printf("\n");
-
       }
 
-      
 
-      // sim->difftest_continue(1);
-      sleep(1);
+      printf("\n");      
 
-      if (max_cycles != 0 && trace_count == max_cycles)
-      {
-         failure = "timeout";
-         break;
-      }
+      sleep(0.5);
    }
 
-#if VM_TRACE
-  if (tfp)
-    tfp->close();
-  if (vcdfile)
-    fclose(vcdfile);
-#endif   
-
-   if (failure)
-   {
-      fprintf(logfile, "*** FAILED *** (%s) after %lld cycles\n", failure, (long long)trace_count);
-      return -1;
-   }
-
-
-#if 0
-
-#endif
-
-   for (auto& mem : mems)
-      delete mem.second;
-
-   for (auto& plugin_device : plugin_devices)
-      delete plugin_device.second;
-
+   engine.trace_close();
    return 0;
 }
+
+
