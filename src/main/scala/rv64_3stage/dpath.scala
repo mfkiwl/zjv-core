@@ -69,6 +69,7 @@ class ALU extends Module with phvntomParams {
   val io = IO(new ALUIO)
 
   val shamt = io.b(bitWidth - 1, 0)
+  def sign_ext32(a: UInt): UInt = { Cat(Fill(32, a(31)), a(31, 0)) }
   val lower =  MuxLookup(io.opType, "hdeadbeef".U, Seq(
     aluADD -> (io.a + io.b),
     aluSUB -> (io.a - io.b),
@@ -82,6 +83,15 @@ class ALU extends Module with phvntomParams {
     aluAND -> (io.a & io.b),
     aluCPA -> io.a,
     aluCPB -> io.b,
+    aluADDIW -> sign_ext32(io.a(31, 0) + io.b(31, 0)),
+    aluSLLIW -> sign_ext32(io.a(31, 0) << shamt(4, 0)),
+    aluSRLIW -> sign_ext32(io.a(31, 0) >> shamt(4, 0)),
+    aluSRAIW -> sign_ext32((io.a(31, 0).asSInt >> shamt(4, 0)).asUInt),
+    aluADDW -> sign_ext32(io.a(31, 0) + io.b(31, 0)),
+    aluSUBW -> sign_ext32(io.a(31, 0) - io.b(31, 0)),
+    aluSLLW -> sign_ext32(io.a(31, 0) << shamt(4, 0)),
+    aluSRLW -> sign_ext32(io.a(31, 0) >> shamt(4, 0)),
+    aluSRAW -> sign_ext32((io.a(31, 0).asSInt >> shamt(4, 0)).asUInt)
   ))
 
   when(io.ignoreUp) {
@@ -256,5 +266,4 @@ class DataPath extends Module with phvntomParams {
     }
 
   }
-
 }
