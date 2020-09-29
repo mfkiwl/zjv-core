@@ -91,6 +91,7 @@ object ControlConst {
   val wenXXX  = 0.U(2.W)
   val wenReg  = 1.U(2.W)
   val wenMem  = 2.U(2.W)
+  val wenCSR  = 2.U(2.W)
   val wenBits = wenXXX.getWidth
 
   // io.wbSelect
@@ -148,11 +149,11 @@ class ControlPath extends Module with phvntomParams {
         BGE       -> List(BType,   pcBranch, False,   bgeType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
         BLTU      -> List(BType,   pcBranch, False,   bltuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
         BGEU      -> List(BType,   pcBranch, False,   bgeuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
-        LB        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbMEM,   wenReg),
-        LH        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbMEM,   wenReg),
-        LW        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbMEM,   wenReg),
-        LBU       -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memByteU,  wbMEM,   wenReg),
-        LHU       -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memHalfU,  wbMEM,   wenReg),
+        LB        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbMEM,   wenReg),
+        LH        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbMEM,   wenReg),
+        LW        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbMEM,   wenReg),
+        LBU       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByteU,  wbMEM,   wenReg),
+        LHU       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalfU,  wbMEM,   wenReg),
         SB        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbXXX,   wenMem),
         SH        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbXXX,   wenMem),
         SW        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbXXX,   wenMem),
@@ -178,8 +179,8 @@ class ControlPath extends Module with phvntomParams {
         FENCE     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
         ECALL     -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
         EBREAK    -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
-        LWU       -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memWordU,  wbMEM,   wenReg),
-        LD        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbMEM,   wenReg),
+        LWU       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWordU,  wbMEM,   wenReg),
+        LD        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbMEM,   wenReg),
         SD        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbXXX,   wenMem),
         ADDIW     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADDW, memXXX,    wbALU,   wenReg),
         SLLIW     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLLW, memXXX,    wbALU,   wenReg),

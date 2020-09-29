@@ -1,31 +1,18 @@
 rv64i_test_target = \
-	lui   \
-	auipc \
-	jal   \
-	jalr  \
-	beq   \
-	bne   \
-	blt   \
-	bge   \
-	bltu  \
-	bgeu  \
-	lb    \
-	lh    \
-	lw    \
-	lbu   \
-	lhu   \
-	sb    \
+	$(dev_test_set) \
+	$(rv64i_r_type) \
+	$(rv64i_i_type) \
+	$(rv64i_u_type) \
+	$(rv64i_j_type) \
+	$(rv64i_b_type) \
+	$(rv64i_s_type) \
+
+dev_test_set = \
 	sh    \
 	sw    \
-	addi  \
-	slti  \
-	sltiu \
-	xori  \
-	ori   \
-	andi  \
-	slli  \
-	srli  \
-	srai  \
+
+
+rv64i_r_type = \
 	add   \
 	sub   \
 	sll   \
@@ -36,18 +23,68 @@ rv64i_test_target = \
 	sra   \
 	or    \
 	and   \
-	lwu   \
-	ld    \
-	sd    \
-	addiw \
-	slliw \
-	srliw \
-	sraiw \
 	addw  \
 	subw  \
 	sllw  \
 	srlw  \
 	sraw  \
+
+rv64i_i_type = \
+	addi  \
+	slti  \
+	sltiu \
+	xori  \
+	ori   \
+	andi  \
+	slli  \
+	srli  \
+	srai  \
+	jalr  \
+	lb    \
+	lh    \
+	lw    \
+	lbu   \
+	lhu   \
+	lwu   \
+	ld    \
+	addiw \
+	slliw \
+	srliw \
+	sraiw \
+
+rv64i_u_type = \
+	lui   \
+	auipc \
+
+rv64i_j_type = \
+	jal   \
+
+rv64i_b_type = \
+	beq   \
+	bne   \
+	blt   \
+	bge   \
+	bltu  \
+	bgeu  \
+
+rv64i_s_type = \
+	sb    \
+	sh    \
+	sw    \
+	sd    \
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 rv64i_test_src = $(addsuffix .S, $(rv64i_sc_tests))

@@ -38,9 +38,9 @@ void SimMemAccess (paddr_t iaddr, paddr_t *idata,  paddr_t itype,
                    paddr_t daddr, paddr_t *drdata, paddr_t dwdata, paddr_t dtype, uint8_t dwen) {
 
 #ifdef ZJV_DEBUG
-//  printf("[Memory Access] \n");
-//  printf("iaddr %016lx %s\n", iaddr, getType(itype));
-//  printf("daddr %016lx %s dwdata %016lx wen %d\n", daddr, getType(dtype), dwdata, dwen);
+ printf("[Memory Access] \n");
+ printf("iaddr %016lx %s\n", iaddr, getType(itype));
+ printf("daddr %016lx %s dwdata %016lx wen %d\n", daddr, getType(dtype), dwdata, dwen);
 #endif
 
 #define RACCESS(addr, memtype, rdata)                                     \
@@ -70,21 +70,19 @@ void SimMemAccess (paddr_t iaddr, paddr_t *idata,  paddr_t itype,
 
 
   if (iaddr != 0xdeadbeefL) {
-    // iaddr = iaddr - mem->get_base();
     RACCESS(iaddr, itype, idata);
     #ifdef ZJV_DEBUG
-      // printf("[READ] iaddr %016lx %016lx\n", iaddr, *idata);
+      printf("[READ] iaddr %016lx %016lx\n", iaddr, *idata);
     #endif
   }
 
   if (daddr != 0xdeadbeefL) {
-    // daddr = daddr - mem->get_base();
     WACCESS(daddr, dtype, dwen, dwdata);
     RACCESS(daddr, dtype, drdata);
     #ifdef ZJV_DEBUG
-      // if (dwen)
-      //   printf("[WRITE] daddr %016lx %016lx\n", daddr, *drdata);
-      // printf("[READ] iaddr %016lx %016lx\n", daddr, *drdata);
+      if (dwen)
+        printf("[WRITE] daddr %016lx %016lx\n", daddr, *drdata);
+      printf("[READ] iaddr %016lx %016lx\n", daddr, *drdata);
     #endif
   }
 

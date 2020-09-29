@@ -174,12 +174,22 @@ class DataPath extends Module with phvntomParams {
 
   regFile.io.rs1_addr := rs1_addr
   regFile.io.rs2_addr := rs2_addr
+  
 
   val rs1Hazard = wen.orR && rs1_addr.orR && (rs1_addr === rd_addr)
   val rs2Hazard = wen.orR && rs2_addr.orR && (rs2_addr === rd_addr)
 
-  val rs1 = Mux(wb_select === wbALU && rs1Hazard, wb_alu, regFile.io.rs1_data)
-  val rs2 = Mux(wb_select === wbALU && rs2Hazard, wb_alu, regFile.io.rs2_data)
+
+
+  val rs1 = Mux(wb_select === wbALU && rs1Hazard, wb_alu, 
+            Mux(wb_select === wbMEM && rs1Hazard, io.dmem.resp.bits.data,
+            Mux(wb_select === wbPC  && rs1Hazard, wb_pc + 4.U(xlen.W),
+            Mux(wb_select === wbCSR && rs1Hazard, 0.U(xlen.W), regFile.io.rs1_data))))
+  
+  val rs2 = Mux(wb_select === wbALU && rs2Hazard, wb_alu, 
+            Mux(wb_select === wbMEM && rs2Hazard, io.dmem.resp.bits.data,
+            Mux(wb_select === wbPC  && rs2Hazard, wb_pc + 4.U(xlen.W),
+            Mux(wb_select === wbCSR && rs2Hazard, 0.U(xlen.W), regFile.io.rs2_data))))  
 
   immExt.io.inst := exe_inst
   immExt.io.instType := io.ctrl.instType

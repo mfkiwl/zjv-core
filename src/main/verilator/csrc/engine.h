@@ -31,14 +31,6 @@
 #define REG_PC     32
 #define REG_NPC    33
 
-const char *reg_name[REG_G_NUM] = {
-  "x0", "ra", "sp",  "gp",  "tp", "t0", "t1", "t2",
-  "s0", "s1", "a0",  "a1",  "a2", "a3", "a4", "a5",
-  "a6", "a7", "s2",  "s3",  "s4", "s5", "s6", "s7",
-  "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
-};
-
-
 class dtengine_t {
 public:
     sim_t*  spike;
@@ -52,184 +44,30 @@ public:
         VerilatedVcdC* tfp;
     #endif
 
-    sim_t* sim_init(std::string elfpath) {
-        const char* isa = "RV64IM";
-        const char* priv = "M";
-        const char* varch = "vlen:128,elen:64,slen:128";
-        size_t nprocs = 1;
-        bool halted = false;
-        reg_t start_pc = reg_t(0x80000000);
-        bool real_time_clint = false;
-        reg_t initrd_start = 0, initrd_end = 0;
-        const char* bootargs = NULL;
-        reg_t size = reg_t(2048) << 20;
-        std::vector<std::pair<reg_t, mem_t*>> mems(1, std::make_pair(reg_t(DRAM_BASE), new mem_t(size)));
-        std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices;
-        std::vector<std::string> htif_args; htif_args.push_back(elfpath);
-        std::vector<int> hartids;
-        debug_module_config_t dm_config = {
-            .progbufsize = 2,
-            .max_bus_master_bits = 0,
-            .require_authentication = false,
-            .abstract_rti = 0,
-            .support_hasel = true,
-            .support_abstract_csr_access = true,
-            .support_haltgroups = true
-        };
-        const char *log_path = nullptr;
-        bool dtb_enabled = true;
-        const char* dtb_file = NULL;
+    sim_t* sim_init(std::string elfpath);
+    emu_t* emu_init(std::string elfpath);
 
-        spike = new sim_t(isa, priv, varch, nprocs, halted, real_time_clint, initrd_start, initrd_end, bootargs, start_pc, 
-                        mems, plugin_devices, htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file);
-
-        #ifdef ZJV_DEBUG
-            // spike->set_log_commits(true);
-            spike->set_procs_debug(true);
-        #endif
-        // spike->run();
-
-        spike->difftest_setup();
-    }
-
-    emu_t* emu_init(std::string elfpath) {
-        zjv = new emu_t;
-        extern void init_ram(const char *img);
-        init_ram(elfpath.c_str());
-    }
-
-    void emu_reset(uint cycle) {
-        for (int i = 0; i < cycle; i++) {
-            zjv->reset = 1;
-            zjv->clock = 0;
-            zjv->eval();
-            zjv->clock = 1;
-            zjv->eval();
-            zjv->reset = 0;
-        }
-    }
-
-    void sim_reset(uint cycle) {
-        // TODO
-    }
+    void emu_reset(uint cycle);
+    void sim_reset(uint cycle);
     
-    void sim_step(uint step) {
-        spike->difftest_continue(1);
-        sim_get_state();
-    }
+    void sim_step(uint step);
+    void emu_step(uint step);
 
-    void emu_step(uint step) {
-        zjv->clock = 0;
-        zjv->eval();
-        #if VM_TRACE
-            bool dump = tfp && trace_count >= start;
-            if (dump)
-                tfp->dump(static_cast<vluint64_t>(trace_count * 2));
-        #endif
-        zjv->clock = 1;
-        zjv-> eval();
-        #if VM_TRACE
-            if (dump)
-                tfp->dump(static_cast<vluint64_t>(trace_count * 2 + 1));
-        #endif
-        trace_count++;
-        emu_get_state();
-    }
+    dtengine_t(std::string elfpath);
 
-    void sim_until_npc(unsigned long pc) {
-        do {
-            sim_step(1);
-        } while (sim_state.npc != pc);
-    }
+    void trace_close();
 
-    dtengine_t(std::string elfpath) {
+    void emu_get_state();
+    void sim_get_state();
 
-        emu_init(elfpath);
-        sim_init(elfpath);
-        
+    unsigned long emu_get_pc();
+    unsigned long emu_get_inst();
+    unsigned long sim_get_pc();
 
-        #if VM_TRACE
-            Verilated::traceEverOn(true); // Verilator must compute traced signals
-            tfp = new VerilatedVcdC;
-            // std::unique_ptr<VerilatedVcdFILE> vcdfd(new VerilatedVcdFILE(vcdfile));
-            // std::unique_ptr<VerilatedVcdC> tfp(new VerilatedVcdC(vcdfd.get()));
-            if (true) {
-                zjv->trace(tfp, 99);  // Trace 99 levels of hierarchy
-                tfp->open("sim.vcd");
-            }
-            printf("TFP successfully opened sim.vcd\n");
-        #endif
-        trace_count = 0;
-    }
-
-    void trace_close () {
-        #if VM_TRACE
-        if (tfp)
-            tfp->close();
-        if (vcdfile)
-            fclose(vcdfile);
-        #endif  
-    }
-
-    void emu_get_state() {
-        #define emu_get_reg(n) emu_state.regs[n] = zjv->io_difftest_regs_##n
-            emu_get_reg( 0); emu_get_reg(10); emu_get_reg(20); emu_get_reg(30); 
-            emu_get_reg( 1); emu_get_reg(11); emu_get_reg(21); emu_get_reg(31); 
-            emu_get_reg( 2); emu_get_reg(12); emu_get_reg(22); 
-            emu_get_reg( 3); emu_get_reg(13); emu_get_reg(23);
-            emu_get_reg( 4); emu_get_reg(14); emu_get_reg(24);
-            emu_get_reg( 5); emu_get_reg(15); emu_get_reg(25);
-            emu_get_reg( 6); emu_get_reg(16); emu_get_reg(26);
-            emu_get_reg( 7); emu_get_reg(17); emu_get_reg(27);
-            emu_get_reg( 8); emu_get_reg(18); emu_get_reg(28);
-            emu_get_reg( 9); emu_get_reg(19); emu_get_reg(29);
-        emu_state.pc    = zjv->io_difftest_pc;
-        emu_state.inst  = zjv->io_difftest_inst;
-        emu_state.valid = zjv->io_difftest_valid;
-    }
-
-    void sim_get_state() {
-        spike->get_state(&sim_state);       
-    }
-
-    unsigned long emu_difftest_valid() {
-        return emu_state.valid;
-    }
-
-    unsigned long emu_get_pc() {
-        return emu_state.pc;
-    }
-
-    unsigned long emu_get_inst() {
-        return emu_state.inst;
-    }
-
-    unsigned long sim_get_pc() {
-        return sim_state.pc;
-    }
-
-    bool is_finish() {
-        return Verilated::gotFinish() || zjv->io_difftest_trmt;
-    }
-
-
+    bool is_finish();
+    unsigned long emu_difftest_valid();
 
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 #endif // _ENGINE_H
