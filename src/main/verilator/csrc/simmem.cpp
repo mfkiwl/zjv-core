@@ -37,8 +37,8 @@ void SimMemAccess (paddr_t iaddr, paddr_t *idata,  paddr_t itype,
 
 #ifdef PHVNTOM_DEBUG
  printf("[Memory Access] \n");
- printf("iaddr %lx %s\n", iaddr, getType(itype));
- printf("daddr %lx %s dwdata %lx wen %d\n", daddr, getType(dtype), dwdata, dwen);
+ printf("iaddr %016lx %s\n", iaddr, getType(itype));
+ printf("daddr %016lx %s dwdata %016lx wen %d\n", daddr, getType(dtype), dwdata, dwen);
 #endif
 
 #define RACCESS(addr, memtype, rdata)                                     \
@@ -74,8 +74,11 @@ void SimMemAccess (paddr_t iaddr, paddr_t *idata,  paddr_t itype,
 
   if (daddr != 0xdeadbeefL) {
     // daddr = daddr - mem->get_base();
-    RACCESS(daddr, dtype, drdata);
     WACCESS(daddr, dtype, dwen, dwdata);
+    RACCESS(daddr, dtype, drdata);
+    if (dwen) {
+      printf("[GOT] daddr %016lx %016lx\n", daddr, *drdata);
+    }
   }
 
 }

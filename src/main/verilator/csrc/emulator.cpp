@@ -73,7 +73,7 @@ int main(int argc, char** argv)
          
          else if((engine.emu_get_pc() != engine.sim_get_pc()) ||
             (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ) ) {
-            printf("\t\t ========== [ Trace Out ] ==========\n");
+            printf("\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
             if (engine.emu_get_pc() != engine.sim_get_pc())
                printf("emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
             else

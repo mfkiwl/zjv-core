@@ -1,5 +1,16 @@
 rv64i_test_target = \
-	ld \
+	sb \
+	sh \
+	sw \
+	sd \
+
+	# ld \
+	# lw \
+	# lh \
+	# lb \
+	# lwu \
+	# lbu \
+	# lhu \
 
 	# add \
 	# sub \
@@ -17,6 +28,7 @@ rv64i_test_target = \
 	# sltiu \
 	# xori \
 	# andi \
+	# ori \
 	# lui \
 	# auipc \
 	# addiw \

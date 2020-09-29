@@ -43,9 +43,15 @@ ifneq (,$(VTRACE))
 VERILATOR_FLAGS += --debug --trace
 endif
 
-.PHONY: clean build generate_verilog
+.PHONY: clean build generate_verilog generate_emulator
 
 all: generate_verilog
+
+difftest_target = $(foreach elf,$(TEST_ELF_LIST),$(addsuffix _dt,$(elf)))
+
+$(difftest_target): %_dt: $(VERILATOR_DEST_DIR)/emulator %
+	$^
+	@sleep 1
 
 generate_verilog: $(VSRC_DIR)/Top.v
 
@@ -53,8 +59,7 @@ $(VSRC_DIR)/Top.v: $(SRC_DIR)/main/scala
 	mkdir -p $(WORK_DIR)
 	sbt "runMain $(TARGET_CORE).elaborate"
 
-generate_emulator: $(VERILATOR_DEST_DIR)/emulator
-	$(foreach elf, $(TEST_ELF_LIST), $^ $(elf); sleep 1;)
+generate_emulator: $(difftest_target)
 
 $(SPIKE_DEST_DIR)/Makefile: $(SPIKE_SRC_DIR)/configure
 	mkdir -p $(SPIKE_DEST_DIR)

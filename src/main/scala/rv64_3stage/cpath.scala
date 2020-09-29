@@ -69,15 +69,11 @@ object ControlConst {
   val aluAND   = 10.U(5.W)
   val aluCPA   = 11.U(5.W)
   val aluCPB   = 12.U(5.W)
-  val aluADDIW = 13.U(5.W)
-  val aluSLLIW = 14.U(5.W)
-  val aluSRLIW = 15.U(5.W)
-  val aluSRAIW = 16.U(5.W)
-  val aluADDW  = 17.U(5.W)
-  val aluSUBW  = 18.U(5.W)
-  val aluSLLW  = 19.U(5.W)
-  val aluSRLW  = 20.U(5.W)
-  val aluSRAW  = 21.U(5.W)
+  val aluADDW  = 13.U(5.W)
+  val aluSUBW  = 14.U(5.W)
+  val aluSLLW  = 15.U(5.W)
+  val aluSRLW  = 16.U(5.W)
+  val aluSRAW  = 17.U(5.W)
   val aluBits = aluXXX.getWidth
 
   // io.memType
@@ -90,6 +86,12 @@ object ControlConst {
   val memHalfU  = 6.U(3.W)
   val memWordU  = 7.U(3.W)
   val memBits   = memXXX.getWidth
+
+  // io.wbEnable
+  val wenXXX  = 0.U(2.W)
+  val wenReg  = 1.U(2.W)
+  val wenMem  = 2.U(2.W)
+  val wenBits = wenXXX.getWidth
 
   // io.wbSelect
   val wbXXX = 0.U(3.W)
@@ -126,78 +128,76 @@ class ControlPathIO extends Bundle with phvntomParams {
   val aluType   = Output(UInt(aluBits.W))
   val memType   = Output(UInt(memBits.W))
   val wbSelect  = Output(UInt(wbBits.W))
-  val wbEnable  = Output(Bool())
-  val extType   = Output(UInt(extBits.W))   // 0 for unsinged, 1 for signed
-  val ignoreUp  = Output(Bool())
+  val wbEnable  = Output(UInt(wenBits.W))
 }
 
 class ControlPath extends Module with phvntomParams {
   val io = IO(new ControlPathIO)
 
   val controlSignal = ListLookup(io.inst,
-                     List(instXXX, pcPlus4, False, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, False, unsignedExt, False),
-    Array(         /*      Inst  |   PC   |  Bubble | Branch |   A    |   B    |  alu   |  Mem  |     wb    |  wb    |  Ext   | ignore  */
-                   /*      Type  | Select |         |  Type  | Select | Select |  Type  | Type  |   Select  | Enable |  sign  |  Up     */
-        LUI       -> List(UType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbALU,   True,    signedExt, False),
-        AUIPC     -> List(UType,   pcPlus4,  False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbALU,   True,    signedExt, False),
-        JAL       -> List(JType,   pcJump,   True,    brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbPC,    True,    signedExt, False),
-        JALR      -> List(IType,   pcJump,   True,    brXXX,    ARS1,    BIMM,   aluADD,  memXXX,    wbPC,    True,    signedExt, False),
-        BEQ       -> List(BType,   pcBranch, False,   beqType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   False,   signedExt, False),
-        BNE       -> List(BType,   pcBranch, False,   bneType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   False,   signedExt, False),
-        BLT       -> List(BType,   pcBranch, False,   bltType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   False,   signedExt, False),
-        BGE       -> List(BType,   pcBranch, False,   bgeType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   False,   signedExt, False),
-        BLTU      -> List(BType,   pcBranch, False,   bltuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   False,   signedExt, False),
-        BGEU      -> List(BType,   pcBranch, False,   bgeuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   False,   signedExt, False),
-        LB        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbMEM,   True,    signedExt, False),
-        LH        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbMEM,   True,    signedExt, False),
-        LW        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbMEM,   True,    signedExt, False),
-        LBU       -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memByteU,  wbMEM,   True,    signedExt, False),
-        LHU       -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memHalfU,  wbMEM,   True,    signedExt, False),
-        SB        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbXXX,   False,   signedExt, False),
-        SH        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbXXX,   False,   signedExt, False),
-        SW        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbXXX,   False,   signedExt, False),
-        ADDI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memXXX,    wbALU,   True,    signedExt, False),
-        SLTI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLT,  memXXX,    wbALU,   True,    signedExt, False),
-        SLTIU     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLTU, memXXX,    wbALU,   True,    signedExt, False),
-        XORI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluXOR,  memXXX,    wbALU,   True,    signedExt, False),
-        ORI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluOR,   memXXX,    wbALU,   True,    signedExt, False),
-        ANDI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluAND,  memXXX,    wbALU,   True,    signedExt, False),
-        SLLI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLL,  memXXX,    wbALU,   True,    signedExt, False),
-        SRLI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRL,  memXXX,    wbALU,   True,    signedExt, False),
-        SRAI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRA,  memXXX,    wbALU,   True,    signedExt, False),
-        ADD       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluADD,  memXXX,    wbALU,   True,    signedExt, False),
-        SUB       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSUB,  memXXX,    wbALU,   True,    signedExt, False),
-        SLL       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLL,  memXXX,    wbALU,   True,    signedExt, False),
-        SLT       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLT,  memXXX,    wbALU,   True,    signedExt, False),
-        SLTU      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLTU, memXXX,    wbALU,   True,    signedExt, False),
-        XOR       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluXOR,  memXXX,    wbALU,   True,    signedExt, False),
-        SRL       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRL,  memXXX,    wbALU,   True,    signedExt, False),
-        SRA       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRA,  memXXX,    wbALU,   True,    signedExt, False),
-        OR        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluOR,   memXXX,    wbALU,   True,    signedExt, False),
-        AND       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluAND,  memXXX,    wbALU,   True,    signedExt, False),
-        FENCE     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   False,   signedExt, False),
-        ECALL     -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   False,   signedExt, False),
-        EBREAK    -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   False,   signedExt, False),
-        LWU       -> List(instXXX, pcBubble, True,    brXXX,    ARS1,    BXXX,   aluADD,  memWordU,  wbMEM,   True,    signedExt, False),
-        LD        -> List(instXXX, pcBubble, True,    brXXX,    ARS1,    BXXX,   aluADD,  memDouble, wbMEM,   True,    signedExt, False),
-        SD        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluADD,  memDouble, wbXXX,   False,   signedExt, False),
-        ADDIW     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADDIW,  memXXX,    wbALU,   True,    signedExt,  True),
-        SLLIW     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLLIW,  memXXX,    wbALU,   True,    signedExt,  True),
-        SRLIW     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRLIW,  memXXX,    wbALU,   True,    signedExt,  True),
-        SRAIW     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRAIW,  memXXX,    wbALU,   True,    signedExt,  True),
-        ADDW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluADDW,  memXXX,    wbALU,   True,    signedExt,  True),
-        SUBW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSUBW,  memXXX,    wbALU,   True,    signedExt,  True),
-        SLLW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLLW,  memXXX,    wbALU,   True,    signedExt,  True),
-        SRLW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRLW,  memXXX,    wbALU,   True,    signedExt,  True),
-        SRAW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRAW,  memXXX,    wbALU,   True,    signedExt,  True),
-        FENCE_I   -> List(IType,   pcBubble, True,    brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   False,   signedExt, False),
-        CSRRW     -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   True,    signedExt, False),
-        CSRRS     -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   True,    signedExt, False),
-        CSRRC     -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   True,    signedExt, False),
-        CSRRWI    -> List(ZType,   pcBubble, True,    brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   True,    signedExt, False),
-        CSRRSI    -> List(ZType,   pcBubble, True,    brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   True,    signedExt, False),
-        CSRRCI    -> List(ZType,   pcBubble, True,    brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   True,    signedExt, False),
-        MRET      -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   False,   signedExt, False),
+                     List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
+    Array(         /*      Inst  |   PC   |  Bubble | Branch |   A    |   B    |  alu   |  Mem  |     wb    |  wb      */
+                   /*      Type  | Select |         |  Type  | Select | Select |  Type  | Type  |   Select  | Enable   */
+        LUI       -> List(UType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbALU,   wenReg),
+        AUIPC     -> List(UType,   pcPlus4,  False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbALU,   wenReg),
+        JAL       -> List(JType,   pcJump,   True,    brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbPC,    wenReg),
+        JALR      -> List(IType,   pcJump,   True,    brXXX,    ARS1,    BIMM,   aluADD,  memXXX,    wbPC,    wenReg),
+        BEQ       -> List(BType,   pcBranch, False,   beqType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        BNE       -> List(BType,   pcBranch, False,   bneType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        BLT       -> List(BType,   pcBranch, False,   bltType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        BGE       -> List(BType,   pcBranch, False,   bgeType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        BLTU      -> List(BType,   pcBranch, False,   bltuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        BGEU      -> List(BType,   pcBranch, False,   bgeuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        LB        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbMEM,   wenReg),
+        LH        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbMEM,   wenReg),
+        LW        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbMEM,   wenReg),
+        LBU       -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memByteU,  wbMEM,   wenReg),
+        LHU       -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memHalfU,  wbMEM,   wenReg),
+        SB        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbXXX,   wenMem),
+        SH        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbXXX,   wenMem),
+        SW        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbXXX,   wenMem),
+        ADDI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memXXX,    wbALU,   wenReg),
+        SLTI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLT,  memXXX,    wbALU,   wenReg),
+        SLTIU     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLTU, memXXX,    wbALU,   wenReg),
+        XORI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluXOR,  memXXX,    wbALU,   wenReg),
+        ORI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluOR,   memXXX,    wbALU,   wenReg),
+        ANDI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluAND,  memXXX,    wbALU,   wenReg),
+        SLLI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLL,  memXXX,    wbALU,   wenReg),
+        SRLI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRL,  memXXX,    wbALU,   wenReg),
+        SRAI      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRA,  memXXX,    wbALU,   wenReg),
+        ADD       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluADD,  memXXX,    wbALU,   wenReg),
+        SUB       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSUB,  memXXX,    wbALU,   wenReg),
+        SLL       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLL,  memXXX,    wbALU,   wenReg),
+        SLT       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLT,  memXXX,    wbALU,   wenReg),
+        SLTU      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLTU, memXXX,    wbALU,   wenReg),
+        XOR       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluXOR,  memXXX,    wbALU,   wenReg),
+        SRL       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRL,  memXXX,    wbALU,   wenReg),
+        SRA       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRA,  memXXX,    wbALU,   wenReg),
+        OR        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluOR,   memXXX,    wbALU,   wenReg),
+        AND       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluAND,  memXXX,    wbALU,   wenReg),
+        FENCE     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
+        ECALL     -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
+        EBREAK    -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
+        LWU       -> List(instXXX, pcBubble, True,    brXXX,    ARS1,    BXXX,   aluADD,  memWordU,  wbMEM,   wenReg),
+        LD        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbMEM,   wenReg),
+        SD        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbXXX,   wenMem),
+        ADDIW     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADDW, memXXX,    wbALU,   wenReg),
+        SLLIW     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLLW, memXXX,    wbALU,   wenReg),
+        SRLIW     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRLW, memXXX,    wbALU,   wenReg),
+        SRAIW     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRAW, memXXX,    wbALU,   wenReg),
+        ADDW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluADDW, memXXX,    wbALU,   wenReg),
+        SUBW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSUBW, memXXX,    wbALU,   wenReg),
+        SLLW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLLW, memXXX,    wbALU,   wenReg),
+        SRLW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRLW, memXXX,    wbALU,   wenReg),
+        SRAW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRAW, memXXX,    wbALU,   wenReg),
+        FENCE_I   -> List(IType,   pcBubble, True,    brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
+        CSRRW     -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   wenXXX),
+        CSRRS     -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   wenXXX),
+        CSRRC     -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   wenXXX),
+        CSRRWI    -> List(ZType,   pcBubble, True,    brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   wenXXX),
+        CSRRSI    -> List(ZType,   pcBubble, True,    brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   wenXXX),
+        CSRRCI    -> List(ZType,   pcBubble, True,    brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   wenXXX),
+        MRET      -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
     )
   )
 
@@ -214,7 +214,5 @@ class ControlPath extends Module with phvntomParams {
   io.wbSelect := controlSignal(8)
   io.wbEnable := controlSignal(9)
 
-  io.extType  := controlSignal(10)
-  io.ignoreUp := controlSignal(11)
 }
 

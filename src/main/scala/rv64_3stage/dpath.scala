@@ -35,7 +35,6 @@ class BrCond extends Module with phvntomParams {
 class ImmExtIO extends Bundle with phvntomParams {
   val inst = Input(UInt(xlen.W))
   val instType = Input(UInt(instBits.W))
-  val extType = Input(UInt(extBits.W))
   val out = Output(UInt(xlen.W))
 }
 
@@ -60,7 +59,6 @@ class ALUIO() extends Bundle with phvntomParams {
   val a = Input(UInt(xlen.W))
   val b = Input(UInt(xlen.W))
   val opType = Input(UInt(aluBits.W))
-  val ignoreUp = Input(Bool())
   val out = Output(UInt(xlen.W))
   val zero = Output(Bool())
 }
@@ -70,7 +68,7 @@ class ALU extends Module with phvntomParams {
 
   val shamt = io.b(bitWidth - 1, 0)
   def sign_ext32(a: UInt): UInt = { Cat(Fill(32, a(31)), a(31, 0)) }
-  val lower =  MuxLookup(io.opType, "hdeadbeef".U, Seq(
+  io.out :=  MuxLookup(io.opType, "hdeadbeef".U, Seq(
     aluADD -> (io.a + io.b),
     aluSUB -> (io.a - io.b),
     aluSLL -> (io.a << shamt),
@@ -83,22 +81,12 @@ class ALU extends Module with phvntomParams {
     aluAND -> (io.a & io.b),
     aluCPA -> io.a,
     aluCPB -> io.b,
-    aluADDIW -> sign_ext32(io.a(31, 0) + io.b(31, 0)),
-    aluSLLIW -> sign_ext32(io.a(31, 0) << shamt(4, 0)),
-    aluSRLIW -> sign_ext32(io.a(31, 0) >> shamt(4, 0)),
-    aluSRAIW -> sign_ext32((io.a(31, 0).asSInt >> shamt(4, 0)).asUInt),
     aluADDW -> sign_ext32(io.a(31, 0) + io.b(31, 0)),
     aluSUBW -> sign_ext32(io.a(31, 0) - io.b(31, 0)),
     aluSLLW -> sign_ext32(io.a(31, 0) << shamt(4, 0)),
     aluSRLW -> sign_ext32(io.a(31, 0) >> shamt(4, 0)),
     aluSRAW -> sign_ext32((io.a(31, 0).asSInt >> shamt(4, 0)).asUInt)
   ))
-
-  when(io.ignoreUp) {
-    io.out := Cat(Fill(32, lower(31)), lower(31, 0))
-  }.otherwise {
-    io.out := lower
-  }
 
   io.zero := ~io.out.orR
 
@@ -134,7 +122,7 @@ class DataPath extends Module with phvntomParams {
   // Control Signal of Write Back Stage (1 cycle delay)
   val wb_memType = Reg(UInt())
   val wb_select = Reg(UInt())
-  val wen = Reg(Bool())
+  val wen = Reg(UInt())
 
   // ******************************
   //    Instruction Fetch Stage
@@ -187,15 +175,14 @@ class DataPath extends Module with phvntomParams {
   regFile.io.rs1_addr := rs1_addr
   regFile.io.rs2_addr := rs2_addr
 
-  val rs1Hazard = wen && rs1_addr.orR && (rs1_addr === rd_addr)
-  val rs2Hazard = wen && rs2_addr.orR && (rs2_addr === rd_addr)
+  val rs1Hazard = wen.orR && rs1_addr.orR && (rs1_addr === rd_addr)
+  val rs2Hazard = wen.orR && rs2_addr.orR && (rs2_addr === rd_addr)
 
   val rs1 = Mux(wb_select === wbALU && rs1Hazard, wb_alu, regFile.io.rs1_data)
   val rs2 = Mux(wb_select === wbALU && rs2Hazard, wb_alu, regFile.io.rs2_data)
 
   immExt.io.inst := exe_inst
   immExt.io.instType := io.ctrl.instType
-  immExt.io.extType := io.ctrl.extType
 
   brCond.io.rs1 := rs1
   brCond.io.rs2 := rs2
@@ -204,7 +191,6 @@ class DataPath extends Module with phvntomParams {
   alu.io.opType := io.ctrl.aluType
   alu.io.a := Mux(io.ctrl.ASelect === APC, exe_pc, rs1)
   alu.io.b := Mux(io.ctrl.BSelect === BIMM, immExt.io.out, rs2)
-  alu.io.ignoreUp := io.ctrl.ignoreUp
 
   when(!stall) {
     wb_pc := exe_pc
@@ -227,10 +213,10 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.data := wb_wdata
 
   io.dmem.req.valid := wb_memType.orR
-  io.dmem.req.bits.wen := wb_memType.orR
+  io.dmem.req.bits.wen := wen === wenMem
   io.dmem.req.bits.memtype := wb_memType
 
-  regFile.io.wen := wen
+  regFile.io.wen := wen === wenReg
   regFile.io.rd_addr := rd_addr
   regFile.io.rd_data := MuxLookup(wb_select, "hdeadbeef".U, Seq(
     wbALU -> wb_alu,
@@ -242,7 +228,7 @@ class DataPath extends Module with phvntomParams {
   // Difftest
   if (diffTest) {
     val dtest_pc      = RegInit(UInt(xlen.W), 0.U)
-    val dtest_inst    = RegInit(UInt(xlen.W), 0.U)
+    val dtest_inst    = RegInit(UInt(xlen.W), BUBBLE)
     val dtest_wbvalid = WireInit(Bool(), false.B)
     val dtest_trmt    = WireInit(Bool(), false.B)
 
