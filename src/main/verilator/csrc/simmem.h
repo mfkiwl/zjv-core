@@ -56,7 +56,9 @@ protected:
 htif_simmem_t::htif_simmem_t(size_t width, size_t base)
   : base(base), width(width)
 {
+  #ifdef ZJV_DEBUG
   printf("[SimMem] CREATE : width: %lu base 0x%lx\n", width * 8, base);
+  #endif
 }
 
 void htif_simmem_t::read_chunk(addr_t taddr, size_t len, void* vdst)

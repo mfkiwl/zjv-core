@@ -15,7 +15,9 @@ void init_ram(const char *img) {
   reg_t entry;
   load_elf(img, memif, &entry);
 
+#ifdef ZJV_DEBUG
   printf("[SimMem] load elf %s\n", img);
+#endif
 }
 
 const char* getType(unsigned long memtype) {
@@ -35,10 +37,10 @@ extern "C"
 void SimMemAccess (paddr_t iaddr, paddr_t *idata,  paddr_t itype,
                    paddr_t daddr, paddr_t *drdata, paddr_t dwdata, paddr_t dtype, uint8_t dwen) {
 
-#ifdef PHVNTOM_DEBUG
- printf("[Memory Access] \n");
- printf("iaddr %016lx %s\n", iaddr, getType(itype));
- printf("daddr %016lx %s dwdata %016lx wen %d\n", daddr, getType(dtype), dwdata, dwen);
+#ifdef ZJV_DEBUG
+//  printf("[Memory Access] \n");
+//  printf("iaddr %016lx %s\n", iaddr, getType(itype));
+//  printf("daddr %016lx %s dwdata %016lx wen %d\n", daddr, getType(dtype), dwdata, dwen);
 #endif
 
 #define RACCESS(addr, memtype, rdata)                                     \
@@ -70,15 +72,20 @@ void SimMemAccess (paddr_t iaddr, paddr_t *idata,  paddr_t itype,
   if (iaddr != 0xdeadbeefL) {
     // iaddr = iaddr - mem->get_base();
     RACCESS(iaddr, itype, idata);
+    #ifdef ZJV_DEBUG
+      // printf("[READ] iaddr %016lx %016lx\n", iaddr, *idata);
+    #endif
   }
 
   if (daddr != 0xdeadbeefL) {
     // daddr = daddr - mem->get_base();
     WACCESS(daddr, dtype, dwen, dwdata);
     RACCESS(daddr, dtype, drdata);
-    if (dwen) {
-      printf("[GOT] daddr %016lx %016lx\n", daddr, *drdata);
-    }
+    #ifdef ZJV_DEBUG
+      // if (dwen)
+      //   printf("[WRITE] daddr %016lx %016lx\n", daddr, *drdata);
+      // printf("[READ] iaddr %016lx %016lx\n", daddr, *drdata);
+    #endif
   }
 
 }

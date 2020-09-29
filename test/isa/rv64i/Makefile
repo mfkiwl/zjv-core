@@ -1,45 +1,53 @@
 rv64i_test_target = \
-	sb \
-	sh \
-	sw \
-	sd \
-
-	# ld \
-	# lw \
-	# lh \
-	# lb \
-	# lwu \
-	# lbu \
-	# lhu \
-
-	# add \
-	# sub \
-	# sll \
-	# slt \
-	# sltu \
-	# xor \
-	# srl \
-	# sra \
-	# or \
-	# and \
-	# addi \
-	# slli \
-	# slti \
-	# sltiu \
-	# xori \
-	# andi \
-	# ori \
-	# lui \
-	# auipc \
-	# addiw \
-	# slliw \
-	# srliw \
-	# sraiw \
-	# addw \
-	# srlw \
-	# sllw \
-	# subw \
-	# sraw \
+	lui   \
+	auipc \
+	jal   \
+	jalr  \
+	beq   \
+	bne   \
+	blt   \
+	bge   \
+	bltu  \
+	bgeu  \
+	lb    \
+	lh    \
+	lw    \
+	lbu   \
+	lhu   \
+	sb    \
+	sh    \
+	sw    \
+	addi  \
+	slti  \
+	sltiu \
+	xori  \
+	ori   \
+	andi  \
+	slli  \
+	srli  \
+	srai  \
+	add   \
+	sub   \
+	sll   \
+	slt   \
+	sltu  \
+	xor   \
+	srl   \
+	sra   \
+	or    \
+	and   \
+	lwu   \
+	ld    \
+	sd    \
+	addiw \
+	slliw \
+	srliw \
+	sraiw \
+	addw  \
+	subw  \
+	sllw  \
+	srlw  \
+	sraw  \
 
 
 rv64i_test_src = $(addsuffix .S, $(rv64i_sc_tests))

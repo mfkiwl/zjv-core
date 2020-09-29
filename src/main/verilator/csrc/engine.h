@@ -83,10 +83,12 @@ public:
         spike = new sim_t(isa, priv, varch, nprocs, halted, real_time_clint, initrd_start, initrd_end, bootargs, start_pc, 
                         mems, plugin_devices, htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file);
 
-        spike->set_log_commits(true);
+        #ifdef ZJV_DEBUG
+            // spike->set_log_commits(true);
+            spike->set_procs_debug(true);
+        #endif
         // spike->run();
 
-        spike->set_log_commits(true);
         spike->difftest_setup();
     }
 

@@ -36,8 +36,9 @@ VERILATOR_FLAGS := --cc --exe --top-module Top 	\
 				  --assert --x-assign unique    \
 				  --output-split 20000 -O3    	\
 				  -I$(VERILATOR_VSRC_DIR) 	  	\
-				  -CFLAGS "$(VERILATOR_CXXFLAGS) -DPHVNTOM_DEBUG" \
+				  -CFLAGS "$(VERILATOR_CXXFLAGS) -DZJV_DEBUG" \
 				  -LDFLAGS "$(libfesvr) $(libriscv) $(libsoftfloat) $(libfdt) $(VERILATOR_LDFLAGS)"
+
 
 ifneq (,$(VTRACE))
 VERILATOR_FLAGS += --debug --trace
@@ -59,7 +60,7 @@ $(VSRC_DIR)/Top.v: $(SRC_DIR)/main/scala
 	mkdir -p $(WORK_DIR)
 	sbt "runMain $(TARGET_CORE).elaborate"
 
-generate_emulator: $(difftest_target)
+generate_emulator: $(VERILATOR_DEST_DIR)/emulator $(difftest_target)
 
 $(SPIKE_DEST_DIR)/Makefile: $(SPIKE_SRC_DIR)/configure
 	mkdir -p $(SPIKE_DEST_DIR)

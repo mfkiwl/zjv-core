@@ -245,7 +245,7 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_trmt,    "difftestTerminate")
 
-    if (pipe) {
+    if (pipeTrace) {
       printf("      if stage \t\t exe stage \t\t wb stage \t\t debug stage\n")
       printf("pc    %x\t %x\t %x\t %x \n", if_pc, exe_pc, wb_pc, dtest_pc)
       printf("inst  %x\t %x\t %x\t %x \n", if_inst, exe_inst, wb_inst, dtest_inst)

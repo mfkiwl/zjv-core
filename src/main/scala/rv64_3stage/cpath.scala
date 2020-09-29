@@ -178,7 +178,7 @@ class ControlPath extends Module with phvntomParams {
         FENCE     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
         ECALL     -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
         EBREAK    -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
-        LWU       -> List(instXXX, pcBubble, True,    brXXX,    ARS1,    BXXX,   aluADD,  memWordU,  wbMEM,   wenReg),
+        LWU       -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memWordU,  wbMEM,   wenReg),
         LD        -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbMEM,   wenReg),
         SD        -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbXXX,   wenMem),
         ADDIW     -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADDW, memXXX,    wbALU,   wenReg),

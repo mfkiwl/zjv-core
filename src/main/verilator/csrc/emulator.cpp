@@ -41,13 +41,17 @@ int main(int argc, char** argv)
    }
 
    if (htif_argc != 2) {
-      printf("ARGUMENTS WRONG with %d\n", htif_argc);
+      #ifdef ZJV_DEBUG
+         printf("ARGUMENTS WRONG with %d\n", htif_argc);
+      #endif
       exit(1);
    }
 
    dtengine_t engine(argv[1]);
    engine.emu_reset(10);
-   printf("[Emu] Reset after 10 cycles \n");
+   #ifdef ZJV_DEBUG
+      printf("[Emu] Reset after 10 cycles \n");
+   #endif
 
    bool startTest = false;
 
@@ -57,12 +61,15 @@ int main(int argc, char** argv)
 
       if (!startTest && engine.emu_get_pc() == 0x80000000) {
          startTest = true;
-         printf("[Emu] DiffTest Start \n");
+         #ifdef ZJV_DEBUG
+            printf("[Emu] DiffTest Start \n");
+         #endif
       }
 
-      printf("\t\t\t\t [ ROUND %ld ]\n", engine.trace_count);
-      printf("zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
-      
+      #ifdef ZJV_DEBUG
+         printf("\t\t\t\t [ ROUND %ld ]\n", engine.trace_count);
+         printf("zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+      #endif 
       if (startTest && engine.emu_difftest_valid()) {
          engine.sim_step(1);
 
@@ -88,13 +95,14 @@ int main(int argc, char** argv)
                   printf("\n");
             }
             if (REG_G_NUM % 3 != 0)
-            printf("\n");
+               printf("\n");
             exit(-1);
          }
 
       }
-
-      printf("\n");      
+      #ifdef ZJV_DEBUG
+         printf("\n");    
+      #endif  
 
       // sleep(1);
    }
