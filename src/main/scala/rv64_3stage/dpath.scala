@@ -93,11 +93,18 @@ class ALU extends Module with phvntomParams {
   //  printf(p"${io.opType} rs1: ${Hexadecimal(io.rs1)} rs2: ${Hexadecimal(io.rs2)} rd: ${Hexadecimal(io.rd)} zero: ${Hexadecimal(io.zero)}\n")
 }
 
+class ClintIO extends Bundle {
+  val mtip = Output(Bool())
+  val msip = Output(Bool())
+}
+
 class DataPathIO extends Bundle with phvntomParams {
   val ctrl = Flipped(new ControlPathIO)
 
   val imem = Flipped(new MemIO)
   val dmem = Flipped(new MemIO)
+
+  // val clint = Flipped(new ClintIO) TODO
 }
 
 class DataPath extends Module with phvntomParams {
@@ -108,6 +115,7 @@ class DataPath extends Module with phvntomParams {
   val immExt = Module(new ImmExt)
   val brCond = Module(new BrCond)
   val alu = Module(new ALU)
+  val csrFile = Module(new CSR)
 
   /* Fetch / Execute Register */
   val exe_inst = RegInit(UInt(xlen.W), BUBBLE)
@@ -118,11 +126,13 @@ class DataPath extends Module with phvntomParams {
   val wb_pc = RegInit(UInt(xlen.W), 0.U)
   val wb_alu = Reg(UInt(xlen.W))
   val wb_wdata = Reg(UInt(xlen.W))
+  val wb_original_csr = Reg(UInt(xlen.W))
 
   // Control Signal of Write Back Stage (1 cycle delay)
   val wb_memType = Reg(UInt())
   val wb_select = Reg(UInt())
   val wen = Reg(UInt())
+  val wb_illegal = Reg(UInt())
 
   // ******************************
   //    Instruction Fetch Stage
@@ -137,10 +147,14 @@ class DataPath extends Module with phvntomParams {
       pcBubble -> if_pc,
       pcBranch -> Mux(brCond.io.branch, alu.io.out, if_pc_4),
       pcJump -> alu.io.out,
-      pcEPC -> 0.U(xlen.W) /*TODO*/)))
+      pcEPC -> csrFile.io.epc)))  // there will be a bug when "csrw epc, eret" TODO
 
   when(!stall) {
-    if_pc := if_npc
+    when(csrFile.io.expt){
+      if_pc := csrFile.io.evec
+    }.otherwise{
+      if_pc := if_npc
+    }
   }
 
   io.imem.req.bits.addr := if_pc
@@ -189,7 +203,7 @@ class DataPath extends Module with phvntomParams {
   val rs2 = Mux(wb_select === wbALU && rs2Hazard, wb_alu, 
             Mux(wb_select === wbMEM && rs2Hazard, io.dmem.resp.bits.data,
             Mux(wb_select === wbPC  && rs2Hazard, wb_pc + 4.U(xlen.W),
-            Mux(wb_select === wbCSR && rs2Hazard, 0.U(xlen.W), regFile.io.rs2_data))))  
+            Mux(wb_select === wbCSR && rs2Hazard, 0.U(xlen.W), regFile.io.rs2_data))))
 
   immExt.io.inst := exe_inst
   immExt.io.instType := io.ctrl.instType
@@ -210,12 +224,18 @@ class DataPath extends Module with phvntomParams {
     wb_memType := io.ctrl.memType
     wb_select := io.ctrl.wbSelect
     wen := io.ctrl.wbEnable
+    wb_illegal := io.ctrl.instType === ControlConst.Illegal
   }
 
   // ******************************
   //        Write Back Stage
   // ******************************
   val wb_pc_4 = wb_pc + 4.U(xlen.W)
+  val wb_data = MuxLookup(wb_select, "hdeadbeef".U, Seq(
+    wbALU -> wb_alu,
+    wbMEM -> io.dmem.resp.bits.data,
+    wbPC -> wb_pc_4,
+    wbCSR -> csrFile.io.out))
 
   wb_alu := alu.io.out
 
@@ -226,21 +246,37 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.wen := wen === wenMem
   io.dmem.req.bits.memtype := wb_memType
 
-  regFile.io.wen := wen === wenReg
+  regFile.io.wen := wen === wenReg || wen === wenCSRW || wen === wenCSRC || wen === wenCSRS
   regFile.io.rd_addr := rd_addr
-  regFile.io.rd_data := MuxLookup(wb_select, "hdeadbeef".U, Seq(
-    wbALU -> wb_alu,
-    wbMEM -> io.dmem.resp.bits.data,
-    wbPC -> wb_pc_4,
-    wbCSR -> 0.U(xlen.W) /*TODO*/))
+  regFile.io.rd_data := wb_data
 
+  // normal csr operations
+  csrFile.io.stall := stall
+  csrFile.io.cmd := wen
+  csrFile.io.in := wb_data
+  // exception in
+  csrFile.io.pc := wb_pc
+  csrFile.io.addr := io.dmem.req.bits.addr
+  csrFile.io.inst := wb_inst
+  csrFile.io.illegal := wb_illegal
+  csrFile.io.is_load := wb_memType.orR && wenMem =/= wenMem
+  csrFile.io.is_store := wb_memType.orR && wen === wenMem
+  csrFile.io.mem_type := wb_memType
+  csrFile.io.pc_check := true.B
+  // interupt signals in, XIP from CLINT or PLIC
+  csrFile.io.tim_int := false.B // io.clint.mtip TODO
+  csrFile.io.soft_int := false.B  // io.clint.msip TODO
+  csrFile.io.external_int := false.B  // TODO
 
-  // Difftest
+  // ******************************
+  //        Diff Test Stage
+  // ******************************
   if (diffTest) {
     val dtest_pc      = RegInit(UInt(xlen.W), 0.U)
     val dtest_inst    = RegInit(UInt(xlen.W), BUBBLE)
     val dtest_wbvalid = WireInit(Bool(), false.B)
     val dtest_trmt    = WireInit(Bool(), false.B)
+    // val dtest_illegal_inst  = RegInit(Bool(), false.B)
 
     dtest_wbvalid := !(stall || dtest_inst(31, 0) === ControlConst.BUBBLE)
     dtest_trmt    := dtest_inst(31, 0) === ControlConst.TRMT
@@ -248,12 +284,14 @@ class DataPath extends Module with phvntomParams {
     when(!stall) {
       dtest_pc := wb_pc
       dtest_inst := wb_inst
+      // dtest_illegal_inst := wb_illegal
     }
 
     BoringUtils.addSource(dtest_pc,      "difftestPC")
     BoringUtils.addSource(dtest_inst,    "difftestInst")
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_trmt,    "difftestTerminate")
+    // BoringUtils.addSource(dtest_illegal_inst, "difftestIllegal")
 
     if (pipeTrace) {
       printf("      if stage \t\t exe stage \t\t wb stage \t\t debug stage\n")

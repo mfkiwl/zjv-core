@@ -96,8 +96,6 @@ class CSRFileIO extends Bundle with phvntomParams {
   val rdata = Output(UInt(xlen.W))
   val evec_out = Output(UInt(xlen.W))
   val epc_out = Output(UInt(xlen.W))
-  val mtime_out = Output(UInt(64.W))
-  val mtimecmp_out = Output(UInt(64.W))
 }
 
 class CSRFile extends Module with phvntomParams {
@@ -165,12 +163,6 @@ class CSRFile extends Module with phvntomParams {
   val mvendoridr = 0.U(xlen.W)
   val marchidr = 0.U(xlen.W)
 
-  // Memory-mapped registers, when there are multiple cores
-  // these registers should be moved out
-  val mtimer = RegInit(0.U(64.W)) // these are always 64 bits, mtimecmp is used to generate TIM_INT
-  val mtimecmpr = RegInit(0.U(64.W))
-  mtimer := mtimer + 1.U(1.W)
-
   // SOME IMPORTANT INFORMATION
   // By default, M-mode interrupts are globally enabled if the hart’s current privilege mode is less than
   // M, or if the current privilege mode is M and the MIE bit in the mstatus register is set.
@@ -213,8 +205,6 @@ class CSRFile extends Module with phvntomParams {
   }
   io.epc_out := mepcr
   io.evec_out := mtvecr
-  io.mtime_out := mtimer
-  io.mtimecmp_out := mtimecmpr
 
   // seq-logic to write csr file
   when(!io.stall) {
@@ -328,7 +318,7 @@ class ExceptionJudgerIO extends Bundle with phvntomParams {
   val mem_is_st = Input(Bool())
   val mem_ls_addr = Input(UInt(xlen.W))
   val mem_pf = Input(Bool())
-  val mem_type = Input(UInt(3.W))
+  val mem_type = Input(UInt(ControlConst.memBits.W))
   val wb_cmd = Input(Bool())
   val wb_csr_addr = Input(UInt(12.W))
   val has_except = Output(Bool())
@@ -430,7 +420,7 @@ class InterruptJudger extends Module with phvntomParams {
 class CSRIO extends Bundle with phvntomParams {
   // CSRXX
   val stall = Input(Bool())
-  val cmd = Input(UInt(3.W))
+  val cmd = Input(UInt(ControlConst.wenBits.W))
   val in = Input(UInt(xlen.W))
   val out = Output(UInt(xlen.W))
   // Exception
@@ -440,7 +430,7 @@ class CSRIO extends Bundle with phvntomParams {
   val illegal = Input(Bool())
   val is_load = Input(Bool())
   val is_store = Input(Bool())
-  val mem_type = Input(UInt(3.W))
+  val mem_type = Input(UInt(ControlConst.memBits.W))
   val pc_check = Input(Bool())
   val expt = Output(Bool())
   val evec = Output(UInt(xlen.W))
@@ -449,9 +439,10 @@ class CSRIO extends Bundle with phvntomParams {
   val tim_int = Input(Bool())
   val soft_int = Input(Bool())
   val external_int = Input(Bool())
-  // MMIO (in CSR because single core)
-  val mtime = Output(UInt(64.W))
-  val mtimecmp = Output(UInt(64.W))
+  // MMIO registers read write
+  // val mmio_req = Valid(new MemReq)
+  // val mmio_resp = Valid(new MemResp)
+  // val stall_req = Output(Bool())
 }
 
 class CSR extends Module with phvntomParams {
@@ -466,11 +457,11 @@ class CSR extends Module with phvntomParams {
   interrupt_judger.io.timer_int := io.tim_int
   interrupt_judger.io.software_int := io.soft_int
   interrupt_judger.io.external_int := io.external_int
-  interrupt_judger.io.int_mode := 0.U(1.W) // machine mode only
+  interrupt_judger.io.int_mode := 0.U(1.W) // machine mode only TODO
 
   exception_judger.io.if_inst_addr := io.pc
   exception_judger.io.if_pc_check := io.pc_check
-  exception_judger.io.if_pf := false.B // do not consider page fault now
+  exception_judger.io.if_pf := false.B
   exception_judger.io.decode_illegal_inst := io.illegal
   exception_judger.io.mem_is_ld := io.is_load
   exception_judger.io.mem_is_st := io.is_store
@@ -497,6 +488,4 @@ class CSR extends Module with phvntomParams {
   io.expt := exception_judger.io.has_except // here we temporarily do not consider if the CSR file is valid
   io.evec := csr_regfile.io.evec_out
   io.epc := csr_regfile.io.epc_out
-  io.mtime := csr_regfile.io.mtime_out
-  io.mtimecmp := csr_regfile.io.mtimecmp_out
 }
