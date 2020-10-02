@@ -20,16 +20,19 @@ class Uncache extends Module with phvntomParams with AXI4Parameters {
     Enum(8)
   val state = RegInit(s_IDLE)
 
-  io.out.aw.bits.id := 0.U
-  io.out.ar.bits.id := 0.U
-
   // disable all channels
   io.out.aw.valid := false.B
+  io.out.aw.bits := DontCare
   io.out.w.valid := false.B
+  io.out.w.bits := DontCare
   io.out.b.ready := false.B
   io.out.ar.valid := false.B
+  io.out.ar.bits := DontCare
   io.out.r.ready := false.B
   io.in.resp.valid := false.B // stall
+
+  io.out.aw.bits.id := 0.U
+  io.out.ar.bits.id := 0.U
 
   when(state === s_IDLE) {
     when(io.in.req.valid) {
@@ -70,7 +73,7 @@ class Uncache extends Module with phvntomParams with AXI4Parameters {
         io.out.w.bits.data := Fill(2, io.in.req.bits.data(31, 0))
       }
     }
-    val offset = io.in.req.bits.addr(blen - 1, 0) << 8
+    val offset = io.in.req.bits.addr(blen - 1, 0)
     switch(io.in.req.bits.memtype) {
       is(memXXX) { io.out.w.bits.strb := Fill(xlen / 8, 1.U(1.W)) }
       is(memByte) { io.out.w.bits.strb := Fill(1, 1.U(1.W)) << offset }
@@ -95,6 +98,7 @@ class Uncache extends Module with phvntomParams with AXI4Parameters {
       }
     }.elsewhen(state === s_WB_WAIT_BVALID) {
       io.out.aw.valid := false.B
+      io.out.w.valid := false.B
       when(io.out.b.valid) {
         state := s_IDLE
         io.in.resp.valid := true.B
@@ -115,56 +119,99 @@ class Uncache extends Module with phvntomParams with AXI4Parameters {
       when(io.out.r.valid) {
         io.out.r.ready := true.B
         when(io.out.r.bits.last) {
-          state := s_REFILL
+          state := s_FINISH
         }
       }
+    }.elsewhen(state === s_REFILL) {
+      state := s_FINISH
     }.elsewhen(state === s_FINISH) {
       when(io.in.req.bits.wen) {
         state := s_WB_WAIT_AWREADY
       }.otherwise {
         state := s_IDLE
-        io.in.resp.valid := true.B
+        // io.in.resp.valid := true.B
       }
     }
   }
 
+  val offset = io.in.req.bits.addr(blen - 1, 0) << 3
+  val mask = Wire(UInt(xlen.W))
+  val realdata = Wire(UInt(xlen.W))
+  mask := 0.U
+  realdata := 0.U
+  io.in.resp.bits.data := 0.U
   when(state === s_RECEIVING && io.out.r.valid) {
-    val offset = io.in.req.bits.addr(blen - 1, 0)
-    val mask = Wire(UInt())
-    val realdata = Wire(UInt())
+    io.in.resp.valid := true.B
     switch(io.in.req.bits.memtype) {
       is(memXXX) { io.in.resp.bits.data := io.out.r.bits.data }
       is(memByte) {
-        mask := Fill(1, 1.U(1.W)) << offset
-        realdata := io.out.r.bits.data & mask
+        mask := Fill(8, 1.U(1.W)) << offset
+        realdata := (io.out.r.bits.data & mask) >> offset
         io.in.resp.bits.data := Cat(Fill(56, realdata(7)), realdata(7, 0))
       }
       is(memHalf) {
-        mask := Fill(2, 1.U(1.W)) << offset
-        realdata := io.out.r.bits.data & mask
+        mask := Fill(16, 1.U(1.W)) << offset
+        realdata := (io.out.r.bits.data & mask) >> offset
         io.in.resp.bits.data := Cat(Fill(48, realdata(15)), realdata(15, 0))
       }
       is(memWord) {
-        mask := Fill(4, 1.U(1.W)) << offset
-        realdata := io.out.r.bits.data & mask
+        mask := Fill(32, 1.U(1.W)) << offset
+        realdata := (io.out.r.bits.data & mask) >> offset
         io.in.resp.bits.data := Cat(Fill(32, realdata(31)), realdata(31, 0))
       }
       is(memDouble) { io.in.resp.bits.data := io.out.r.bits.data }
       is(memByteU) {
-        mask := Fill(1, 1.U(1.W)) << offset
-        realdata := io.out.r.bits.data & mask
+        mask := Fill(8, 1.U(1.W)) << offset
+        realdata := (io.out.r.bits.data & mask) >> offset
         io.in.resp.bits.data := Cat(Fill(56, 0.U), realdata(7, 0))
       }
       is(memHalfU) {
-        mask := Fill(2, 1.U(1.W)) << offset
-        realdata := io.out.r.bits.data & mask
+        mask := Fill(16, 1.U(1.W)) << offset
+        realdata := (io.out.r.bits.data & mask) >> offset
         io.in.resp.bits.data := Cat(Fill(48, 0.U), realdata(15, 0))
       }
       is(memWordU) {
-        mask := Fill(4, 1.U(1.W)) << offset
-        realdata := io.out.r.bits.data & mask
+        mask := Fill(32, 1.U(1.W)) << offset
+        realdata := (io.out.r.bits.data & mask) >> offset
         io.in.resp.bits.data := Cat(Fill(32, 0.U), realdata(31, 0))
       }
     }
   }
+
+  // printf("-----------Uncache Debug Start-----------\n")
+  // printf("state = %d\n", state);
+  // printf("offset = %x, mask = %x, realdata = %x\n", offset, mask, realdata)
+  // printf(
+  //   "req.valid = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d, resp.valid = %d, resp.data = %x\n",
+  //   io.in.req.valid,
+  //   io.in.req.bits.addr,
+  //   io.in.req.bits.data,
+  //   io.in.req.bits.wen,
+  //   io.in.req.bits.memtype,
+  //   io.in.resp.valid,
+  //   io.in.resp.bits.data
+  // )
+
+  // printf(
+  //   "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
+  //   io.out.aw.valid,
+  //   io.out.w.valid,
+  //   io.out.b.valid,
+  //   io.out.ar.valid,
+  //   io.out.r.valid
+  // )
+  // printf(
+  //   "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
+  //   io.out.aw.ready,
+  //   io.out.w.ready,
+  //   io.out.b.ready,
+  //   io.out.ar.ready,
+  //   io.out.r.ready
+  // )
+  // printf(p"aw.bits: ${io.out.aw.bits}\n")
+  // printf(p"w.bits: ${io.out.w.bits}\n")
+  // printf(p"b.bits: ${io.out.b.bits}\n")
+  // printf(p"ar.bits: ${io.out.ar.bits}\n")
+  // printf(p"r.bits: ${io.out.r.bits}\n")
+  // printf("-----------Uncache Debug Done-----------\n")
 }

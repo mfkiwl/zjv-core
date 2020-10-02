@@ -110,4 +110,28 @@ abstract class AXI4Slave[B <: Data](_extra: B = null)
   io.in.b.bits.user := RegEnable(io.in.aw.bits.user, io.in.aw.fire())
   io.in.r.bits.id := RegEnable(io.in.ar.bits.id, io.in.ar.fire())
   io.in.r.bits.user := RegEnable(io.in.ar.bits.user, io.in.ar.fire())
+
+  // printf("-----------AXI4Slave Debug Start-----------\n")
+  // printf(
+  //   "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
+  //   io.in.aw.valid,
+  //   io.in.w.valid,
+  //   io.in.b.valid,
+  //   io.in.ar.valid,
+  //   io.in.r.valid
+  // )
+  // printf(
+  //   "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
+  //   io.in.aw.ready,
+  //   io.in.w.ready,
+  //   io.in.b.ready,
+  //   io.in.ar.ready,
+  //   io.in.r.ready
+  // )
+  // printf(p"in.aw.bits: ${io.in.aw.bits}\n")
+  // printf(p"in.w.bits: ${io.in.w.bits}\n")
+  // printf(p"in.b.bits: ${io.in.b.bits}\n")
+  // printf(p"in.ar.bits: ${io.in.ar.bits}\n")
+  // printf(p"in.r.bits: ${io.in.r.bits}\n")
+  // printf("-----------AXI4Slave Debug Done-----------\n")
 }
