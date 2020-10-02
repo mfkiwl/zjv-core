@@ -75,7 +75,8 @@ rv64i_s_type = \
 	sd    \
 
 rv64i_z_type = \
-	mcsr  \
+	csr   \
+	#mcsr   \
 
 
 

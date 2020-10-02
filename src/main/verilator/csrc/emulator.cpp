@@ -75,8 +75,8 @@ int main(int argc, char** argv)
       }
 
       #ifdef ZJV_DEBUG
-         printf("\t\t\t\t [ ROUND %ld ]\n", engine.trace_count);
-         printf("zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+         // printf("\t\t\t\t [ ROUND %ld ]\n", engine.trace_count);
+         // printf("zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
       #endif 
       if (startTest && engine.emu_difftest_valid()) {
          engine.sim_step(1);

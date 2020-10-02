@@ -161,7 +161,7 @@ class CSRFile extends Module with phvntomParams {
   val midelegr = RegInit(0.U(xlen.W)) // so their values are 0
   val misar = Cat(2.U(2.W), 0.U((xlen - 2 - 13).W), true.B, 0.U(3.W), true.B, 0.U(8.W)) // rv64+im
   val mvendoridr = 0.U(xlen.W)
-  val marchidr = 0.U(xlen.W)
+  val marchidr = 5.U(xlen.W)
 
   // SOME IMPORTANT INFORMATION
   // By default, M-mode interrupts are globally enabled if the hart’s current privilege mode is less than
@@ -251,7 +251,7 @@ class CSRFile extends Module with phvntomParams {
           mtvecr := mtvecr & (~io.wdata)
         }
       }.elsewhen(io.which_reg === CSR.mip) {
-        when(io.wen) {
+        /* when(io.wen) {
           mipr_meip := io.wdata(11)
           mipr_seip := io.wdata(9)
           mipr_mtip := io.wdata(7)
@@ -272,7 +272,8 @@ class CSRFile extends Module with phvntomParams {
           mipr_stip := mipr_stip & ~io.wdata(5)
           mipr_mtip := mipr_mtip & ~io.wdata(3)
           mipr_stip := mipr_stip & ~io.wdata(1)
-        }
+        }*/
+        //  TODO controled by CLINT and PLIC
       }.elsewhen(io.which_reg === CSR.mie) {
         when(io.wen) {
           mier_meie := io.wdata(11)
@@ -298,11 +299,68 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.mstatus) {
         when(io.wen) {
-          // mstatusr := io.wdata
+          mstatusr_sd := io.wdata(xlen - 1)
+          mstatusr_mbe := io.wdata(37)
+          mstatusr_sbe := io.wdata(36)
+          mstatusr_sxl := io.wdata(35, 34)
+          mstatusr_uxl := io.wdata(33, 32)
+          mstatusr_tsr := io.wdata(22)
+          mstatusr_tw := io.wdata(21)
+          mstatusr_tvm := io.wdata(20)
+          mstatusr_mxr := io.wdata(19)
+          mstatusr_sum := io.wdata(18)
+          mstatusr_mprv := io.wdata(17)
+          mstatusr_xs := io.wdata(16, 15)
+          mstatusr_fs := io.wdata(14, 13)
+          mstatusr_mpp := io.wdata(12, 11)
+          mstatusr_spp := io.wdata(8)
+          mstatusr_mpie := io.wdata(7)
+          mstatusr_ube := io.wdata(6)
+          mstatusr_spie := io.wdata(5)
+          mstatusr_mie := io.wdata(3)
+          mstatusr_sie := io.wdata(1)
         }.elsewhen(io.sen) {
-          // mstatusr := mstatusr | io.wdata
+          mstatusr_sd := mstatusr(xlen - 1) | io.wdata(xlen - 1)
+          mstatusr_mbe := mstatusr(37) | io.wdata(37)
+          mstatusr_sbe := mstatusr(36) | io.wdata(36)
+          mstatusr_sxl := mstatusr(35, 34) | io.wdata(35, 34)
+          mstatusr_uxl := mstatusr(33, 32) | io.wdata(33, 32)
+          mstatusr_tsr := mstatusr(22) | io.wdata(22)
+          mstatusr_tw := mstatusr(21) | io.wdata(21)
+          mstatusr_tvm := mstatusr(20) | io.wdata(20)
+          mstatusr_mxr := mstatusr(19) | io.wdata(19)
+          mstatusr_sum := mstatusr(18) | io.wdata(18)
+          mstatusr_mprv := mstatusr(17) | io.wdata(17)
+          mstatusr_xs := mstatusr(16, 15) | io.wdata(16, 15)
+          mstatusr_fs := mstatusr(14, 13) | io.wdata(14, 13)
+          mstatusr_mpp := mstatusr(12, 11) | io.wdata(12, 11)
+          mstatusr_spp := mstatusr(8) | io.wdata(8)
+          mstatusr_mpie := mstatusr(7) | io.wdata(7)
+          mstatusr_ube := mstatusr(6) | io.wdata(6)
+          mstatusr_spie := mstatusr(5) | io.wdata(5)
+          mstatusr_mie := mstatusr(3) | io.wdata(3)
+          mstatusr_sie := mstatusr(1) | io.wdata(1)
         }.elsewhen(io.cen) {
-          // mstatusr := mstatusr & (~io.wdata)
+          mstatusr_sd := mstatusr(xlen - 1) & ~io.wdata(xlen - 1)
+          mstatusr_mbe := mstatusr(37) & ~io.wdata(37)
+          mstatusr_sbe := mstatusr(36) & ~io.wdata(36)
+          mstatusr_sxl := mstatusr(35, 34) & ~io.wdata(35, 34)
+          mstatusr_uxl := mstatusr(33, 32) & ~io.wdata(33, 32)
+          mstatusr_tsr := mstatusr(22) & ~io.wdata(22)
+          mstatusr_tw := mstatusr(21) & ~io.wdata(21)
+          mstatusr_tvm := mstatusr(20) & ~io.wdata(20)
+          mstatusr_mxr := mstatusr(19) & ~io.wdata(19)
+          mstatusr_sum := mstatusr(18) & ~io.wdata(18)
+          mstatusr_mprv := mstatusr(17) & ~io.wdata(17)
+          mstatusr_xs := mstatusr(16, 15) & ~io.wdata(16, 15)
+          mstatusr_fs := mstatusr(14, 13) & ~io.wdata(14, 13)
+          mstatusr_mpp := mstatusr(12, 11) & ~io.wdata(12, 11)
+          mstatusr_spp := mstatusr(8) & ~io.wdata(8)
+          mstatusr_mpie := mstatusr(7) & ~io.wdata(7)
+          mstatusr_ube := mstatusr(6) & ~io.wdata(6)
+          mstatusr_spie := mstatusr(5) & ~io.wdata(5)
+          mstatusr_mie := mstatusr(3) & ~io.wdata(3)
+          mstatusr_sie := mstatusr(1) & ~io.wdata(1)
         }
       }
     }
@@ -472,9 +530,9 @@ class CSR extends Module with phvntomParams {
   exception_judger.io.wb_csr_addr := csr_addr
 
   csr_regfile.io.which_reg := csr_addr
-  csr_regfile.io.wen := io.cmd === CSR.W
-  csr_regfile.io.cen := io.cmd === CSR.C
-  csr_regfile.io.sen := io.cmd === CSR.S
+  csr_regfile.io.wen := io.cmd === ControlConst.wenCSRW
+  csr_regfile.io.cen := io.cmd === ControlConst.wenCSRC
+  csr_regfile.io.sen := io.cmd === ControlConst.wenCSRS
   csr_regfile.io.wdata := io.in
   csr_regfile.io.stall := io.stall
   csr_regfile.io.has_except := exception_judger.io.has_except

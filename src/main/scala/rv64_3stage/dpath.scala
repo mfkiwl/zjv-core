@@ -238,7 +238,7 @@ class DataPath extends Module with phvntomParams {
       Mux(
         wb_select === wbPC && rs1Hazard,
         wb_pc + 4.U(xlen.W),
-        Mux(wb_select === wbCSR && rs1Hazard, 0.U(xlen.W), regFile.io.rs1_data)
+        Mux(wb_select === wbCSR && rs1Hazard, csrFile.io.out, regFile.io.rs1_data)
       )
     )
   )
@@ -252,7 +252,7 @@ class DataPath extends Module with phvntomParams {
       Mux(
         wb_select === wbPC && rs2Hazard,
         wb_pc + 4.U(xlen.W),
-        Mux(wb_select === wbCSR && rs2Hazard, 0.U(xlen.W), regFile.io.rs2_data)
+        Mux(wb_select === wbCSR && rs2Hazard, csrFile.io.in, regFile.io.rs2_data)
       )
     )
   )
@@ -309,9 +309,9 @@ class DataPath extends Module with phvntomParams {
   regFile.io.rd_data := wb_data
 
   // normal csr operations
-  csrFile.io.stall := stall
+  csrFile.io.stall := exe_stall
   csrFile.io.cmd := wen
-  csrFile.io.in := wb_data
+  csrFile.io.in := wb_alu
   // exception in
   csrFile.io.pc := wb_pc
   csrFile.io.addr := io.dmem.req.bits.addr
@@ -334,7 +334,7 @@ class DataPath extends Module with phvntomParams {
     val dtest_inst = RegInit(UInt(xlen.W), BUBBLE)
     val dtest_wbvalid = WireInit(Bool(), false.B)
     val dtest_trmt    = WireInit(Bool(), false.B)
-    // val dtest_illegal_inst  = RegInit(Bool(), false.B)
+    val dtest_csr_cmd = RegInit(0.U(ControlConst.wenBits.W))
 
     dtest_wbvalid := !(exe_stall || dtest_inst(31, 0) === ControlConst.BUBBLE)
     dtest_trmt := dtest_inst(31, 0) === ControlConst.TRMT
@@ -342,16 +342,16 @@ class DataPath extends Module with phvntomParams {
     when(!exe_stall) {
       dtest_pc := wb_pc
       dtest_inst := wb_inst
-      // dtest_illegal_inst := wb_illegal
+      dtest_csr_cmd := csrFile.io.cmd
     }
 
     BoringUtils.addSource(dtest_pc, "difftestPC")
     BoringUtils.addSource(dtest_inst, "difftestInst")
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_trmt,    "difftestTerminate")
-    // BoringUtils.addSource(dtest_illegal_inst, "difftestIllegal")
+    BoringUtils.addSource(dtest_csr_cmd, "difftestCSRCmd")
 
-    if (pipeTrace) {
+    if (pipeTrace == false) {
       // when (!stall) {
       printf("      if stage \t\t exe stage \t\t wb stage \t\t debug stage\n")
       printf("pc    %x\t %x\t %x\t %x \n", if_pc, exe_pc, wb_pc, dtest_pc)

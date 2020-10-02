@@ -195,12 +195,12 @@ class ControlPath extends Module with phvntomParams {
         SRLW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRLW, memXXX,    wbALU,   wenReg),
         SRAW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRAW, memXXX,    wbALU,   wenReg),
         FENCE_I   -> List(IType,   pcBubble, True,    brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
-        CSRRW     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   wenCSRW),
-        CSRRS     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   wenCSRS),
-        CSRRC     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   wenCSRC),
-        CSRRWI    -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   wenCSRW),
-        CSRRSI    -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   wenCSRS),
-        CSRRCI    -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   wenCSRC),
+        CSRRW     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRW),
+        CSRRS     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRS),
+        CSRRC     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRC),
+        CSRRWI    -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRW),
+        CSRRSI    -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRS),
+        CSRRCI    -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRC),
         MRET      -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
     )
   )
