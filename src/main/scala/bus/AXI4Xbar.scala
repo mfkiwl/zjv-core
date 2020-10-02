@@ -10,47 +10,55 @@ class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   })
 
   // val s_idle :: s_resp :: s_error :: Nil = Enum(3)
-  // val state = RegInit(s_idle)
+  // val r_state = RegInit(s_idle)
+  // val w_state = RegInit(s_idle)
 
+  // // read channel
   // // select the output channel according to the address
-  // val addr = io.in.req.bits.addr
-  // val outSelVec = VecInit(addressSpace.map(
-  //   range => (addr >= range._1.U && addr < (range._1 + range._2).U)))
+  // val raddr = io.in.ar.bits.addr
+  // val outSelVec = VecInit(
+  //   addressSpace.map(range =>
+  //     (raddr >= range._1.U && raddr < (range._1 + range._2).U)
+  //   )
+  // )
   // val outSelIdx = PriorityEncoder(outSelVec)
   // val outSel = io.out(outSelIdx)
-  // val outSelIdxResp = RegEnable(outSelIdx, outSel.req.fire() && (state === s_idle))
+  // val outSelIdxResp =
+  //   RegEnable(outSelIdx, outSel.r.fire() && (r_state === s_idle))
   // val outSelResp = io.out(outSelIdxResp)
-  // val reqInvalidAddr = io.in.req.valid && !outSelVec.asUInt.orR
-
-  // when(!(!io.in.req.valid || outSelVec.asUInt.orR) || !(!(io.in.req.valid && outSelVec.asUInt.andR))){
-  //   Debug(){
-  //     printf("crossbar access bad addr %x, time %d\n", addr, GTimer())
-  //   }
-  // }
-  // // assert(!io.in.req.valid || outSelVec.asUInt.orR, "address decode error, bad addr = 0x%x\n", addr)
-  // assert(!(io.in.req.valid && outSelVec.asUInt.andR), "address decode error, bad addr = 0x%x\n", addr)
+  // val reqInvalidAddr = io.in.ar.valid && !outSelVec.asUInt.orR
 
   // // bind out.req channel
-  // (io.out zip outSelVec).map { case (o, v) => {
-  //   o.req.bits := io.in.req.bits
-  //   o.req.valid := v && (io.in.req.valid && (state === s_idle))
-  //   o.resp.ready := v
-  // }}
-
-  // switch (state) {
-  //   is (s_idle) {
-  //     when (outSel.req.fire()) { state := s_resp }
-  //     when (reqInvalidAddr) { state := s_error }
+  // (io.out zip outSelVec).map {
+  //   case (o, v) => {
+  //     o.ar.bits := io.in.ar.bits
+  //     o.ar.valid := v && (io.in.ar.valid && (r_state === s_idle))
+  //     o.r.ready := v
   //   }
-  //   is (s_resp) { when (outSelResp.resp.fire()) { state := s_idle } }
-  //   is (s_error) { when(io.in.resp.fire()){ state := s_idle } }
   // }
 
-  // io.in.resp.valid := outSelResp.resp.fire() || state === s_error
-  // io.in.resp.bits <> outSelResp.resp.bits
-  // // io.in.resp.bits.exc.get := state === s_error
-  // outSelResp.resp.ready := io.in.resp.ready
-  // io.in.req.ready := outSel.req.ready || reqInvalidAddr
+  // switch(r_state) {
+  //   is(s_idle) {
+  //     when(outSel.r.fire()) { r_state := s_resp }
+  //     when(reqInvalidAddr) { r_state := s_error }
+  //   }
+  //   is(s_resp) { when(outSelResp.r.fire()) { r_state := s_idle } }
+  //   // is(s_error) { when(io.in.resp.fire()) { r_state := s_idle } }
+  // }
+
+  // io.in.r.valid := outSelResp.r.fire() || r_state === s_error
+  // io.in.r.bits <> outSelResp.r.bits
+  // // io.in.resp.bits.exc.get := r_state === s_error
+  // outSelResp.r.ready := io.in.r.ready
+  // io.in.ar.ready := outSel.ar.ready || reqInvalidAddr
+
+  // // when(!(!io.in.req.valid || outSelVec.asUInt.orR) || !(!(io.in.req.valid && outSelVec.asUInt.andR))){
+  // //   Debug(){
+  // //     printf("crossbar access bad addr %x, time %d\n", addr, GTimer())
+  // //   }
+  // // }
+  // // assert(!io.in.req.valid || outSelVec.asUInt.orR, "address decode error, bad addr = 0x%x\n", addr)
+  // // assert(!(io.in.req.valid && outSelVec.asUInt.andR), "address decode error, bad addr = 0x%x\n", addr)
   io.in <> io.out(0)
 }
 
@@ -63,8 +71,8 @@ class SimpleBusCrossbarNto1(n: Int) extends Module {
   if (n > 1) {
     val arbIdBits = log2Up(n)
 
-    val ar_arb = Module(new Arbiter(new AXI4BundleAR, n))
-    val aw_arb = Module(new Arbiter(new AXI4BundleAW, n))
+    val ar_arb = Module(new Arbiter(new AXI4BundleAR, n)) // or RRArbiter
+    val aw_arb = Module(new Arbiter(new AXI4BundleAW, n)) // or RRArbiter
 
     val out_r_arb_id = io.out.r.bits.id(arbIdBits - 1, 0)
     val out_b_arb_id = io.out.b.bits.id(arbIdBits - 1, 0)
@@ -120,6 +128,30 @@ class SimpleBusCrossbarNto1(n: Int) extends Module {
     aw_arb.io.out.ready := io.out.aw.ready && w_done
 
   } else { io.out <> io.in.head }
+
+  // printf("-----------Xbar Debug Start-----------\n")
+  // printf(
+  //   "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
+  //   io.out.aw.valid,
+  //   io.out.w.valid,
+  //   io.out.b.valid,
+  //   io.out.ar.valid,
+  //   io.out.r.valid
+  // )
+  // printf(
+  //   "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
+  //   io.out.aw.ready,
+  //   io.out.w.ready,
+  //   io.out.b.ready,
+  //   io.out.ar.ready,
+  //   io.out.r.ready
+  // )
+  // printf(p"out.aw.bits: ${io.out.aw.bits}\n")
+  // printf(p"out.w.bits: ${io.out.w.bits}\n")
+  // printf(p"out.b.bits: ${io.out.b.bits}\n")
+  // printf(p"out.ar.bits: ${io.out.ar.bits}\n")
+  // printf(p"out.r.bits: ${io.out.r.bits}\n")
+  // printf("-----------Xbar Debug Done-----------\n")
 }
 
 class AXI4Xbar(n: Int, addressSpace: List[(Long, Long)]) extends Module {

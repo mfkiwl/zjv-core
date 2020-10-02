@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 
    bool startTest = false;
 
-   while (!engine.is_finish()) {
+   while (!Verilated::gotFinish()) {
 
       engine.emu_step(1);
 
