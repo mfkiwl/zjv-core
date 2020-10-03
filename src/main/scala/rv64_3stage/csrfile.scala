@@ -54,20 +54,21 @@ object CSR {
 }
 
 object Exception {
-  val InstAddrMisaligned = 0x0.U
-  val InstAccessFault = 0x1.U
-  val IllegalInst = 0x2.U
-  val Breakpoint = 0x3.U
-  val LoadAddrMisaligned = 0x4.U
-  val LoadAccessFault = 0x5.U
-  val StoreAddrMisaligned = 0x6.U
-  val StoreAccessFault = 0x7.U
-  val EcallU = 0x8.U
-  val EcallS = 0x9.U
-  val EcallM = 0xb.U
-  val InstPageFault = 0xc.U
-  val LoadPageFault = 0xd.U
-  val StorePageFault = 0xf.U
+  val InstAddrMisaligned = 0x0.U(4.W)
+  val InstAccessFault = 0x1.U(4.W)
+  val IllegalInst = 0x2.U(4.W)
+  val Breakpoint = 0x3.U(4.W)
+  val LoadAddrMisaligned = 0x4.U(4.W)
+  val LoadAccessFault = 0x5.U(4.W)
+  val StoreAddrMisaligned = 0x6.U(4.W)
+  val StoreAccessFault = 0x7.U(4.W)
+  val EcallU = 0x8.U(4.W)
+  val EcallS = 0x9.U(4.W)
+  val EcallM = 0xb.U(4.W)
+  val InstPageFault = 0xc.U(4.W)
+  val LoadPageFault = 0xd.U(4.W)
+  val StorePageFault = 0xf.U(4.W)
+  val exceptionBits = InstAddrMisaligned.getWidth
 }
 
 object Interrupt {
@@ -212,11 +213,12 @@ class CSRFile extends Module with phvntomParams {
   // seq-logic to write csr file
   when(!io.stall) {
     when((io.has_int & machine_int_enable) | io.has_except) { // handle interrupt and exception
-      mepcr := io.current_pc
       when(io.has_int) {
+        mepcr := io.current_pc + 4.U
         mcauser_int := 1.U(1.W)
         mcauser_cause := io.int_type
       }.otherwise {
+        mepcr := io.current_pc
         mcauser_int := 0.U(1.W)
         mcauser_cause := io.except_type
       }
@@ -385,7 +387,7 @@ class ExceptionJudgerIO extends Bundle with phvntomParams {
   val decode_illegal_inst = Input(Bool())
   val mem_is_ld = Input(Bool())
   val mem_is_st = Input(Bool())
-  val mem_ls_addr = Input(UInt(xlen.W))
+  val illegal_mem_addr = Input(Bool())
   val mem_pf = Input(Bool())
   val mem_type = Input(UInt(ControlConst.memBits.W))
   val wb_inst = Input(UInt(xlen.W))
@@ -397,13 +399,6 @@ class ExceptionJudgerIO extends Bundle with phvntomParams {
 class ExceptionJudger extends Module with phvntomParams {
   val io = IO(new ExceptionJudgerIO)
 
-  val illegal_mem_addr = MuxLookup(io.mem_type, false.B, Seq(
-    ControlConst.memByte -> false.B, ControlConst.memByteU -> false.B,
-    ControlConst.memHalf -> io.mem_ls_addr(0), ControlConst.memHalfU -> io.mem_ls_addr(0),
-    ControlConst.memWord -> io.mem_ls_addr(1, 0).orR, ControlConst.memWordU -> io.mem_ls_addr(1, 0).orR,
-    ControlConst.memDouble -> io.mem_ls_addr(2, 0).orR
-  ))
-
   when(io.if_pc_check & io.if_inst_addr(1, 0).orR) {
     io.has_except := true.B
     io.except_out := Exception.InstAddrMisaligned
@@ -414,7 +409,7 @@ class ExceptionJudger extends Module with phvntomParams {
     io.has_except := true.B
     io.except_out := Exception.IllegalInst
   }.elsewhen(io.mem_is_ld) {
-    when(illegal_mem_addr) {
+    when(io.illegal_mem_addr) {
       io.has_except := true.B
       io.except_out := Exception.LoadAddrMisaligned
     }.elsewhen(io.mem_pf) {
@@ -425,7 +420,7 @@ class ExceptionJudger extends Module with phvntomParams {
       io.except_out := Exception.InstAddrMisaligned
     }
   }.elsewhen(io.mem_is_st) {
-    when(illegal_mem_addr) {
+    when(io.illegal_mem_addr) {
       io.has_except := true.B
       io.except_out := Exception.StoreAddrMisaligned
     }.elsewhen(io.mem_pf) {
@@ -494,7 +489,7 @@ class CSRIO extends Bundle with phvntomParams {
   val out = Output(UInt(xlen.W))
   // Exception
   val pc = Input(UInt(xlen.W))
-  val addr = Input(UInt(xlen.W))
+  val illegal_mem_addr = Input(Bool())
   val inst = Input(UInt(xlen.W))
   val illegal = Input(Bool())
   val is_load = Input(Bool())
@@ -535,7 +530,7 @@ class CSR extends Module with phvntomParams {
   exception_judger.io.decode_illegal_inst := io.illegal
   exception_judger.io.mem_is_ld := io.is_load
   exception_judger.io.mem_is_st := io.is_store
-  exception_judger.io.mem_ls_addr := io.addr
+  exception_judger.io.illegal_mem_addr := io.illegal_mem_addr
   exception_judger.io.mem_pf := false.B
   exception_judger.io.mem_type := io.mem_type
   exception_judger.io.wb_inst := io.inst
@@ -556,7 +551,7 @@ class CSR extends Module with phvntomParams {
 
   io.out := csr_regfile.io.rdata
   io.expt := interrupt_judger.io.has_int | exception_judger.io.has_except // here we temporarily do not consider if the CSR file is valid
-  io.evec := csr_regfile.io.evec_out
+  io.evec := Mux(csr_regfile.io.evec_out.orR, csr_regfile.io.evec_out, io.pc + 4.U)
   io.epc := csr_regfile.io.epc_out
   io.ret := csr_regfile.io.is_eret
 }

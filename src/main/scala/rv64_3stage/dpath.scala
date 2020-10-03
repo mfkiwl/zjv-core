@@ -167,7 +167,7 @@ class DataPath extends Module with phvntomParams {
   // ******************************
 
   val istall = !io.imem.resp.valid
-  val dstall = (wb_memType.orR && !io.dmem.resp.valid)
+  val dstall = (io.dmem.req.valid && !io.dmem.resp.valid)
   val if_stall = istall || dstall
   val exe_stall = dstall
   val if_pc = RegInit(UInt(xlen.W), startAddr)
@@ -307,6 +307,15 @@ class DataPath extends Module with phvntomParams {
   // ******************************
   //        Write Back Stage
   // ******************************
+  val illegal_mem_addr = MuxLookup(wb_memType, false.B, Seq(
+    memByte -> false.B,
+    memByteU -> false.B,
+    memHalf -> wb_alu(0),
+    memHalfU -> wb_alu(0),
+    memWord -> wb_alu(1, 0).orR,
+    memWordU -> wb_alu(1, 0).orR,
+    memDouble -> wb_alu(2, 0).orR
+  ))
   val wb_pc_4 = wb_pc + 4.U(xlen.W)
   val wb_data = MuxLookup(wb_select, "hdeadbeef".U, Seq(
     wbALU -> wb_alu,
@@ -317,11 +326,11 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.addr := wb_alu
   io.dmem.req.bits.data := wb_wdata
 
-  io.dmem.req.valid := wb_memType.orR
+  io.dmem.req.valid := wb_memType.orR && illegal_mem_addr === false.B
   io.dmem.req.bits.wen := wen === wenMem
   io.dmem.req.bits.memtype := wb_memType
 
-  regFile.io.wen := wen === wenReg || wen === wenCSRW || wen === wenCSRC || wen === wenCSRS
+  regFile.io.wen := (wen === wenReg && illegal_mem_addr === false.B) || wen === wenCSRW || wen === wenCSRC || wen === wenCSRS
   regFile.io.rd_addr := rd_addr
   regFile.io.rd_data := wb_data
 
@@ -331,7 +340,7 @@ class DataPath extends Module with phvntomParams {
   csrFile.io.in := wb_alu
   // exception in
   csrFile.io.pc := wb_pc
-  csrFile.io.addr := io.dmem.req.bits.addr
+  csrFile.io.illegal_mem_addr := illegal_mem_addr
   csrFile.io.inst := wb_inst
   csrFile.io.illegal := wb_illegal
   csrFile.io.is_load := wb_memType.orR && wen =/= wenMem
@@ -351,7 +360,7 @@ class DataPath extends Module with phvntomParams {
     val dtest_inst = RegInit(UInt(xlen.W), BUBBLE)
     val dtest_wbvalid = WireInit(Bool(), false.B)
     val dtest_trmt    = WireInit(Bool(), false.B)
-    val dtest_csr_cmd = RegInit(0.U(ControlConst.wenBits.W))
+    val dtest_expt = RegInit(false.B)
 
     dtest_wbvalid := !(exe_stall || dtest_inst(31, 0) === ControlConst.BUBBLE)
     dtest_trmt := dtest_inst(31, 0) === ControlConst.TRMT
@@ -359,14 +368,17 @@ class DataPath extends Module with phvntomParams {
     when(!exe_stall) {
       dtest_pc := wb_pc
       dtest_inst := wb_inst
-      dtest_csr_cmd := csrFile.io.cmd
+      dtest_expt := csrFile.io.expt
     }
 
     BoringUtils.addSource(dtest_pc, "difftestPC")
     BoringUtils.addSource(dtest_inst, "difftestInst")
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_trmt,    "difftestTerminate")
-    BoringUtils.addSource(dtest_csr_cmd, "difftestCSRCmd")
+
+    if(pipeTrace){
+      printf("[[[[[EXPT %d]]]]]\n", dtest_expt);
+    }
 
     if (pipeTrace == false) {
       // when (!stall) {
