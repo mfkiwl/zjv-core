@@ -160,7 +160,7 @@ class DataPath extends Module with phvntomParams {
   val wb_memType = Reg(UInt())
   val wb_select = Reg(UInt())
   val wen = Reg(UInt())
-  val wb_illegal = Reg(UInt())
+  val wb_illegal = RegInit(false.B)
 
   // ******************************
   //    Instruction Fetch Stage
@@ -174,23 +174,34 @@ class DataPath extends Module with phvntomParams {
   val if_pc_4 = if_pc + 4.U(xlen.W)
 
   val if_npc = Mux(
-    if_stall,
-    if_pc,
-    MuxLookup(
-      io.ctrl.pcSelect,
-      if_pc_4,
-      Seq(
-        pcPlus4 -> if_pc_4,
-        pcBubble -> if_pc,
-        pcBranch -> Mux(brCond.io.branch, alu.io.out, if_pc_4),
-        pcJump -> alu.io.out,
-        pcEPC -> csrFile.io.epc /*TODO*/
+    csrFile.io.expt,
+    csrFile.io.evec,
+    Mux(
+      csrFile.io.ret,
+      csrFile.io.epc,
+      Mux(
+        if_stall,
+        if_pc,
+        MuxLookup(
+          io.ctrl.pcSelect,
+          if_pc_4,
+          Seq(
+            pcPlus4 -> if_pc_4,
+            pcBubble -> if_pc,
+            pcBranch -> Mux(brCond.io.branch, alu.io.out, if_pc_4),
+            pcJump -> alu.io.out
+          )
+        )
       )
     )
   )
 
   when(!if_stall) {
     if_pc := if_npc
+  }.elsewhen(csrFile.io.expt) {
+    if_pc := csrFile.io.evec
+  }.elsewhen(csrFile.io.ret) {
+    if_pc := csrFile.io.epc
   }.elsewhen(brCond.io.branch || io.ctrl.pcSelect === pcJump) {
     if_pc := alu.io.out
   }
@@ -204,11 +215,10 @@ class DataPath extends Module with phvntomParams {
   io.imem.req.bits.memtype := memWordU
 
   when(!exe_stall) {
-    when(io.ctrl.bubble || brCond.io.branch || istall) {
-      exe_pc := if_pc
+    exe_pc := if_pc
+    when(io.ctrl.bubble || brCond.io.branch || istall || csrFile.io.expt || csrFile.io.ret) {
       exe_inst := BUBBLE
     }.otherwise {
-      exe_pc := if_pc
       exe_inst := if_inst
     }
   }
@@ -277,14 +287,21 @@ class DataPath extends Module with phvntomParams {
 
   when(!exe_stall) {
     wb_pc := exe_pc
-    wb_inst := exe_inst
     wb_alu := alu.io.out
     wb_wdata := rs2
-
-    wb_memType := io.ctrl.memType
-    wb_select := io.ctrl.wbSelect
-    wen := io.ctrl.wbEnable
-    wb_illegal := io.ctrl.instType === ControlConst.Illegal
+    when(csrFile.io.expt || csrFile.io.ret) {
+      wb_inst := BUBBLE
+      wb_memType := memXXX
+      wb_select := wbXXX
+      wen := wenXXX
+      wb_illegal := false.B
+    }.otherwise {
+      wb_inst := exe_inst
+      wb_memType := io.ctrl.memType
+      wb_select := io.ctrl.wbSelect
+      wen := io.ctrl.wbEnable
+      wb_illegal := io.ctrl.instType === ControlConst.Illegal
+    }
   }
 
   // ******************************
@@ -317,7 +334,7 @@ class DataPath extends Module with phvntomParams {
   csrFile.io.addr := io.dmem.req.bits.addr
   csrFile.io.inst := wb_inst
   csrFile.io.illegal := wb_illegal
-  csrFile.io.is_load := wb_memType.orR && wenMem =/= wenMem
+  csrFile.io.is_load := wb_memType.orR && wen =/= wenMem
   csrFile.io.is_store := wb_memType.orR && wen === wenMem
   csrFile.io.mem_type := wb_memType
   csrFile.io.pc_check := true.B

@@ -1,12 +1,14 @@
 rv64i_test_target = \
     $(rv64i_z_type) \
-	#$(dev_test_set) \
-	#$(rv64i_r_type) \
-	#$(rv64i_i_type) \
-	#$(rv64i_u_type) \
-	#$(rv64i_j_type) \
-	#$(rv64i_b_type) \
-	#$(rv64i_s_type) \
+	$(dev_test_set) \
+	$(rv64i_r_type) \
+	$(rv64i_i_type) \
+	$(rv64i_u_type) \
+	$(rv64i_j_type) \
+	$(rv64i_b_type) \
+	$(rv64i_s_type) \
+
+    #$(rv64i_exception)  \
 
 dev_test_set = \
 	sh    \
@@ -76,7 +78,15 @@ rv64i_s_type = \
 
 rv64i_z_type = \
 	csr   \
-	#mcsr   \
+	mcsr   \
+
+rv64i_exception = \
+	ma_addr     \
+	ma_fetch    \
+	illegal \
+	access  \
+	breakpoint  \
+
 
 
 

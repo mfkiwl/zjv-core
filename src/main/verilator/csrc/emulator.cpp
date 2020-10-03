@@ -81,8 +81,6 @@ int main(int argc, char** argv)
       if (startTest && engine.emu_difftest_valid()) {
          engine.sim_step(1);
 
-         // printf("\x1b[31mIn If cond emu pc: %016lX inst: %016lX valid: %016lX\x1b[0m\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.emu_difftest_valid());
-
          if (engine.is_finish()) {
             printf("\n\t\t \x1b[32m========== [ %s PASS ] ==========\x1b[0m\n", argv[1]);
             break;
@@ -92,9 +90,7 @@ int main(int argc, char** argv)
             (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ) ) {
             printf("\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
             if (engine.emu_get_pc() != engine.sim_get_pc())
-               printf("emu|sim \x1b[34mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
-            else
-               printf("emu|sim pc: %016lX|%016lx\n",  engine.emu_get_pc(), engine.sim_get_pc());
+               printf("emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
 
             for (int i = 0; i < REG_G_NUM; i++) {
                if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
@@ -107,8 +103,7 @@ int main(int argc, char** argv)
             if (REG_G_NUM % 3 != 0)
                printf("\n");
 
-            if (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0)
-               exit(-1);
+            exit(-1);
          }
 
       }

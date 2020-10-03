@@ -119,12 +119,12 @@ class CSRFile extends Module with phvntomParams {
   val mstatusr_mprv = RegInit(false.B)
   val mstatusr_xs = RegInit(0.U(2.W))
   val mstatusr_fs = RegInit(0.U(2.W))
-  val mstatusr_mpp = RegInit(0.U(2.W)) // When a trap is taken from privilege mode y into privilege mode x, x PIE is set to the value of x IE;
-  val mstatusr_spp = RegInit(false.B) //  x IE is set to 0; and x PP is set to y.
+  val mstatusr_mpp = RegInit(3.U(2.W)) // When a trap is taken from privilege mode y into privilege mode x, x PIE is set to the value of x IE;
+  val mstatusr_spp = RegInit(false.B) //  x IE is set to 0; and x PP is set to y. MPP is always 3, because M-Mode only
   val mstatusr_mpie = RegInit(false.B)
   val mstatusr_ube = RegInit(false.B)
   val mstatusr_spie = RegInit(false.B)
-  val mstatusr_mie = RegInit(true.B)
+  val mstatusr_mie = RegInit(false.B)
   val mstatusr_sie = RegInit(false.B)
   // MIE
   val mier_meie = RegInit(true.B)
@@ -162,6 +162,7 @@ class CSRFile extends Module with phvntomParams {
   val misar = Cat(2.U(2.W), 0.U((xlen - 2 - 13).W), true.B, 0.U(3.W), true.B, 0.U(8.W)) // rv64+im
   val mvendoridr = 0.U(xlen.W)
   val marchidr = 5.U(xlen.W)
+  val mscratchr = RegInit(0.U(xlen.W))
 
   // SOME IMPORTANT INFORMATION
   // By default, M-mode interrupts are globally enabled if the hart’s current privilege mode is less than
@@ -200,6 +201,8 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := mvendoridr
   }.elsewhen(io.which_reg === CSR.marchid) {
     io.rdata := marchidr
+  }.elsewhen(io.which_reg === CSR.mscratch) {
+    io.rdata := mscratchr
   }.otherwise {
     io.rdata := mhartidr
   }
@@ -249,6 +252,14 @@ class CSRFile extends Module with phvntomParams {
           mtvecr := mtvecr | io.wdata
         }.elsewhen(io.cen) {
           mtvecr := mtvecr & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.mscratch) {
+        when(io.wen) {
+          mscratchr := io.wdata
+        }.elsewhen(io.sen) {
+          mscratchr := mscratchr | io.wdata
+        }.elsewhen(io.cen) {
+          mscratchr := mscratchr & (~io.wdata)
         }
       }.elsewhen(io.which_reg === CSR.mip) {
         /* when(io.wen) {
@@ -312,7 +323,7 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_mprv := io.wdata(17)
           mstatusr_xs := io.wdata(16, 15)
           mstatusr_fs := io.wdata(14, 13)
-          mstatusr_mpp := io.wdata(12, 11)
+          // mstatusr_mpp := io.wdata(12, 11) TODO M-Mode, so always 3
           mstatusr_spp := io.wdata(8)
           mstatusr_mpie := io.wdata(7)
           mstatusr_ube := io.wdata(6)
@@ -333,7 +344,7 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_mprv := mstatusr(17) | io.wdata(17)
           mstatusr_xs := mstatusr(16, 15) | io.wdata(16, 15)
           mstatusr_fs := mstatusr(14, 13) | io.wdata(14, 13)
-          mstatusr_mpp := mstatusr(12, 11) | io.wdata(12, 11)
+          // mstatusr_mpp := mstatusr(12, 11) | io.wdata(12, 11) TODO M-Mode, so always 3
           mstatusr_spp := mstatusr(8) | io.wdata(8)
           mstatusr_mpie := mstatusr(7) | io.wdata(7)
           mstatusr_ube := mstatusr(6) | io.wdata(6)
@@ -354,7 +365,7 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_mprv := mstatusr(17) & ~io.wdata(17)
           mstatusr_xs := mstatusr(16, 15) & ~io.wdata(16, 15)
           mstatusr_fs := mstatusr(14, 13) & ~io.wdata(14, 13)
-          mstatusr_mpp := mstatusr(12, 11) & ~io.wdata(12, 11)
+          // mstatusr_mpp := mstatusr(12, 11) & ~io.wdata(12, 11) TODO M-Mode, so always 3
           mstatusr_spp := mstatusr(8) & ~io.wdata(8)
           mstatusr_mpie := mstatusr(7) & ~io.wdata(7)
           mstatusr_ube := mstatusr(6) & ~io.wdata(6)
@@ -377,7 +388,7 @@ class ExceptionJudgerIO extends Bundle with phvntomParams {
   val mem_ls_addr = Input(UInt(xlen.W))
   val mem_pf = Input(Bool())
   val mem_type = Input(UInt(ControlConst.memBits.W))
-  val wb_cmd = Input(Bool())
+  val wb_inst = Input(UInt(xlen.W))
   val wb_csr_addr = Input(UInt(12.W))
   val has_except = Output(Bool())
   val except_out = Output(UInt(4.W))
@@ -424,10 +435,10 @@ class ExceptionJudger extends Module with phvntomParams {
       io.has_except := false.B
       io.except_out := Exception.InstAddrMisaligned
     }
-  }.elsewhen(io.wb_cmd === CSR.P && !io.wb_csr_addr(0) && !io.wb_csr_addr(8)) { // only supports Machine Mode
+  }.elsewhen(io.wb_inst === "b00000000000000000000000001110011".U) { // only supports Machine Mode
     io.has_except := true.B
     io.except_out := Exception.EcallM
-  }.elsewhen(io.wb_cmd === CSR.P && io.wb_csr_addr(0) && !io.wb_csr_addr(8)) {
+  }.elsewhen(io.wb_inst === "b00000000000100000000000001110011".U) {
     io.has_except := true.B
     io.except_out := Exception.Breakpoint
   }.otherwise {
@@ -491,6 +502,7 @@ class CSRIO extends Bundle with phvntomParams {
   val mem_type = Input(UInt(ControlConst.memBits.W))
   val pc_check = Input(Bool())
   val expt = Output(Bool())
+  val ret = Output(Bool())
   val evec = Output(UInt(xlen.W))
   val epc = Output(UInt(xlen.W))
   // Interrupt
@@ -526,7 +538,7 @@ class CSR extends Module with phvntomParams {
   exception_judger.io.mem_ls_addr := io.addr
   exception_judger.io.mem_pf := false.B
   exception_judger.io.mem_type := io.mem_type
-  exception_judger.io.wb_cmd := io.cmd
+  exception_judger.io.wb_inst := io.inst
   exception_judger.io.wb_csr_addr := csr_addr
 
   csr_regfile.io.which_reg := csr_addr
@@ -540,10 +552,11 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.has_int := interrupt_judger.io.has_int
   csr_regfile.io.int_type := interrupt_judger.io.int_out
   csr_regfile.io.current_pc := Cat(io.pc(31, 2), 0.U(2.W))
-  csr_regfile.io.is_eret := io.cmd === CSR.P && !csr_addr(0) && csr_addr(8)
+  csr_regfile.io.is_eret := io.inst === "b00110000001000000000000001110011".U
 
   io.out := csr_regfile.io.rdata
-  io.expt := exception_judger.io.has_except // here we temporarily do not consider if the CSR file is valid
+  io.expt := interrupt_judger.io.has_int | exception_judger.io.has_except // here we temporarily do not consider if the CSR file is valid
   io.evec := csr_regfile.io.evec_out
   io.epc := csr_regfile.io.epc_out
+  io.ret := csr_regfile.io.is_eret
 }
