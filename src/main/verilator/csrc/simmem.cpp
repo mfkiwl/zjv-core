@@ -100,10 +100,10 @@ extern "C" void SimMemAccess(paddr_t raddr, paddr_t *rdata, paddr_t waddr, paddr
     int offset = getOffset(wmask);
     int size   = getSize(wmask);
     WACCESS(waddr + (offset >> 3), size, wen, wdata >> offset);
-    printf("Write Done %lx -> %lx, offset = %d, size = %d\n", waddr, wdata, offset, size);
+    // printf("Write Done %lx -> %lx, offset = %d, size = %d\n", waddr, wdata, offset, size);
   }
 
-  printf("[Memory Access] \n");
-  printf("raddr %lx rdata %lx\n", raddr, *rdata);
-  printf("waddr %lx wdata %lx mask %lx wen %d\n", waddr, wdata, wmask, wen);
+  // printf("[Memory Access] \n");
+  // printf("raddr %lx rdata %lx\n", raddr, *rdata);
+  // printf("waddr %lx wdata %lx mask %lx wen %d\n", waddr, wdata, wmask, wen);
 }
