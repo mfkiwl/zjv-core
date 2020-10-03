@@ -35,6 +35,11 @@ class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
       o.r.ready := v
     }
   }
+  for(i <- 0 until addressSpace.length) {
+    when(routSelIdx === i.U) {
+      io.out(i).ar.bits.addr := io.in.ar.bits.addr - addressSpace(i)._1.U
+    }
+  }
 
   switch(r_state) {
     is(s_idle) {

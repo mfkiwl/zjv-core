@@ -17,23 +17,24 @@ class Tile extends Module with phvntomParams with projectConfig{
 
   val core = Module(new Core)
   core.reset := reset
-
-  
   
   val icache = Module(new Uncache)
   val dcache = Module(new Uncache)
   val in_device = List(icache, dcache)
 
+  val clint = Module(new Clint)
+  val mtipSync = clint.io.extra.get.mtip
+  val msipSync = clint.io.extra.get.msip
+
   core.io.imem <> icache.io.in
   core.io.dmem <> dcache.io.in
+  core.io.int.msip := msipSync
+  core.io.int.mtip := mtipSync
 
   val hangup = Module(new AXI4Hangup)
   val hangupSync = hangup.io.extra.get.hangup
   BoringUtils.addSource(hangupSync, "hangup")
 
-  val clint = Module(new Clint)
-  val mtipSync = clint.io.extra.get.mtip
-  val msipSync = clint.io.extra.get.msip
   BoringUtils.addSource(mtipSync, "mtip")
   BoringUtils.addSource(msipSync, "msip")
 

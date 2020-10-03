@@ -121,18 +121,13 @@ class ALU extends Module with phvntomParams {
   //  printf(p"${io.opType} rs1: ${Hexadecimal(io.rs1)} rs2: ${Hexadecimal(io.rs2)} rd: ${Hexadecimal(io.rd)} zero: ${Hexadecimal(io.zero)}\n")
 }
 
-class ClintIO extends Bundle {
-  val mtip = Output(Bool())
-  val msip = Output(Bool())
-}
-
 class DataPathIO extends Bundle with phvntomParams {
   val ctrl = Flipped(new ControlPathIO)
 
   val imem = Flipped(new MemIO)
   val dmem = Flipped(new MemIO)
 
-  // val clint = Flipped(new ClintIO) TODO
+  val int = Flipped(Flipped(new InterruptIO))
 }
 
 class DataPath extends Module with phvntomParams {
@@ -323,6 +318,7 @@ class DataPath extends Module with phvntomParams {
     wbPC -> wb_pc_4,
     wbCSR -> csrFile.io.out))
 
+  //io.dmem.req.bits.addr := Mux(wb_memType === memDouble,"h38004000".U,wb_alu) // TODO restore wb_alu
   io.dmem.req.bits.addr := wb_alu
   io.dmem.req.bits.data := wb_wdata
 
@@ -348,8 +344,8 @@ class DataPath extends Module with phvntomParams {
   csrFile.io.mem_type := wb_memType
   csrFile.io.pc_check := true.B
   // interupt signals in, XIP from CLINT or PLIC
-  csrFile.io.tim_int := false.B // io.clint.mtip TODO
-  csrFile.io.soft_int := false.B  // io.clint.msip TODO
+  csrFile.io.tim_int := io.int.mtip
+  csrFile.io.soft_int := io.int.msip
   csrFile.io.external_int := false.B  // TODO
 
   // ******************************
@@ -361,6 +357,7 @@ class DataPath extends Module with phvntomParams {
     val dtest_wbvalid = WireInit(Bool(), false.B)
     val dtest_trmt    = WireInit(Bool(), false.B)
     val dtest_expt = RegInit(false.B)
+    val dtest_int = RegInit(false.B)
 
     dtest_wbvalid := !(exe_stall || dtest_inst(31, 0) === ControlConst.BUBBLE)
     dtest_trmt := dtest_inst(31, 0) === ControlConst.TRMT
@@ -370,6 +367,7 @@ class DataPath extends Module with phvntomParams {
       dtest_inst := wb_inst
       dtest_expt := csrFile.io.expt
     }
+    dtest_int := io.int.msip | io.int.mtip
 
     BoringUtils.addSource(dtest_pc, "difftestPC")
     BoringUtils.addSource(dtest_inst, "difftestInst")
@@ -377,7 +375,7 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_trmt,    "difftestTerminate")
 
     if(pipeTrace){
-      printf("[[[[[EXPT %d]]]]]\n", dtest_expt);
+      printf("[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n", dtest_expt, dtest_int);
     }
 
     if (pipeTrace == false) {

@@ -14,9 +14,10 @@ class ClintIO extends Bundle with phvntomParams {
 
 class Clint extends AXI4Slave(new ClintIO) with AXI4Parameters {
   val mtime = RegInit(0.U(xlen.W)) // unit: us
-  val mtimecmp = RegInit(0.U(xlen.W))
+  val mtimecmp = RegInit(1024.U(xlen.W))
   val msip = RegInit(0.U(xlen.W))
   val sim = true
+  val speeder = true
 
   val clk =
     (if (!sim) 40 /* 40MHz / 1000000 */
@@ -28,8 +29,15 @@ class Clint extends AXI4Slave(new ClintIO) with AXI4Parameters {
   val nextCnt = cnt + 1.U
   cnt := Mux(nextCnt < freq, nextCnt, 0.U)
   val tick = (nextCnt === freq)
-  when(tick) {
-    mtime := mtime + inc
+  if(speeder) {
+    when(true.B) {
+      mtime := mtime + inc
+    }
+  }
+  else {
+    when(tick) {
+      mtime := mtime + inc
+    }
   }
 
   val mapping = Map(

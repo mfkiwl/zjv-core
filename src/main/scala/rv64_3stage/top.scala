@@ -18,7 +18,7 @@ class DiffTestIO extends Bundle with phvntomParams {
 class TopIO extends Bundle with phvntomParams {
   // Difftest
   val difftest = new DiffTestIO
-
+  val hangup = Output(Bool())
 
 }
 
@@ -44,6 +44,7 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(msip, "msip")
 
   io.difftest := difftest
+  io.hangup := hangup
 
 }
 

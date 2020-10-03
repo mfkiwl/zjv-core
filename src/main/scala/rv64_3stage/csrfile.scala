@@ -3,6 +3,11 @@ package rv64_3stage
 import chisel3._
 import chisel3.util._
 
+class InterruptIO extends Bundle with phvntomParams {
+  val mtip = Input(Bool())
+  val msip = Input(Bool())
+}
+
 object CSR {
   val N = 0.U(3.W)
   val W = 1.U(3.W)
@@ -97,6 +102,7 @@ class CSRFileIO extends Bundle with phvntomParams {
   val rdata = Output(UInt(xlen.W))
   val evec_out = Output(UInt(xlen.W))
   val epc_out = Output(UInt(xlen.W))
+  val global_int_enable = Output(Bool())
 }
 
 class CSRFile extends Module with phvntomParams {
@@ -134,22 +140,12 @@ class CSRFile extends Module with phvntomParams {
   val mier_stie = RegInit(false.B)
   val mier_msie = RegInit(true.B)
   val mier_ssie = RegInit(false.B)
-  // MIP
-  val mipr_meip = RegInit(false.B) // MEIP is read-only in mip, and is set and cleared by a platform-specific interrupt controller.
-  val mipr_seip = RegInit(false.B)
-  val mipr_mtip = RegInit(false.B) // MTIP is read-only in mip, and is cleared by writing to the memory-mapped machine-mode timer compare register.
-  val mipr_stip = RegInit(false.B)
-  val mipr_msip = RegInit(false.B) // read-only
-  val mipr_ssip = RegInit(false.B)
 
   // normal registers in CSR
   val mepcr = RegInit(0.U(xlen.W))
   val mcauser = Cat(mcauser_int, 0.U((xlen - 5).W), mcauser_cause)
   val mtvecr = RegInit(0.U(xlen.W))
   val mhartidr = 0.U(xlen.W)
-  val mipr = Cat(0.U((xlen - 12).W), mipr_meip, false.B, mipr_seip, false.B,
-    mipr_mtip, false.B, mipr_stip, false.B, mipr_msip, false.B,
-    mipr_msip, false.B, mipr_ssip, false.B) // contains information on pending interrupts
   val mier = Cat(0.U((xlen - 12).W), mier_meie, false.B, mier_seie, false.B,
     mier_mtie, false.B, mier_stie, false.B, mier_msie, false.B,
     mier_msie, false.B, mier_ssie, false.B) // interrupt[i] => mi(e/p)r[i], no s-mode, hardwired to zero
@@ -177,7 +173,8 @@ class CSRFile extends Module with phvntomParams {
   // combo-logic for int control, machine mode only now
   val current_prv = CSR.PRV_M // support Machine mode only
   val machine_int_global_enable = current_prv != CSR.PRV_M || mstatusr_mie
-  val machine_int_enable = mier(io.int_type) & mipr(io.int_type) & machine_int_global_enable
+  val machine_int_enable = mier(io.int_type) & machine_int_global_enable
+  io.global_int_enable := machine_int_enable
 
   // combo-logic for output
   when(io.which_reg === CSR.mepc) {
@@ -186,8 +183,6 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := mcauser
   }.elsewhen(io.which_reg === CSR.mtvec) {
     io.rdata := mtvecr
-  }.elsewhen(io.which_reg === CSR.mip) {
-    io.rdata := mipr
   }.elsewhen(io.which_reg === CSR.mie) {
     io.rdata := mier
   }.elsewhen(io.which_reg === CSR.mstatus) {
@@ -263,30 +258,6 @@ class CSRFile extends Module with phvntomParams {
         }.elsewhen(io.cen) {
           mscratchr := mscratchr & (~io.wdata)
         }
-      }.elsewhen(io.which_reg === CSR.mip) {
-        /* when(io.wen) {
-          mipr_meip := io.wdata(11)
-          mipr_seip := io.wdata(9)
-          mipr_mtip := io.wdata(7)
-          mipr_stip := io.wdata(5)
-          mipr_msip := io.wdata(3)
-          mipr_ssip := io.wdata(1)
-        }.elsewhen(io.sen) {
-          mipr_meip := mipr_meip | io.wdata(11)
-          mipr_seip := mipr_seip | io.wdata(9)
-          mipr_mtip := mipr_mtip | io.wdata(7)
-          mipr_stip := mipr_stip | io.wdata(5)
-          mipr_mtip := mipr_mtip | io.wdata(3)
-          mipr_stip := mipr_stip | io.wdata(1)
-        }.elsewhen(io.cen) {
-          mipr_meip := mipr_meip & ~io.wdata(11)
-          mipr_seip := mipr_seip & ~io.wdata(9)
-          mipr_mtip := mipr_mtip & ~io.wdata(7)
-          mipr_stip := mipr_stip & ~io.wdata(5)
-          mipr_mtip := mipr_mtip & ~io.wdata(3)
-          mipr_stip := mipr_stip & ~io.wdata(1)
-        }*/
-        //  TODO controled by CLINT and PLIC
       }.elsewhen(io.which_reg === CSR.mie) {
         when(io.wen) {
           mier_meie := io.wdata(11)
@@ -504,10 +475,6 @@ class CSRIO extends Bundle with phvntomParams {
   val tim_int = Input(Bool())
   val soft_int = Input(Bool())
   val external_int = Input(Bool())
-  // MMIO registers read write
-  // val mmio_req = Valid(new MemReq)
-  // val mmio_resp = Valid(new MemResp)
-  // val stall_req = Output(Bool())
 }
 
 class CSR extends Module with phvntomParams {
@@ -550,7 +517,7 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.is_eret := io.inst === "b00110000001000000000000001110011".U
 
   io.out := csr_regfile.io.rdata
-  io.expt := interrupt_judger.io.has_int | exception_judger.io.has_except // here we temporarily do not consider if the CSR file is valid
+  io.expt := (interrupt_judger.io.has_int & csr_regfile.io.global_int_enable) | exception_judger.io.has_except // here we temporarily do not consider if the CSR file is valid
   io.evec := Mux(csr_regfile.io.evec_out.orR, csr_regfile.io.evec_out, io.pc + 4.U)
   io.epc := csr_regfile.io.epc_out
   io.ret := csr_regfile.io.is_eret
