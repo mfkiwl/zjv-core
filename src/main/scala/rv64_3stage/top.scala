@@ -33,6 +33,14 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.valid, "difftestValid")
   BoringUtils.addSink(difftest.trmt,  "difftestTerminate")
 
+  val hangup = WireInit(false.B)
+  BoringUtils.addSink(hangup, "hangup")
+
+  val mtip = WireInit(false.B)
+  val msip = WireInit(false.B)
+  BoringUtils.addSink(mtip, "mtip")
+  BoringUtils.addSink(msip, "msip")
+
   io.difftest := difftest
 
 }
