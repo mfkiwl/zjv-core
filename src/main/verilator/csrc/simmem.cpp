@@ -7,83 +7,103 @@ typedef uint64_t paddr_t;
 htif_simmem_t *mem;
 memif_t *memif;
 
-
-void init_ram(const char *img) {
+void init_ram(const char *img)
+{
 
   mem = new htif_simmem_t();
   memif = new memif_t(mem);
   reg_t entry;
   load_elf(img, memif, &entry);
 
-#ifdef ZJV_DEBUG
   printf("[SimMem] load elf %s\n", img);
-#endif
+
+  //  mem->mem_check();
 }
 
-const char* getType(unsigned long memtype) {
-  if      (memtype == memByte)      return "byte";     
-  else if (memtype == memByteU)     return "unsigned byte";  
-  else if (memtype == memHalf)      return "half";  
-  else if (memtype == memHalfU)     return "unsigned half"; 
-  else if (memtype == memWord)      return "word";  
-  else if (memtype == memWordU)     return "unsigned word"; 
-  else if (memtype == memDouble)    return "double";  
-  else if (memtype == memXXX)       return "default"; 
-  else                              return "ERROR!";
-} 
 
+static int getOffset (paddr_t mask) {
+  int res = 0;
+  if (mask)
+    while ((mask & 1) == 0)
+      mask >>= 1, res++;
+  return res;
+}
 
-extern "C"
-void SimMemAccess (paddr_t iaddr, paddr_t *idata,  paddr_t itype,
-                   paddr_t daddr, paddr_t *drdata, paddr_t dwdata, paddr_t dtype, uint8_t dwen) {
+static int getSize (paddr_t mask) {
+  if (mask & (mask >> 63))
+    return memDouble;
+  else if (mask & (mask >> 31))
+    return memWord;
+  else if (mask & (mask >> 15))
+    return memHalf;
+  else if (mask & (mask >> 7))
+    return memByte;
+  else 
+    return memDouble;
+}
 
-#ifdef ZJV_DEBUG
- printf("[Memory Access] \n");
- printf("iaddr %016lx %s\n", iaddr, getType(itype));
- printf("daddr %016lx %s dwdata %016lx wen %d\n", daddr, getType(dtype), dwdata, dwen);
-#endif
+extern "C" void SimMemAccess(paddr_t raddr, paddr_t *rdata, paddr_t waddr, paddr_t wdata, paddr_t wmask, uint8_t wen)
+{
 
-#define RACCESS(addr, memtype, rdata)                                     \
-  if      (memtype == memByte)       *rdata = memif->read_int8(addr);     \
-  else if (memtype == memByteU)      *rdata = memif->read_uint8(addr);    \
-  else if (memtype == memHalf)       *rdata = memif->read_int16(addr);    \
-  else if (memtype == memHalfU)      *rdata = memif->read_uint16(addr);   \
-  else if (memtype == memWord)       *rdata = memif->read_int32(addr);    \
-  else if (memtype == memWordU)      *rdata = memif->read_uint32(addr);   \
-  else if (memtype == memDouble)     *rdata = memif->read_int64(addr);    \
-  else if (memtype == memXXX)        *rdata = memif->read_uint64(addr);   \
-  else throw std::runtime_error("Unexpect Read Memory Access Type %d\n"); 
-  
+#define RACCESS(addr, memtype, rdata)  \
+  if (memtype == memByte)              \
+    *rdata = memif->read_int8(addr);   \
+  else if (memtype == memByteU)        \
+    *rdata = memif->read_uint8(addr);  \
+  else if (memtype == memHalf)         \
+    *rdata = memif->read_int16(addr);  \
+  else if (memtype == memHalfU)        \
+    *rdata = memif->read_uint16(addr); \
+  else if (memtype == memWord)         \
+    *rdata = memif->read_int32(addr);  \
+  else if (memtype == memWordU)        \
+    *rdata = memif->read_uint32(addr); \
+  else if (memtype == memDouble)       \
+    *rdata = memif->read_int64(addr);  \
+  else if (memtype == memXXX)          \
+    *rdata = memif->read_uint64(addr); \
+  else                                 \
+    throw std::runtime_error("Unexpect Read Memory Access Type %d\n");
 
-#define WACCESS(addr, memtype, wen, wdata)                                \
-  if (wen) {                                                              \
-    if      (memtype == memByte)       memif->write_int8(addr, wdata);    \
-    else if (memtype == memByteU)      memif->write_uint8(addr, wdata);   \
-    else if (memtype == memHalf)       memif->write_int16(addr, wdata);   \
-    else if (memtype == memHalfU)      memif->write_uint16(addr, wdata);  \
-    else if (memtype == memWord)       memif->write_int32(addr, wdata);   \
-    else if (memtype == memWordU)      memif->write_uint32(addr, wdata);  \
-    else if (memtype == memDouble)     memif->write_int64(addr, wdata);   \
-    else if (memtype == memXXX)        memif->write_uint64(addr, wdata);  \
-    else throw std::runtime_error("Unexpect Write Memory Access Type");   \
+#define WACCESS(addr, memtype, wen, wdata)                           \
+  if (wen)                                                           \
+  {                                                                  \
+    if (memtype == memByte)                                          \
+      memif->write_int8(addr, wdata);                                \
+    else if (memtype == memByteU)                                    \
+      memif->write_uint8(addr, wdata);                               \
+    else if (memtype == memHalf)                                     \
+      memif->write_int16(addr, wdata);                               \
+    else if (memtype == memHalfU)                                    \
+      memif->write_uint16(addr, wdata);                              \
+    else if (memtype == memWord)                                     \
+      memif->write_int32(addr, wdata);                               \
+    else if (memtype == memWordU)                                    \
+      memif->write_uint32(addr, wdata);                              \
+    else if (memtype == memDouble)                                   \
+      memif->write_int64(addr, wdata);                               \
+    else if (memtype == memXXX)                                      \
+      memif->write_uint64(addr, wdata);                              \
+    else                                                             \
+      throw std::runtime_error("Unexpect Write Memory Access Type"); \
   }
 
-
-  if (iaddr != 0xdeadbeefL) {
-    RACCESS(iaddr, itype, idata);
-    #ifdef ZJV_DEBUG
-      printf("[READ] iaddr %016lx %016lx\n", iaddr, *idata);
-    #endif
+  if (raddr != 0xdeadbeefL)
+  {
+    // daddr = daddr - mem->get_base();
+    RACCESS(raddr, memDouble, rdata);
+    // printf("Read Done %lx -> %lx\n", raddr, *rdata);
   }
 
-  if (daddr != 0xdeadbeefL) {
-    WACCESS(daddr, dtype, dwen, dwdata);
-    RACCESS(daddr, dtype, drdata);
-    #ifdef ZJV_DEBUG
-      if (dwen)
-        printf("[WRITE] daddr %016lx %016lx\n", daddr, *drdata);
-      printf("[READ] iaddr %016lx %016lx\n", daddr, *drdata);
-    #endif
+  if (waddr != 0xdeadbeefL)
+  {
+    int offset = getOffset(wmask);
+    int size   = getSize(wmask);
+    WACCESS(waddr + (offset >> 3), size, wen, wdata >> offset);
+    // printf("Write Done %lx -> %lx, offset = %d, size = %d\n", waddr, wdata, offset, size);
   }
 
+  // printf("[Memory Access] \n");
+  // printf("raddr %lx rdata %lx\n", raddr, *rdata);
+  // printf("waddr %lx wdata %lx mask %lx wen %d\n", waddr, wdata, wmask, wen);
 }

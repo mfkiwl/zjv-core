@@ -1,32 +1,25 @@
 `define XLEN 64
 import "DPI-C" function void SimMemAccess (
-    input  longint  iaddr,
-    output longint  idata,
-    input  longint  itype,
-    input  longint  daddr,
-    output longint  drdata,
-    input  longint  dwdata,
-    input  longint  dtype,
-    input  bit      dwen
+    input  longint  raddr,
+    output longint  rdata,
+    input  longint  waddr,
+    input  longint  wdata,
+    input  longint  wmask,
+    input  bit      wen
 );
 
 module SimMem (
   input  clk,
-  input  [`XLEN-1:0] iaddr,
-  output [`XLEN-1:0] idata,
-  input  [`XLEN-1:0] itype,
-  input  [`XLEN-1:0] daddr,
-  output [`XLEN-1:0] drdata,
-  input  [`XLEN-1:0] dwdata,
-  input  [`XLEN-1:0] dtype,
-  input  dwen
+  input  [`XLEN-1:0] raddr,
+  output [`XLEN-1:0] rdata,
+  input  [`XLEN-1:0] waddr,  
+  input  [`XLEN-1:0] wdata,
+  input  [`XLEN-1:0] wmask,
+  input  wen
 );
-  always @(*) begin
-    SimMemAccess(iaddr, idata, itype, daddr, drdata, dwdata, dtype, dwen);
-  end
 
-  /*always @(posedge clk) begin
-    WSimMemAccess(iaddr, idata, itype, daddr, drdata, dwdata, dtype, dwen);
-  end*/
+  always @(posedge clk) begin
+    SimMemAccess(raddr, rdata, waddr, wdata, wmask, wen);
+  end
 
 endmodule

@@ -22,64 +22,16 @@ class MemIO extends Bundle with phvntomParams {
   val resp = Valid(new MemResp)
 }
 
-class simpleMem extends Module with phvntomParams {
-  val io = IO(new Bundle() {
-    val iport = new MemIO
-    val dport = new MemIO
-  })
-
-  val mem = Module(new SimMem)
-
-  mem.io.clk := clock
-
-  //  IPORT
-  io.iport.resp.valid := io.iport.req.valid
-  mem.io.iaddr        := io.iport.req.bits.addr
-  mem.io.itype        := io.iport.req.bits.memtype
-  io.iport.resp.bits.data := mem.io.idata 
-
-  //  DPORT
-  io.dport.resp.valid := io.dport.req.valid
-  mem.io.dtype        := io.dport.req.bits.memtype
-  mem.io.dwen         := io.dport.req.bits.wen
-  mem.io.daddr        := io.dport.req.bits.addr
-  mem.io.dwdata       := io.dport.req.bits.data
-  io.dport.resp.bits.data := mem.io.drdata
-
+class SimMemLiteIO extends Bundle with phvntomParams {
+  val clk = Input(Clock())
+  val raddr = Input(UInt(xlen.W))
+  val rdata = Output(UInt(xlen.W))
+  val waddr = Input(UInt(xlen.W))
+  val wdata = Input(UInt(xlen.W))
+  val wmask = Input(UInt(xlen.W))
+  val wen = Input(Bool())
 }
 
-class SimMemIO extends Bundle with phvntomParams {
-  val clk    = Input(Clock())
-  val iaddr  = Input(UInt(xlen.W))
-  val idata  = Output(UInt(xlen.W))
-  val itype  = Input(UInt(xlen.W))
-  val daddr  = Input(UInt(xlen.W))
-  val drdata = Output(UInt(xlen.W))
-  val dwdata = Input(UInt(xlen.W))
-  val dtype  = Input(UInt(xlen.W))
-  val dwen   = Input(Bool())
-}
-
-class SimMem extends BlackBox{
-   val io = IO(new SimMemIO)
-}
-
-class FPGAMem extends Module with phvntomParams {
-  val io = IO(new Bundle() {
-    val iport = new MemIO
-    val dport = new MemIO
-  })
-  // TODO initialize memory
-  // refer to https://github.com/freechipsproject/chisel3/wiki/Chisel-Memories
-  val mem = Mem(4096, UInt(xlen.W))
-  //  IPORT
-  io.iport.resp.valid := io.iport.req.valid
-  io.iport.resp.bits.data := mem(io.iport.req.bits.addr)
-
-  //  DPORT
-  io.dport.resp.valid := io.dport.req.valid
-  when (io.dport.req.bits.wen) {
-    mem(io.dport.req.bits.addr) := io.dport.req.bits.data
-  }  
-  io.dport.resp.bits.data := mem(io.dport.req.bits.addr)
+class SimMem extends BlackBox {
+  val io = IO(new SimMemLiteIO)
 }

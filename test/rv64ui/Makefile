@@ -1,15 +1,13 @@
 rv64ui_test_target = \
-	$(dev_test_set)  \
-	$(rv64ui_r_type) \
-	$(rv64ui_i_type) \
-	$(rv64ui_u_type) \
-	$(rv64ui_j_type) \
-	$(rv64ui_b_type) \
-	$(rv64ui_s_type) \
-
-dev_test_set = \
-	sh    \
-	sw    \
+	$(rv64ui_exception) \
+	# $(rv64ui_r_type) \
+	# $(rv64ui_i_type) \
+	# $(rv64ui_u_type) \
+	# $(rv64ui_j_type) \
+	# $(rv64ui_b_type) \
+	# $(rv64ui_s_type) \
+	# $(rv64ui_z_type) \
+	# $(rv64ui_exception) \
 
 
 rv64ui_r_type = \
@@ -72,6 +70,18 @@ rv64ui_s_type = \
 	sh    \
 	sw    \
 	sd    \
+
+rv64ui_z_type = \
+	csr   \
+	mcsr   \
+
+rv64ui_exception = \
+	ma_addr     \
+	#ma_fetch    \
+	#illegal \
+	#access  \
+	#breakpoint  \
+
 
 
 

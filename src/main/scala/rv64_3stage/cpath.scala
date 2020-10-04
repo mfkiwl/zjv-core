@@ -30,6 +30,7 @@ object ControlConst {
   val UType   = 4.U(3.W)
   val JType   = 5.U(3.W)
   val ZType   = 6.U(3.W) // Zicsr
+  val Illegal = 7.U(3.W)
   val instBits = instXXX.getWidth
 
   // BrCond.io.brType
@@ -88,10 +89,12 @@ object ControlConst {
   val memBits   = memXXX.getWidth
 
   // io.wbEnable
-  val wenXXX  = 0.U(2.W)
-  val wenReg  = 1.U(2.W)
-  val wenMem  = 2.U(2.W)
-  val wenCSR  = 2.U(2.W)
+  val wenXXX  = 0.U(3.W)
+  val wenReg  = 1.U(3.W)
+  val wenMem  = 2.U(3.W)
+  val wenCSRW = 3.U(3.W)
+  val wenCSRS = 4.U(3.W)
+  val wenCSRC = 5.U(3.W)
   val wenBits = wenXXX.getWidth
 
   // io.wbSelect
@@ -136,19 +139,19 @@ class ControlPath extends Module with phvntomParams {
   val io = IO(new ControlPathIO)
 
   val controlSignal = ListLookup(io.inst,
-                     List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
+                     List(Illegal, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
     Array(         /*      Inst  |   PC   |  Bubble | Branch |   A    |   B    |  alu   |  Mem  |     wb    |  wb      */
                    /*      Type  | Select |         |  Type  | Select | Select |  Type  | Type  |   Select  | Enable   */
         LUI       -> List(UType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbALU,   wenReg),
         AUIPC     -> List(UType,   pcPlus4,  False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbALU,   wenReg),
         JAL       -> List(JType,   pcJump,   True,    brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbPC,    wenReg),
         JALR      -> List(IType,   pcJump,   True,    brXXX,    ARS1,    BIMM,   aluADD,  memXXX,    wbPC,    wenReg),
-        BEQ       -> List(BType,   pcBranch, False,   beqType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
-        BNE       -> List(BType,   pcBranch, False,   bneType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
-        BLT       -> List(BType,   pcBranch, False,   bltType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
-        BGE       -> List(BType,   pcBranch, False,   bgeType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
-        BLTU      -> List(BType,   pcBranch, False,   bltuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
-        BGEU      -> List(BType,   pcBranch, False,   bgeuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        BEQ       -> List(BType,   pcBranch, True,    beqType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        BNE       -> List(BType,   pcBranch, True,    bneType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        BLT       -> List(BType,   pcBranch, True,    bltType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        BGE       -> List(BType,   pcBranch, True,    bgeType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        BLTU      -> List(BType,   pcBranch, True,    bltuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+        BGEU      -> List(BType,   pcBranch, True,    bgeuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
         LB        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbMEM,   wenReg),
         LH        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbMEM,   wenReg),
         LW        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbMEM,   wenReg),
@@ -192,12 +195,12 @@ class ControlPath extends Module with phvntomParams {
         SRLW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRLW, memXXX,    wbALU,   wenReg),
         SRAW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRAW, memXXX,    wbALU,   wenReg),
         FENCE_I   -> List(IType,   pcBubble, True,    brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
-        CSRRW     -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   wenXXX),
-        CSRRS     -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   wenXXX),
-        CSRRC     -> List(IType,   pcBubble, True,    brXXX,    ARS1,    BXXX,   aluXXX,  memXXX,    wbCSR,   wenXXX),
-        CSRRWI    -> List(ZType,   pcBubble, True,    brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   wenXXX),
-        CSRRSI    -> List(ZType,   pcBubble, True,    brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   wenXXX),
-        CSRRCI    -> List(ZType,   pcBubble, True,    brXXX,    AXXX,    BIMM,   aluXXX,  memXXX,    wbCSR,   wenXXX),
+        CSRRW     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRW),
+        CSRRS     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRS),
+        CSRRC     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRC),
+        CSRRWI    -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRW),
+        CSRRSI    -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRS),
+        CSRRCI    -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRC),
         MRET      -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
     )
   )

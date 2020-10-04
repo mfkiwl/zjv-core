@@ -17,6 +17,7 @@ trait phvntomParams {
 class CoreIO extends Bundle with phvntomParams {
   val imem = Flipped(new MemIO)
   val dmem = Flipped(new MemIO)
+  val int = new InterruptIO
 }
 
 class Core extends Module with phvntomParams {
@@ -27,5 +28,5 @@ class Core extends Module with phvntomParams {
   dpath.io.ctrl <> cpath.io
   dpath.io.imem <> io.imem
   dpath.io.dmem <> io.dmem
-
+  dpath.io.int  <> io.int
 }
