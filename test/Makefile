@@ -1,8 +1,9 @@
-SRC_DIR     := $(CURDIR)/isa
+SRC_DIR     := $(CURDIR)
 DEST_DIR    ?= $(CURDIR)/../build/test
 
-include $(CURDIR)/isa/rv64i/Makefile
-## rv64i_test_src rv64i_test_target
+## XXX_test_src XXX_test_target
+include $(CURDIR)/rv64ui/Makefile
+include $(CURDIR)/uart/Makefile
 
 RISCV_PREFIX   := riscv64-unknown-elf
 LINK_SCRIPT    := -T$(CURDIR)/common/zjv.ld 
@@ -29,6 +30,7 @@ endef
 $(DEST_DIR):
 	mkdir -p $(DEST_DIR)
 
-$(eval $(call compile_template,rv64i))
+$(eval $(call compile_template,rv64ui))
+$(eval $(call compile_template,uart))
 
 all: $(DEST_DIR) $(tests)
