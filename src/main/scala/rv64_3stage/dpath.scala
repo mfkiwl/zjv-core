@@ -143,14 +143,16 @@ class DataPath extends Module with phvntomParams {
   /* Fetch / Execute Register */
   val exe_inst = RegInit(UInt(xlen.W), BUBBLE)
   val exe_pc = RegInit(UInt(xlen.W), 0.U)
-  val exe_inst_addr_misaligned = RegInit(Bool(), false.B)
+  val exe_inst_access_fault = RegInit(Bool(), false.B)
 
   /* Execute / Write Back Register */
+  val inst_addr_misaligned = WireInit(false.B)
   val wb_inst = RegInit(UInt(xlen.W), BUBBLE)
   val wb_pc = RegInit(UInt(xlen.W), 0.U)
   val wb_alu = Reg(UInt(xlen.W))
   val wb_wdata = Reg(UInt(xlen.W))
   val wb_inst_addr_misaligned = RegInit(Bool(), false.B)
+  val wb_inst_access_fault = RegInit(Bool(), false.B)
 
   // Control Signal of Write Back Stage (1 cycle delay)
   val wb_memType = Reg(UInt())
@@ -162,13 +164,13 @@ class DataPath extends Module with phvntomParams {
   //    Instruction Fetch Stage
   // ******************************
 
-  val istall = (io.imem.req.valid && !io.imem.resp.valid)
+  val if_pc = RegInit(UInt(xlen.W), startAddr)
+  val if_pc_4 = if_pc + 4.U(xlen.W)
+  val inst_access_fault = if_pc(xlen - 1, 48).orR
+  val istall = (!io.imem.resp.valid && !inst_access_fault)
   val dstall = (io.dmem.req.valid && !io.dmem.resp.valid)
   val if_stall = istall || dstall
   val exe_stall = dstall
-  val if_pc = RegInit(UInt(xlen.W), startAddr)
-  val if_pc_4 = if_pc + 4.U(xlen.W)
-  val inst_addr_misaligned = if_pc(1,0).orR  // TODO add C Extension
 
   val if_npc = Mux(
     csrFile.io.expt,
@@ -185,29 +187,29 @@ class DataPath extends Module with phvntomParams {
           Seq(
             pcPlus4 -> if_pc_4,
             pcBubble -> if_pc,
-            pcBranch -> Mux(brCond.io.branch, alu.io.out, if_pc_4),
-            pcJump -> alu.io.out
+            pcBranch -> Mux(brCond.io.branch, Mux(inst_addr_misaligned, if_pc_4, alu.io.out), if_pc_4),
+            pcJump -> Mux(inst_addr_misaligned, if_pc_4, alu.io.out)
           )
         )
       )
     )
   )
 
-  when(!if_stall) {
-    if_pc := if_npc
-  }.elsewhen(csrFile.io.expt) {
+  when(csrFile.io.expt) {
     if_pc := csrFile.io.evec
   }.elsewhen(csrFile.io.ret) {
     if_pc := csrFile.io.epc
   }.elsewhen(brCond.io.branch || io.ctrl.pcSelect === pcJump) {
     if_pc := alu.io.out
+  }.elsewhen(!if_stall) {
+    if_pc := if_npc
   }
 
   io.imem.req.bits.addr := if_pc
   io.imem.req.bits.data := DontCare
   val if_inst = io.imem.resp.bits.data
 
-  io.imem.req.valid := !io.ctrl.bubble && inst_addr_misaligned === false.B
+  io.imem.req.valid := !io.ctrl.bubble && !inst_access_fault
   io.imem.req.bits.wen := false.B
   io.imem.req.bits.memtype := memWordU
 
@@ -215,10 +217,10 @@ class DataPath extends Module with phvntomParams {
     exe_pc := if_pc
     when(io.ctrl.bubble || brCond.io.branch || istall || csrFile.io.expt || csrFile.io.ret) {
       exe_inst := BUBBLE
-      exe_inst_addr_misaligned := false.B
+      exe_inst_access_fault := false.B
     }.otherwise {
       exe_inst := if_inst
-      exe_inst_addr_misaligned := inst_addr_misaligned
+      exe_inst_access_fault := inst_access_fault
     }
   }
 
@@ -283,6 +285,7 @@ class DataPath extends Module with phvntomParams {
   alu.io.opType := io.ctrl.aluType
   alu.io.a := Mux(io.ctrl.ASelect === APC, exe_pc, rs1)
   alu.io.b := Mux(io.ctrl.BSelect === BIMM, immExt.io.out, rs2)
+  inst_addr_misaligned := alu.io.out(1,0).orR && (io.ctrl.pcSelect === pcJump || io.ctrl.pcSelect === pcBranch)
 
   when(!exe_stall) {
     wb_pc := exe_pc
@@ -295,13 +298,21 @@ class DataPath extends Module with phvntomParams {
       wen := wenXXX
       wb_illegal := false.B
       wb_inst_addr_misaligned := false.B
+      wb_inst_access_fault := false.B
     }.otherwise {
-      wb_inst := exe_inst
-      wb_memType := io.ctrl.memType
-      wb_select := io.ctrl.wbSelect
-      wen := io.ctrl.wbEnable
+      wb_inst_addr_misaligned := inst_addr_misaligned
       wb_illegal := io.ctrl.instType === ControlConst.Illegal
-      wb_inst_addr_misaligned := exe_inst_addr_misaligned
+      wb_inst := exe_inst
+      wb_inst_access_fault := exe_inst_access_fault
+      when(inst_addr_misaligned || exe_inst_access_fault) {
+        wb_memType := memXXX
+        wb_select := wbXXX
+        wen := wenXXX
+      }.otherwise {
+        wb_memType := io.ctrl.memType
+        wb_select := io.ctrl.wbSelect
+        wen := io.ctrl.wbEnable
+      }
     }
   }
 
@@ -317,6 +328,7 @@ class DataPath extends Module with phvntomParams {
     memWordU -> wb_alu(1, 0).orR,
     memDouble -> wb_alu(2, 0).orR
   ))
+  val mem_access_fault = wb_memType.orR && wb_alu(xlen - 1, 48).orR
   val wb_pc_4 = wb_pc + 4.U(xlen.W)
   val wb_data = MuxLookup(wb_select, "hdeadbeef".U, Seq(
     wbALU -> wb_alu,
@@ -328,11 +340,12 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.addr := wb_alu
   io.dmem.req.bits.data := wb_wdata
 
-  io.dmem.req.valid := wb_memType.orR && mem_addr_misaligned === false.B
+  io.dmem.req.valid := wb_memType.orR && mem_addr_misaligned === false.B && mem_access_fault === false.B
   io.dmem.req.bits.wen := wen === wenMem
   io.dmem.req.bits.memtype := wb_memType
 
-  regFile.io.wen := (wen === wenReg && mem_addr_misaligned === false.B) || wen === wenCSRW || wen === wenCSRC || wen === wenCSRS
+  regFile.io.wen := ((wen === wenReg && mem_addr_misaligned === false.B && mem_access_fault === false.B) ||
+    wen === wenCSRW || wen === wenCSRC || wen === wenCSRS)
   regFile.io.rd_addr := rd_addr
   regFile.io.rd_data := wb_data
 
@@ -350,6 +363,8 @@ class DataPath extends Module with phvntomParams {
   csrFile.io.is_store := wb_memType.orR && wen === wenMem
   csrFile.io.mem_type := wb_memType
   csrFile.io.pc_check := true.B
+  csrFile.io.inst_access_fault := wb_inst_access_fault
+  csrFile.io.mem_access_fault := mem_access_fault
   // interupt signals in, XIP from CLINT or PLIC
   csrFile.io.tim_int := io.int.mtip
   csrFile.io.soft_int := io.int.msip
@@ -381,7 +396,7 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_trmt,    "difftestTerminate")
 
-    if(pipeTrace){
+    if(pipeTrace == false){
       printf("[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n", dtest_expt, dtest_int);
     }
 

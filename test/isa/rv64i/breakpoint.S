@@ -11,7 +11,7 @@
 #include "test_macros.h"
 
 RVTEST_RV64M
-RVTEST_CODE_BEGIN
+RVTEST_BARE_CODE_BEGIN
 
   # Set up breakpoint to trap on M-mode fetches.
   li TESTNUM, 2
