@@ -1,20 +1,16 @@
-rv64i_test_target = \
-    $(rv64i_exception)  \
-    $(rv64i_z_type) \
-	$(dev_test_set) \
-	$(rv64i_r_type) \
-	$(rv64i_i_type) \
-	$(rv64i_u_type) \
-	$(rv64i_j_type) \
-	$(rv64i_b_type) \
-	$(rv64i_s_type) \
 
-dev_test_set = \
-	sh    \
-	sw    \
+rv64ui_test_target = \
+	$(rv64ui_exception) \
+	$(rv64ui_r_type) \
+	$(rv64ui_i_type) \
+	$(rv64ui_u_type) \
+	$(rv64ui_j_type) \
+	$(rv64ui_b_type) \
+	$(rv64ui_s_type) \
+	$(rv64ui_z_type) \
 
 
-rv64i_r_type = \
+rv64ui_r_type = \
 	add   \
 	sub   \
 	sll   \
@@ -31,7 +27,7 @@ rv64i_r_type = \
 	srlw  \
 	sraw  \
 
-rv64i_i_type = \
+rv64ui_i_type = \
 	addi  \
 	slti  \
 	sltiu \
@@ -54,14 +50,14 @@ rv64i_i_type = \
 	srliw \
 	sraiw \
 
-rv64i_u_type = \
+rv64ui_u_type = \
 	lui   \
 	auipc \
 
-rv64i_j_type = \
+rv64ui_j_type = \
 	jal   \
 
-rv64i_b_type = \
+rv64ui_b_type = \
 	beq   \
 	bne   \
 	blt   \
@@ -69,17 +65,17 @@ rv64i_b_type = \
 	bltu  \
 	bgeu  \
 
-rv64i_s_type = \
+rv64ui_s_type = \
 	sb    \
 	sh    \
 	sw    \
 	sd    \
 
-rv64i_z_type = \
+rv64ui_z_type = \
 	csr   \
 	mcsr   \
 
-rv64i_exception = \
+rv64ui_exception = \
 	sbreak  \
 	scall   \
     illegal \
@@ -92,16 +88,4 @@ rv64i_exception = \
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-rv64i_test_src = $(addsuffix .S, $(rv64i_sc_tests))
+rv64ui_test_src = $(addsuffix .S, $(rv64ui_sc_tests))
