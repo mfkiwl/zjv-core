@@ -29,12 +29,11 @@ class Clint extends AXI4Slave(new ClintIO) with AXI4Parameters {
   val nextCnt = cnt + 1.U
   cnt := Mux(nextCnt < freq, nextCnt, 0.U)
   val tick = (nextCnt === freq)
-  if(speeder) {
+  if (speeder) {
     when(true.B) {
       mtime := mtime + inc
     }
-  }
-  else {
+  } else {
     when(tick) {
       mtime := mtime + inc
     }
