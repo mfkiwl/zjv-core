@@ -15,16 +15,14 @@ class AXI4PowerOff extends AXI4Slave(new AXI4PowerOffIO) with AXI4Parameters {
   val poweroff = RegInit(0.U(xlen.W))
 
   val mapping = Map(
-    RegMap(0x0, poweroff),
+    RegMap(0x0, poweroff)
   )
-
-  def getOffset(addr: UInt) = addr(15, 0)
 
   RegMap.generate(
     mapping,
-    getOffset(raddr),
+    raddr(3, 0),
     io.in.r.bits.data,
-    getOffset(waddr),
+    waddr(3, 0),
     io.in.w.fire(),
     io.in.w.bits.data,
     MaskExpand(io.in.w.bits.strb)
