@@ -60,19 +60,19 @@ object CSR {
 
 object Exception {
   val InstAddrMisaligned = 0x0.U(4.W)
-  val InstAccessFault = 0x1.U(4.W)
-  val IllegalInst = 0x2.U(4.W)
-  val Breakpoint = 0x3.U(4.W)
+  val InstAccessFault = 0x1.U(4.W)  // TODO
+  val IllegalInst = 0x2.U(4.W)  // TODO
+  val Breakpoint = 0x3.U(4.W)  // TODO
   val LoadAddrMisaligned = 0x4.U(4.W)
-  val LoadAccessFault = 0x5.U(4.W)
+  val LoadAccessFault = 0x5.U(4.W)  // TODO
   val StoreAddrMisaligned = 0x6.U(4.W)
-  val StoreAccessFault = 0x7.U(4.W)
-  val EcallU = 0x8.U(4.W)
-  val EcallS = 0x9.U(4.W)
-  val EcallM = 0xb.U(4.W)
-  val InstPageFault = 0xc.U(4.W)
-  val LoadPageFault = 0xd.U(4.W)
-  val StorePageFault = 0xf.U(4.W)
+  val StoreAccessFault = 0x7.U(4.W)  // TODO
+  val EcallU = 0x8.U(4.W)  // TODO
+  val EcallS = 0x9.U(4.W)  // TODO
+  val EcallM = 0xb.U(4.W)  // TODO
+  val InstPageFault = 0xc.U(4.W)  // TODO
+  val LoadPageFault = 0xd.U(4.W)  // TODO
+  val StorePageFault = 0xf.U(4.W)  // TODO
   val exceptionBits = InstAddrMisaligned.getWidth
 }
 
@@ -359,6 +359,7 @@ class ExceptionJudgerIO extends Bundle with phvntomParams {
   val mem_is_ld = Input(Bool())
   val mem_is_st = Input(Bool())
   val illegal_mem_addr = Input(Bool())
+  val illegal_inst_addr = Input(Bool())
   val mem_pf = Input(Bool())
   val mem_type = Input(UInt(ControlConst.memBits.W))
   val wb_inst = Input(UInt(xlen.W))
@@ -370,7 +371,7 @@ class ExceptionJudgerIO extends Bundle with phvntomParams {
 class ExceptionJudger extends Module with phvntomParams {
   val io = IO(new ExceptionJudgerIO)
 
-  when(io.if_pc_check & io.if_inst_addr(1, 0).orR) {
+  when(io.if_pc_check & io.illegal_inst_addr) {
     io.has_except := true.B
     io.except_out := Exception.InstAddrMisaligned
   }.elsewhen(io.if_pf) {
@@ -461,6 +462,7 @@ class CSRIO extends Bundle with phvntomParams {
   // Exception
   val pc = Input(UInt(xlen.W))
   val illegal_mem_addr = Input(Bool())
+  val illegal_inst_addr = Input(Bool())
   val inst = Input(UInt(xlen.W))
   val illegal = Input(Bool())
   val is_load = Input(Bool())
@@ -498,6 +500,7 @@ class CSR extends Module with phvntomParams {
   exception_judger.io.mem_is_ld := io.is_load
   exception_judger.io.mem_is_st := io.is_store
   exception_judger.io.illegal_mem_addr := io.illegal_mem_addr
+  exception_judger.io.illegal_inst_addr := io.illegal_inst_addr
   exception_judger.io.mem_pf := false.B
   exception_judger.io.mem_type := io.mem_type
   exception_judger.io.wb_inst := io.inst

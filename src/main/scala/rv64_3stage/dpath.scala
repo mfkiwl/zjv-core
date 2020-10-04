@@ -143,13 +143,14 @@ class DataPath extends Module with phvntomParams {
   /* Fetch / Execute Register */
   val exe_inst = RegInit(UInt(xlen.W), BUBBLE)
   val exe_pc = RegInit(UInt(xlen.W), 0.U)
+  val exe_inst_addr_misaligned = RegInit(Bool(), false.B)
 
   /* Execute / Write Back Register */
   val wb_inst = RegInit(UInt(xlen.W), BUBBLE)
   val wb_pc = RegInit(UInt(xlen.W), 0.U)
   val wb_alu = Reg(UInt(xlen.W))
   val wb_wdata = Reg(UInt(xlen.W))
-  val wb_original_csr = Reg(UInt(xlen.W))
+  val wb_inst_addr_misaligned = RegInit(Bool(), false.B)
 
   // Control Signal of Write Back Stage (1 cycle delay)
   val wb_memType = Reg(UInt())
@@ -161,12 +162,13 @@ class DataPath extends Module with phvntomParams {
   //    Instruction Fetch Stage
   // ******************************
 
-  val istall = !io.imem.resp.valid
+  val istall = (io.imem.req.valid && !io.imem.resp.valid)
   val dstall = (io.dmem.req.valid && !io.dmem.resp.valid)
   val if_stall = istall || dstall
   val exe_stall = dstall
   val if_pc = RegInit(UInt(xlen.W), startAddr)
   val if_pc_4 = if_pc + 4.U(xlen.W)
+  val inst_addr_misaligned = if_pc(1,0).orR  // TODO add C Extension
 
   val if_npc = Mux(
     csrFile.io.expt,
@@ -205,7 +207,7 @@ class DataPath extends Module with phvntomParams {
   io.imem.req.bits.data := DontCare
   val if_inst = io.imem.resp.bits.data
 
-  io.imem.req.valid := !io.ctrl.bubble
+  io.imem.req.valid := !io.ctrl.bubble && inst_addr_misaligned === false.B
   io.imem.req.bits.wen := false.B
   io.imem.req.bits.memtype := memWordU
 
@@ -213,8 +215,10 @@ class DataPath extends Module with phvntomParams {
     exe_pc := if_pc
     when(io.ctrl.bubble || brCond.io.branch || istall || csrFile.io.expt || csrFile.io.ret) {
       exe_inst := BUBBLE
+      exe_inst_addr_misaligned := false.B
     }.otherwise {
       exe_inst := if_inst
+      exe_inst_addr_misaligned := inst_addr_misaligned
     }
   }
 
@@ -290,19 +294,21 @@ class DataPath extends Module with phvntomParams {
       wb_select := wbXXX
       wen := wenXXX
       wb_illegal := false.B
+      wb_inst_addr_misaligned := false.B
     }.otherwise {
       wb_inst := exe_inst
       wb_memType := io.ctrl.memType
       wb_select := io.ctrl.wbSelect
       wen := io.ctrl.wbEnable
       wb_illegal := io.ctrl.instType === ControlConst.Illegal
+      wb_inst_addr_misaligned := exe_inst_addr_misaligned
     }
   }
 
   // ******************************
   //        Write Back Stage
   // ******************************
-  val illegal_mem_addr = MuxLookup(wb_memType, false.B, Seq(
+  val mem_addr_misaligned = MuxLookup(wb_memType, false.B, Seq(
     memByte -> false.B,
     memByteU -> false.B,
     memHalf -> wb_alu(0),
@@ -322,11 +328,11 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.addr := wb_alu
   io.dmem.req.bits.data := wb_wdata
 
-  io.dmem.req.valid := wb_memType.orR && illegal_mem_addr === false.B
+  io.dmem.req.valid := wb_memType.orR && mem_addr_misaligned === false.B
   io.dmem.req.bits.wen := wen === wenMem
   io.dmem.req.bits.memtype := wb_memType
 
-  regFile.io.wen := (wen === wenReg && illegal_mem_addr === false.B) || wen === wenCSRW || wen === wenCSRC || wen === wenCSRS
+  regFile.io.wen := (wen === wenReg && mem_addr_misaligned === false.B) || wen === wenCSRW || wen === wenCSRC || wen === wenCSRS
   regFile.io.rd_addr := rd_addr
   regFile.io.rd_data := wb_data
 
@@ -336,7 +342,8 @@ class DataPath extends Module with phvntomParams {
   csrFile.io.in := wb_alu
   // exception in
   csrFile.io.pc := wb_pc
-  csrFile.io.illegal_mem_addr := illegal_mem_addr
+  csrFile.io.illegal_mem_addr := mem_addr_misaligned
+  csrFile.io.illegal_inst_addr := wb_inst_addr_misaligned
   csrFile.io.inst := wb_inst
   csrFile.io.illegal := wb_illegal
   csrFile.io.is_load := wb_memType.orR && wen =/= wenMem

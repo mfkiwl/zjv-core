@@ -81,7 +81,7 @@ rv64i_z_type = \
 
 rv64i_exception = \
 	ma_addr     \
-	#ma_fetch    \
+	ma_fetch    \
 	#illegal \
 	#access  \
 	#breakpoint  \
