@@ -1,6 +1,6 @@
 rv64i_test_target = \
     $(rv64i_exception)  \
-    #$(rv64i_z_type) \
+    $(rv64i_z_type) \
 	$(dev_test_set) \
 	$(rv64i_r_type) \
 	$(rv64i_i_type) \
@@ -80,12 +80,12 @@ rv64i_z_type = \
 	mcsr   \
 
 rv64i_exception = \
-	breakpoint  \
 	sbreak  \
 	scall   \
     illegal \
 	ma_addr     \
 	ma_fetch    \
+	#breakpoint  \
 	#access  \
 
 

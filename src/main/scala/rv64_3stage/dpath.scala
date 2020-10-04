@@ -336,7 +336,6 @@ class DataPath extends Module with phvntomParams {
     wbPC -> wb_pc_4,
     wbCSR -> csrFile.io.out))
 
-  //io.dmem.req.bits.addr := Mux(wb_memType === memDouble,"h38004000".U,wb_alu) // TODO restore wb_alu
   io.dmem.req.bits.addr := wb_alu
   io.dmem.req.bits.data := wb_wdata
 
