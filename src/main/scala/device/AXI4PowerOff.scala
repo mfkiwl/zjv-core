@@ -7,15 +7,15 @@ import rv64_3stage.phvntomParams
 import bus.AXI4Slave
 import utils._
 
-class AXI4HangupIO extends Bundle with phvntomParams {
-  val hangup = Output(Bool())
+class AXI4PowerOffIO extends Bundle with phvntomParams {
+  val poweroff = Output(Bool())
 }
 
-class AXI4Hangup extends AXI4Slave(new AXI4HangupIO) with AXI4Parameters {
-  val hangup = RegInit(0.U(xlen.W))
+class AXI4PowerOff extends AXI4Slave(new AXI4PowerOffIO) with AXI4Parameters {
+  val poweroff = RegInit(0.U(xlen.W))
 
   val mapping = Map(
-    RegMap(0x0, hangup),
+    RegMap(0x0, poweroff),
   )
 
   def getOffset(addr: UInt) = addr(15, 0)
@@ -30,5 +30,5 @@ class AXI4Hangup extends AXI4Slave(new AXI4HangupIO) with AXI4Parameters {
     MaskExpand(io.in.w.bits.strb)
   )
 
-  io.extra.get.hangup := RegNext(hangup =/= 0.U)
+  io.extra.get.poweroff := RegNext(poweroff =/= 0.U)
 }
