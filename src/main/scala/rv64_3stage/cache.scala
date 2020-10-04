@@ -15,7 +15,7 @@
 // )
 
 // trait CacheParams extends CoreParams with HasNastiParameters {
-//   val nWays = p(NWays) // Not used...
+//   val nWays = p(NWays)
 //   val nSets = p(NSets)
 //   val bBytes = p(CacheBlockBytes)
 //   val bBits = bBytes << 3
@@ -28,17 +28,17 @@
 //   val dataBeats = bBits / nastiXDataBits
 // }
 
-// class CacheSimpleIO extends Bundle with phvntomParams {
+// class CacheIO extends Bundle with phvntomParams {
 //   val in = new MemIO
-//   val out = new AXI4Bundle
+//   val out = new MemIO
 // }
 
 // class MetaData(implicit val p: Parameters) extends Bundle with CacheParams {
 //   val tag = UInt(tlen.W)
 // }
 
-// class CacheSimple(val config: CacheConfig) extends Module with phvntomParams {
-//   val io = IO(new CacheSimpleIO)
+// class Cache(val config: CacheConfig) extends Module with phvntomParams {
+//   val io = IO(new CacheIO)
 //   // cache states
 //   val (s_IDLE :: s_READ_CACHE :: s_WRITE_CACHE :: s_WRITE_BACK :: s_WRITE_ACK :: s_REFILL_READY :: s_REFILL :: Nil) =
 //     Enum(7)
