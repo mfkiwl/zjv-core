@@ -25,11 +25,11 @@ RVTEST_BARE_CODE_BEGIN
 	sb   t0, 0(s0)
 	addi t0, zero, 'o'
 	sb   t0, 0(s0)
-	addi t0, zero, ' '
-	sb   t0, 0(s0)
 	addi t0, zero, ','
 	sb   t0, 0(s0)
-	addi t0, zero, 'w'
+	addi t0, zero, ' '
+	sb   t0, 0(s0)
+	addi t0, zero, 'W'
 	sb   t0, 0(s0)
 	addi t0, zero, 'o'
 	sb   t0, 0(s0)
@@ -39,7 +39,8 @@ RVTEST_BARE_CODE_BEGIN
 	sb   t0, 0(s0)	
 	addi t0, zero, 'd'
 	sb   t0, 0(s0)
-
+	addi t0, zero, '!'
+	sb   t0, 0(s0)
 
 RVTEST_CODE_END
 

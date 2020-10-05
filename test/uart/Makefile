@@ -1,6 +1,7 @@
 uart_test_target = \
 	$(dev_test_set) \
-	putc
+	putc \
+	getc
 
 dev_test_set = \
 
