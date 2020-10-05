@@ -36,7 +36,7 @@ sim_t* dtengine_t::sim_init(std::string elfpath) {
         spike->set_procs_debug(true);
     #endif
     // spike->run();
-
+    spike->set_diffTest(true);
     spike->difftest_setup();
 }
 
