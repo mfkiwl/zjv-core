@@ -13,8 +13,8 @@ static char line_status = '\x60'; // b101 R
 static char modem_status;         // b110 R
 static char scratch_pad;          // b111
 
-static char divisor_latch_low;  // b000
-static char divisor_latch_high; // b001
+static char divisor_latch_low = '\x01';  // b000
+static char divisor_latch_high = '\x01'; // b001
 static char prescalar_division; // b101 W
 
 static void uart_enqueue(char ch)
@@ -49,6 +49,7 @@ static int uart_dequeue(void)
 
 static void update_value()
 {
+    line_status = 0x40 | 0x20 | (front != rear);
 }
 
 extern "C" void uart_getc(char addr, char *data) // read
@@ -144,6 +145,7 @@ extern "C" void uart_putc(char addr, char data) // write
 
     case 6:
     default:
+        printf("[UART] Store illegal address 0x%x[%x] \n", addr, data);
         break;
     }
     update_value();

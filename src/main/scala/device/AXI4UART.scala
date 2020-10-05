@@ -42,7 +42,7 @@ class AXI4UART extends AXI4Slave with AXI4Parameters {
     printf("%c", io.in.w.bits.data(7, 0))
   }
 
-  printf("In UART: wen = %d, waddr = %d, wdata = %d; ren = %d, raddr = %d, rdata = %d\n", uart_sim.io.wen, uart_sim.io.waddr, uart_sim.io.wdata, uart_sim.io.ren, uart_sim.io.raddr, rdata)
+  // printf("In UART: wen = %d, waddr = %d, wdata = %d; ren = %d, raddr = %d, rdata = %d\n", uart_sim.io.wen, uart_sim.io.waddr, uart_sim.io.wdata, uart_sim.io.ren, uart_sim.io.raddr, rdata)
   
 //   val mapping = Map(
 //     RegMap(0x0, rx_tx, putc),

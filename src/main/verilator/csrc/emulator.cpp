@@ -81,20 +81,20 @@ int main(int argc, char** argv)
       if (startTest && engine.emu_difftest_valid()) {
          engine.sim_step(1);
 
-         printf("zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
-         for (int i = 0; i < REG_G_NUM; i++) {
-            if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
-               printf("\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
-            else
-               printf("[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
-            if (i % 3 == 2)
-               printf("\n");
-         }
+         printf("zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());         
          if (REG_G_NUM % 3 != 0)
             printf("\n");
 
          if (engine.is_finish()) {
             printf("\n\t\t \x1b[32m========== [ %s PASS ] ==========\x1b[0m\n", argv[1]);
+            for (int i = 0; i < REG_G_NUM; i++) {
+               if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
+                  printf("\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+               else
+                  printf("[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+               if (i % 3 == 2)
+                  printf("\n");
+            }
             break;
          }
          
