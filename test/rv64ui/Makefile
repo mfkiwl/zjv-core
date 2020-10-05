@@ -1,12 +1,12 @@
 rv64ui_test_target = \
 	$(rv64ui_exception) \
-	# $(rv64ui_r_type) \
-	# $(rv64ui_i_type) \
-	# $(rv64ui_u_type) \
-	# $(rv64ui_j_type) \
-	# $(rv64ui_b_type) \
-	# $(rv64ui_s_type) \
-	# $(rv64ui_z_type) \
+	$(rv64ui_r_type) \
+	$(rv64ui_i_type) \
+	$(rv64ui_u_type) \
+	$(rv64ui_j_type) \
+	$(rv64ui_b_type) \
+	$(rv64ui_s_type) \
+	$(rv64ui_z_type) \
 	# $(rv64ui_exception) \
 
 

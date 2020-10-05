@@ -3,7 +3,7 @@ package bus
 import chisel3._
 import chisel3.util._
 
-class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
+class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   val io = IO(new Bundle {
     val in = Flipped(new AXI4Bundle)
     val out = Vec(addressSpace.length, new AXI4Bundle)
@@ -23,9 +23,10 @@ class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   )
   val routSelIdx = PriorityEncoder(routSelVec)
   val routSel = io.out(routSelIdx)
-  val routSelIdxResp = RegEnable(routSelIdx, routSel.ar.fire() && (r_state === s_idle))
+  val routSelIdxResp =
+    RegEnable(routSelIdx, routSel.ar.fire() && (r_state === s_idle))
   val routSelResp = io.out(routSelIdxResp)
-  // val reqInvalidAddr = io.in.ar.valid && !routSelVec.asUInt.orR
+  // val rreqInvalidAddr = io.in.ar.valid && !routSelVec.asUInt.orR
 
   // bind out.req channel
   (io.out zip routSelVec).map {
@@ -35,8 +36,8 @@ class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
       o.r.ready := v
     }
   }
-  for(i <- 0 until addressSpace.length) {
-    when(routSelIdx === i.U) {
+  for (i <- 0 until addressSpace.length) {
+    when(routSelIdx === i.U && routSelIdx =/= (addressSpace.length - 1).U) { // minus base addr except mem
       io.out(i).ar.bits.addr := io.in.ar.bits.addr - addressSpace(i)._1.U
     }
   }
@@ -44,7 +45,7 @@ class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   switch(r_state) {
     is(s_idle) {
       when(routSel.ar.fire()) { r_state := s_resp }
-      // when(reqInvalidAddr) { r_state := s_error }
+      // when(rreqInvalidAddr) { r_state := s_error }
     }
     is(s_resp) { when(routSelResp.r.bits.last) { r_state := s_idle } }
     // is(s_error) { when(io.in.r.fire()) { r_state := s_idle } }
@@ -54,7 +55,7 @@ class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   io.in.r.bits <> routSelResp.r.bits
   // io.in.resp.bits.exc.get := r_state === s_error
   routSelResp.r.ready := io.in.r.ready
-  io.in.ar.ready := routSel.ar.ready // || reqInvalidAddr
+  io.in.ar.ready := routSel.ar.ready // || rreqInvalidAddr
 
   // printf("-----------Xbar1toN Debug Start-----------\n")
   // printf(p"routSelVec = ${routSelVec}, routSelIdx = ${routSelIdx}\n")
@@ -91,9 +92,10 @@ class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   )
   val woutSelIdx = PriorityEncoder(woutSelVec)
   val woutSel = io.out(woutSelIdx)
-  val woutSelIdxResp = RegEnable(woutSelIdx, woutSel.aw.fire() && (w_state === s_idle))
+  val woutSelIdxResp =
+    RegEnable(woutSelIdx, woutSel.aw.fire() && (w_state === s_idle))
   val woutSelResp = io.out(woutSelIdxResp)
-  // val reqInvalidAddr = io.in.aw.valid && !woutSelVec.asUInt.orR
+  // val wreqInvalidAddr = io.in.aw.valid && !woutSelVec.asUInt.orR
 
   // bind out.req channel
   (io.out zip woutSelVec).map {
@@ -109,17 +111,17 @@ class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   switch(w_state) {
     is(s_idle) {
       when(woutSel.aw.fire()) { w_state := s_resp }
-      // when(reqInvalidAddr) { w_state := s_error }
+      // when(wreqInvalidAddr) { w_state := s_error }
     }
     is(s_resp) { when(woutSelResp.b.fire()) { w_state := s_idle } }
-    // is(s_error) { when(io.in.r.fire()) { w_state := s_idle } }
+    // is(s_error) { when(io.in.b.fire()) { w_state := s_idle } }
   }
 
   io.in.b.valid := woutSelResp.b.valid // || w_state === s_error
   io.in.b.bits <> woutSelResp.b.bits
   // io.in.resp.bits.exc.get := w_state === s_error
   woutSelResp.b.ready := io.in.b.ready
-  io.in.aw.ready := woutSel.aw.ready // || reqInvalidAddr
+  io.in.aw.ready := woutSel.aw.ready // || wreqInvalidAddr
   io.in.w.ready := woutSel.w.ready
 
   // when(!(!io.in.req.valid || routSelVec.asUInt.orR) || !(!(io.in.req.valid && routSelVec.asUInt.andR))){
@@ -129,18 +131,9 @@ class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   // }
   // assert(!io.in.req.valid || routSelVec.asUInt.orR, "address decode error, bad addr = 0x%x\n", addr)
   // assert(!(io.in.req.valid && routSelVec.asUInt.andR), "address decode error, bad addr = 0x%x\n", addr)
-  // io.in.aw <> io.out(1).aw
-  // io.in.w <> io.out(1).w
-  // io.in.b <> io.out(1).b
-  // io.out(0).ar := DontCare
-  // io.out(0).r.ready := false.B
-  // io.out(0).aw := DontCare
-  // io.out(0).w := DontCare
-  // io.out(0).b.ready := false.B
-  // io.in <> io.out(1)
 }
 
-class SimpleBusCrossbarNto1(n: Int) extends Module {
+class CrossbarNto1(n: Int) extends Module {
   val io = IO(new Bundle {
     val in = Flipped(Vec(n, new AXI4Bundle))
     val out = new AXI4Bundle
@@ -239,8 +232,8 @@ class AXI4Xbar(n: Int, addressSpace: List[(Long, Long)]) extends Module {
     val out = Vec(addressSpace.length, new AXI4Bundle)
   })
 
-  val inXbar = Module(new SimpleBusCrossbarNto1(n))
-  val outXbar = Module(new SimpleBusCrossbar1toN(addressSpace))
+  val inXbar = Module(new CrossbarNto1(n))
+  val outXbar = Module(new Crossbar1toN(addressSpace))
   inXbar.io.in <> io.in
   outXbar.io.in <> inXbar.io.out
   io.out <> outXbar.io.out
