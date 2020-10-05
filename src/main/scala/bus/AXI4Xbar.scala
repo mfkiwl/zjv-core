@@ -37,7 +37,7 @@ class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
     }
   }
   for (i <- 0 until addressSpace.length) {
-    when(routSelIdx === i.U) {
+    when(routSelIdx === i.U && routSelIdx =/= (addressSpace.length - 1).U) { // minus base addr except mem
       io.out(i).ar.bits.addr := io.in.ar.bits.addr - addressSpace(i)._1.U
     }
   }
