@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "uart.h"
 
 #define QUEUE_SIZE 1024
 static char queue[QUEUE_SIZE] = {};
@@ -15,7 +16,7 @@ static char scratch_pad;          // b111
 
 static char divisor_latch_low = '\x01';  // b000
 static char divisor_latch_high = '\x01'; // b001
-static char prescalar_division; // b101 W
+static char prescalar_division;          // b101 W
 
 static void uart_enqueue(char ch)
 {
@@ -56,7 +57,7 @@ extern "C" void uart_getc(char addr, char *data) // read
 {
     switch (addr)
     {
-    case 0:
+    case UART_RHR: // 0
         if (line_control < 0)
         {
             *data = divisor_latch_low;
@@ -66,7 +67,7 @@ extern "C" void uart_getc(char addr, char *data) // read
             *data = uart_dequeue();
         }
         break;
-    case 1:
+    case UART_IER: // 1
         if (line_control < 0)
         {
             *data = divisor_latch_high;
@@ -76,22 +77,22 @@ extern "C" void uart_getc(char addr, char *data) // read
             *data = interrupt_enable;
         }
         break;
-    case 2:
+    case UART_ISR: // 2
         *data = interrupt_status;
         break;
-    case 3:
+    case UART_LCR: // 3
         *data = line_control;
         break;
-    case 4:
+    case UART_MCR: // 4
         *data = modem_control;
         break;
-    case 5:
+    case UART_LSR: // 5
         *data = line_status;
         break;
-    case 6:
+    case UART_MSR: // 6
         *data = modem_status;
         break;
-    case 7:
+    case UART_SPR: // 7
         *data = scratch_pad;
         break;
 
@@ -105,7 +106,7 @@ extern "C" void uart_putc(char addr, char data) // write
 {
     switch (addr)
     {
-    case 0:
+    case UART_THR: // 0
         if (line_control < 0)
         {
             divisor_latch_low = data;
@@ -115,7 +116,7 @@ extern "C" void uart_putc(char addr, char data) // write
         //     uart_enqueue(data);
         // }
         break;
-    case 1:
+    case UART_IER: // 1
         if (line_control < 0)
         {
             divisor_latch_high = data;
@@ -125,25 +126,23 @@ extern "C" void uart_putc(char addr, char data) // write
             interrupt_enable = data;
         }
         break;
-    case 2:
+    case UART_FCR: // 2
         fifo_control = data;
         break;
-    case 3:
+    case UART_LCR: // 3
         line_control = data;
         break;
-    case 4:
+    case UART_MCR: // 4
         modem_control = data;
         break;
-    case 5:
+    case UART_PSD: // 5
         if (line_control < 0)
         {
             prescalar_division = data & 0x0f;
         }
-    case 7:
+    case UART_SPR: // 7
         scratch_pad = data;
         break;
-
-    case 6:
     default:
         printf("[UART] Store illegal address 0x%x[%x] \n", addr, data);
         break;
