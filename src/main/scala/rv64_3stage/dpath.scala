@@ -374,7 +374,7 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_trmt,    "difftestTerminate")
 
-    if(pipeTrace){
+    when (pipeTrace.B && dtest_expt){
       printf("[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n", dtest_expt, dtest_int);
     }
 

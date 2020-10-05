@@ -21,6 +21,10 @@ class Tile extends Module with phvntomParams with projectConfig {
   val dcache = Module(new Uncache)
   val in_device = List(icache, dcache)
 
+  val poweroff = Module(new AXI4PowerOff)
+  val poweroffSync = poweroff.io.extra.get.poweroff
+  BoringUtils.addSource(poweroffSync, "poweroff")
+
   val clint = Module(new Clint)
   val mtipSync = clint.io.extra.get.mtip
   val msipSync = clint.io.extra.get.msip
@@ -28,14 +32,12 @@ class Tile extends Module with phvntomParams with projectConfig {
   core.io.imem <> icache.io.in
   core.io.dmem <> dcache.io.in
   core.io.int.msip := msipSync
-  core.io.int.mtip := mtipSync
-
-  val poweroff = Module(new AXI4PowerOff)
-  val poweroffSync = poweroff.io.extra.get.poweroff
-  BoringUtils.addSource(poweroffSync, "poweroff")
+  core.io.int.mtip := mtipSync  
 
   BoringUtils.addSource(mtipSync, "mtip")
   BoringUtils.addSource(msipSync, "msip")
+
+  val uart = Module(new AXI4UART)
 
   val mem = Module(new AXI4RAM(memByte = 4 * 1024 * 1024 * 1024))
 
@@ -44,10 +46,10 @@ class Tile extends Module with phvntomParams with projectConfig {
     (0x000100L, 0x10L), // POWEROFFF
     (0x2000000L, 0x10000L), // CLINT
     // (0xc000000L, 0x4000000L)  // PLIC
-    // (0x10000000L, 0x100L), // uart
+    (0x10000000L, 0x100L), // uart
     (0x80000000L, 0x8000000L) // mem
   )
-  val out_device = List(poweroff, clint, mem)
+  val out_device = List(poweroff, clint, uart, mem)
 
   val xbar = Module(new AXI4Xbar(2, addrSpace))
 

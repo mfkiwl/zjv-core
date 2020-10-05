@@ -2,9 +2,8 @@ package device
 
 import chisel3._
 import chisel3.util._
-import bus.AXI4Parameters
 import rv64_3stage.phvntomParams
-import bus.AXI4Slave
+import bus._
 import utils._
 
 class AXI4PowerOffIO extends Bundle with phvntomParams {
