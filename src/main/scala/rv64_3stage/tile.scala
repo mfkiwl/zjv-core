@@ -39,6 +39,7 @@ class Tile extends Module with phvntomParams with projectConfig {
   BoringUtils.addSource(msipSync, "msip")
 
   val uart = Module(new AXI4UART)
+  uart.io.extra.get.offset := dcache.io.offset
 
   val mem = Module(new AXI4RAM(memByte = 4 * 1024 * 1024 * 1024))
 
