@@ -31,6 +31,9 @@
 #define REG_PC     32
 #define REG_NPC    33
 
+#define PROGRAM_PASS 0xc001babe
+#define PROGRAM_FAIL 0xdeadbabe
+
 class dtengine_t {
 public:
     sim_t*  spike;
@@ -62,6 +65,7 @@ public:
 
     unsigned long emu_get_pc();
     unsigned long emu_get_inst();
+    unsigned long emu_get_poweroff();
     unsigned long sim_get_pc();
 
     bool is_finish();

@@ -193,9 +193,11 @@ reset_vector:                                                           \
 #define RVTEST_PASS                                                     \
         fence;                                                          \
         li TESTNUM, 1;                                                  \
+	      lui	  t0, %hi(0xc001babe);                                      \
+	      addi	t0, t0, %lo(0xc001babe);                                  \
+        sd    t0, 0x100(zero);
 //        ebreak
-        addi t0, zero, 0x555
-        sd t0, 0x100(zero)
+        
 
 #define TESTNUM gp
 #define RVTEST_FAIL                                                     \
@@ -203,9 +205,10 @@ reset_vector:                                                           \
 1:      beqz TESTNUM, 1b;                                               \
         sll TESTNUM, TESTNUM, 1;                                        \
         or TESTNUM, TESTNUM, 1;                                         \
+	      lui	  t0, %hi(0xdeadbabe);                                      \
+	      addi	t0, t0, %lo(0xdeadbabe);                                  \
+        sd    t0, 0x100(zero);
 //        ecall
-        addi t0, zero, 0xfff
-        sd t0, 0x100(zero)
 
 //-----------------------------------------------------------------------
 // Data Section Macro

@@ -5,9 +5,10 @@ import chisel3.util._
 import rv64_3stage.phvntomParams
 import bus._
 import utils._
+import chisel3.util.experimental.BoringUtils
 
 class AXI4PowerOffIO extends Bundle with phvntomParams {
-  val poweroff = Output(Bool())
+  val poweroff = Output(UInt(xlen.W))
 }
 
 class AXI4PowerOff extends AXI4Slave(new AXI4PowerOffIO) with AXI4Parameters {
@@ -27,5 +28,5 @@ class AXI4PowerOff extends AXI4Slave(new AXI4PowerOffIO) with AXI4Parameters {
     MaskExpand(io.in.w.bits.strb)
   )
 
-  io.extra.get.poweroff := RegNext(poweroff =/= 0.U)
+  io.extra.get.poweroff := poweroff
 }

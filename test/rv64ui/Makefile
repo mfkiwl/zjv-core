@@ -1,6 +1,5 @@
 
 rv64ui_test_target = \
-	$(rv64ui_exception) \
 	$(rv64ui_r_type) \
 	$(rv64ui_i_type) \
 	$(rv64ui_u_type) \
@@ -70,22 +69,6 @@ rv64ui_s_type = \
 	sh    \
 	sw    \
 	sd    \
-
-rv64ui_z_type = \
-	csr   \
-	mcsr   \
-
-rv64ui_exception = \
-	sbreak  \
-	scall   \
-    illegal \
-	ma_addr     \
-	ma_fetch    \
-	#breakpoint  \
-	#access  \
-
-
-
 
 
 rv64ui_test_src = $(addsuffix .S, $(rv64ui_sc_tests))

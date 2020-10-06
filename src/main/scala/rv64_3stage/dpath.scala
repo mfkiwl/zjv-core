@@ -396,7 +396,7 @@ class DataPath extends Module with phvntomParams {
       printf("[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n", dtest_expt, dtest_int);
     }
 
-    if (pipeTrace == false) {
+    if (pipeTrace) {
       // when (!stall) {
       printf("      if stage \t\t exe stage \t\t wb stage \t\t debug stage\n")
       printf("pc    %x\t %x\t %x\t %x \n", if_pc, exe_pc, wb_pc, dtest_pc)
@@ -408,7 +408,7 @@ class DataPath extends Module with phvntomParams {
         dtest_inst
       )
       printf(
-        "      if_stall [%c] \t\texe_stall [%c]\t\t\t valid [%c]\n\n",
+        "      if_stall [%c] \t exe_stall [%c] \t\t\t\t valid [%c]\n\n",
         Mux(if_stall, Str("*"), Str(" ")),
         Mux(exe_stall, Str("*"), Str(" ")),
         Mux(dtest_wbvalid, Str("*"), Str(" "))

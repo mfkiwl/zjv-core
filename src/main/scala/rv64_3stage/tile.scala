@@ -23,7 +23,8 @@ class Tile extends Module with phvntomParams with projectConfig {
 
   val poweroff = Module(new AXI4PowerOff)
   val poweroffSync = poweroff.io.extra.get.poweroff
-  BoringUtils.addSource(poweroffSync, "poweroff")
+  BoringUtils.addSource(poweroffSync(31, 0), "poweroff")
+
 
   val clint = Module(new Clint)
   val mtipSync = clint.io.extra.get.mtip

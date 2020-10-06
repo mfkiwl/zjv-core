@@ -146,10 +146,14 @@ unsigned long dtengine_t::emu_get_inst() {
     return emu_state.inst;
 }
 
+unsigned long dtengine_t::emu_get_poweroff() {
+    return zjv->io_poweroff;
+}
+
 unsigned long dtengine_t::sim_get_pc() {
     return sim_state.pc;
 }
 
 bool dtengine_t::is_finish() {
-    return Verilated::gotFinish() || zjv->io_poweroff;
+    return Verilated::gotFinish() || emu_get_poweroff() != 0;
 }
