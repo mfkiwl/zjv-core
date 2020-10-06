@@ -134,11 +134,11 @@ class CSRFile extends Module with phvntomParams {
   val mstatusr_mie = RegInit(false.B)
   val mstatusr_sie = RegInit(false.B)
   // MIE
-  val mier_meie = RegInit(true.B)
+  val mier_meie = RegInit(false.B)
   val mier_seie = RegInit(false.B)
-  val mier_mtie = RegInit(true.B)
+  val mier_mtie = RegInit(false.B)
   val mier_stie = RegInit(false.B)
-  val mier_msie = RegInit(true.B)
+  val mier_msie = RegInit(false.B)
   val mier_ssie = RegInit(false.B)
 
   // normal registers in CSR
