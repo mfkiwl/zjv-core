@@ -11,7 +11,7 @@
 #define UART_FCR   0x02  // FIFO Control Register 
 #define UART_LCR   0x03  // Line Control Register 
 #define UART_MCR   0x04  // Modem Control Register 
-#define UART_LSR   0x05  // Line Status Register 
+#define UART_LSR   0x05  // Line Status Register
 #define UART_MSR   0x06  // Modem Status Register 
 #define UART_SPR   0x07  // Scratch Pad Register 
 #define UART_DLL   0x00  // Divisor LSB (LCR_DLAB) 
