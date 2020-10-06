@@ -1,17 +1,18 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "uart.h"
 
 #define QUEUE_SIZE 1024
-static char queue[QUEUE_SIZE] = {};
-static int front = 0, rear = 0;
+static char queue[QUEUE_SIZE] = "ps\n";
+static int front = 0, rear = 3;
 static char interrupt_enable;     // b001
 static char interrupt_status = 1; // b010 R
 static char fifo_control;         // b010 W
 static char line_control;         // b011
 static char modem_control;        // b100
-static char line_status = '\x60'; // b101 R
+static char line_status = '\x61'; // b101 R
 static char modem_status;         // b110 R
 static char scratch_pad;          // b111
 static char divisor_latch_low = '\x01';  // b000
@@ -54,21 +55,7 @@ static int uart_dequeue(void)
         k = queue[front];
         front = (front + 1) % QUEUE_SIZE;
     }
-    // else
-    // {
-    //     static int last = 0;
-    //     k = "root\n"[last++];
-    //     if (last == 5)
-    //     {
-    //         last = 0;
-    //     }
-    // }
     return k;
-}
-
-static void update_value()
-{
-    line_status = 0x40 | 0x20 | (front != rear);
 }
 
 extern "C" void uart_getc(char addr, char *data) // read
@@ -106,7 +93,7 @@ extern "C" void uart_getc(char addr, char *data) // read
         *data = modem_control;
         break;
     case UART_LSR: // 5
-        *data = line_status;
+        *data = (0x40 | 0x20 | (front != rear));
         break;
     case UART_MSR: // 6
         *data = modem_status;
@@ -118,7 +105,7 @@ extern "C" void uart_getc(char addr, char *data) // read
     default:
         break;
     }
-    printf("In uart_getc: addr = %d, data = %d\n", addr, *data);
+    // printf("In uart_getc: addr = %d, data = %d\n", addr, *data);
 
 // #define read(name, offset) ((uint64_t)read_##name << (offset * 8))
 
@@ -181,9 +168,8 @@ extern "C" void uart_putc(char addr, char data) // write
         scratch_pad = data;
         break;
     default:
-        printf("[UART] Store illegal address 0x%x[%x] \n", addr, data);
+        // printf("[UART] Store illegal address 0x%x[%x] \n", addr, data);
         break;
     }
-    update_value();
-     printf("In uart_putc: addr = %d, data = %d\n", addr, data);
+    //  printf("In uart_putc: addr = %d, data = %d\n", addr, data);
 }
