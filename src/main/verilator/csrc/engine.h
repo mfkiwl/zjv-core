@@ -66,7 +66,10 @@ public:
     unsigned long emu_get_pc();
     unsigned long emu_get_inst();
     unsigned long emu_get_poweroff();
+    bool emu_get_tick();
+
     unsigned long sim_get_pc();
+    void sim_sync_cycle();
 
     bool is_finish();
     unsigned long emu_difftest_valid();

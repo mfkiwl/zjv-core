@@ -150,8 +150,16 @@ unsigned long dtengine_t::emu_get_poweroff() {
     return zjv->io_poweroff;
 }
 
+bool dtengine_t::emu_get_tick() {
+    return zjv->io_difftest_tick;
+}
+
 unsigned long dtengine_t::sim_get_pc() {
     return sim_state.pc;
+}
+
+void dtengine_t::sim_sync_cycle() {
+    spike->sync_cycle();
 }
 
 bool dtengine_t::is_finish() {

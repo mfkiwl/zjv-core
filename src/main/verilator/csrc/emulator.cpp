@@ -63,9 +63,9 @@ int main(int argc, char** argv)
    bool startTest = false;
 
    while (!engine.is_finish()) {
-
       engine.emu_step(1);
-      
+      engine.sim_sync_cycle();
+
       if (!startTest && engine.emu_get_pc() == 0x80000000) {
          startTest = true;
          #ifdef ZJV_DEBUG
