@@ -14,7 +14,7 @@ class SimUART extends BlackBox with phvntomParams {
     val wdata = Input(UInt(8.W))
     val ren = Input(Bool())
     val raddr = Input(UInt(8.W))
-    val rdata = Output(UInt(8.W))
+    val rdata = Output(UInt(xlen.W))
   })
 }
 
