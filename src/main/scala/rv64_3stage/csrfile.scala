@@ -190,8 +190,6 @@ class CSRFile extends Module with phvntomParams {
   val csr_not_exists = WireInit(false.B)
   io.global_int_enable := machine_int_enable
 
-  printf(">>>>>>>>>> mcycle = %x \n", mcycler)
-
   // mcycle and minstret increment
   when(!io.stall && io.which_reg === CSR.mcycle) {
     when(io.wen) {
