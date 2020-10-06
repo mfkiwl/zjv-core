@@ -6,6 +6,7 @@ import bus.AXI4Parameters
 import rv64_3stage.phvntomParams
 import bus.AXI4Slave
 import utils._
+import chisel3.util.experimental.BoringUtils
 
 class ClintIO extends Bundle with phvntomParams {
   val mtip = Output(Bool())
@@ -17,11 +18,11 @@ class Clint extends AXI4Slave(new ClintIO) with AXI4Parameters {
   val mtimecmp = RegInit(1024.U(xlen.W))
   val msip = RegInit(0.U(xlen.W))
   val sim = true
-  val speeder = true
+  val speeder = false
 
   val clk =
     (if (!sim) 40 /* 40MHz / 1000000 */
-     else 10000)
+     else 100)
   val freq = RegInit(clk.U(16.W))
   val inc = RegInit(1.U(16.W))
 
@@ -61,4 +62,6 @@ class Clint extends AXI4Slave(new ClintIO) with AXI4Parameters {
 
   io.extra.get.mtip := RegNext(mtime >= mtimecmp)
   io.extra.get.msip := RegNext(msip =/= 0.U)
+
+  BoringUtils.addSource(tick, "difftestTick")
 }

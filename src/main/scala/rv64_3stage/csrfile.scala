@@ -56,23 +56,29 @@ object CSR {
   val mtinst = 0x34a.U(12.W)
   val mtval2 = 0x34b.U(12.W)
   val pmpcfg0 = 0x3a0.U(12.W)
+  val pmpaddr0 = 0x3b0.U(12.W)
+  // DEBUG
+  val tselect = 0x7a0.U(12.W)
+  val tdata1 = 0x7a1.U(12.W)
+  val tdata2 = 0x7a2.U(12.W)
+  val tdata3 = 0x7a3.U(12.W)
 }
 
 object Exception {
   val InstAddrMisaligned = 0x0.U(4.W)
-  val InstAccessFault = 0x1.U(4.W)
-  val IllegalInst = 0x2.U(4.W)
-  val Breakpoint = 0x3.U(4.W)
+  val InstAccessFault = 0x1.U(4.W) // TODO
+  val IllegalInst = 0x2.U(4.W) // TODO
+  val Breakpoint = 0x3.U(4.W) // TODO
   val LoadAddrMisaligned = 0x4.U(4.W)
-  val LoadAccessFault = 0x5.U(4.W)
+  val LoadAccessFault = 0x5.U(4.W) // TODO
   val StoreAddrMisaligned = 0x6.U(4.W)
-  val StoreAccessFault = 0x7.U(4.W)
-  val EcallU = 0x8.U(4.W)
-  val EcallS = 0x9.U(4.W)
-  val EcallM = 0xb.U(4.W)
-  val InstPageFault = 0xc.U(4.W)
-  val LoadPageFault = 0xd.U(4.W)
-  val StorePageFault = 0xf.U(4.W)
+  val StoreAccessFault = 0x7.U(4.W) // TODO
+  val EcallU = 0x8.U(4.W) // TODO
+  val EcallS = 0x9.U(4.W) // TODO
+  val EcallM = 0xb.U(4.W) // TODO
+  val InstPageFault = 0xc.U(4.W) // TODO
+  val LoadPageFault = 0xd.U(4.W) // TODO
+  val StorePageFault = 0xf.U(4.W) // TODO
   val exceptionBits = InstAddrMisaligned.getWidth
 }
 
@@ -103,6 +109,7 @@ class CSRFileIO extends Bundle with phvntomParams {
   val evec_out = Output(UInt(xlen.W))
   val epc_out = Output(UInt(xlen.W))
   val global_int_enable = Output(Bool())
+  val illegal_csr = Output(Bool())
 }
 
 class CSRFile extends Module with phvntomParams {
@@ -161,53 +168,81 @@ class CSRFile extends Module with phvntomParams {
   val marchidr = 5.U(xlen.W)
   val mscratchr = RegInit(0.U(xlen.W))
 
-  // SOME IMPORTANT INFORMATION
-  // By default, M-mode interrupts are globally enabled if the hart’s current privilege mode is less than
-  // M, or if the current privilege mode is M and the MIE bit in the mstatus register is set.
-  // If bit i
-  // in mideleg is set, however, interrupts are considered to be globally enabled if the hart’s current
-  // privilege mode equals the delegated privilege mode and that mode’s interrupt enable bit (x IE in
-  // mstatus for mode x ) is set, or if the current privilege mode is less than the delegated privilege
-  // mode.
+  // debug registers
+  val tselectr = RegInit(0.U(xlen.W))
+  val tdata1r = RegInit(0.U(xlen.W))
+  val tdata2r = RegInit(0.U(xlen.W))
+  val tdata3r = RegInit(0.U(xlen.W))
 
   // combo-logic for int control, machine mode only now
   val current_prv = CSR.PRV_M // support Machine mode only
   val machine_int_global_enable = current_prv != CSR.PRV_M || mstatusr_mie
   val machine_int_enable = mier(io.int_type) & machine_int_global_enable
+  val csr_not_exists = WireInit(false.B)
   io.global_int_enable := machine_int_enable
 
   // combo-logic for output
   when(io.which_reg === CSR.mepc) {
     io.rdata := mepcr
+    csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.mcause) {
     io.rdata := mcauser
+    csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.mtvec) {
     io.rdata := mtvecr
+    csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.mie) {
     io.rdata := mier
+    csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.mstatus) {
     io.rdata := mstatusr
+    csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.medeleg) {
     io.rdata := medelegr
+    csr_not_exists := true.B // TODO no register in M
   }.elsewhen(io.which_reg === CSR.mideleg) {
     io.rdata := midelegr
+    csr_not_exists := true.B // TODO no register in M
   }.elsewhen(io.which_reg === CSR.misa) {
     io.rdata := misar
+    csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.mvendorid) {
     io.rdata := mvendoridr
+    csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.marchid) {
     io.rdata := marchidr
+    csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.mscratch) {
     io.rdata := mscratchr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.pmpaddr0 || io.which_reg === CSR.pmpcfg0 || io.which_reg === CSR.mtval) { // TODO implementation
+    io.rdata := mhartidr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.mhartid) {
+    io.rdata := mhartidr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.tselect) {
+    io.rdata := tselectr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.tdata1) {
+    io.rdata := tdata1r
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.tdata2) {
+    io.rdata := tdata2r
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.tdata3) {
+    io.rdata := tdata3r
+    csr_not_exists := false.B
   }.otherwise {
     io.rdata := mhartidr
+    csr_not_exists := true.B
   }
   io.epc_out := mepcr
   io.evec_out := mtvecr
 
   // seq-logic to write csr file
   when(!io.stall) {
-    when((io.has_int & machine_int_enable) | io.has_except) { // handle interrupt and exception
+    when((io.has_int & machine_int_enable) | io.has_except | io.illegal_csr) { // handle interrupt and exception
       when(io.has_int) {
         mepcr := io.current_pc + 4.U
         mcauser_int := 1.U(1.W)
@@ -346,9 +381,43 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_mie := mstatusr(3) & ~io.wdata(3)
           mstatusr_sie := mstatusr(1) & ~io.wdata(1)
         }
+      }.elsewhen(io.which_reg === CSR.tselect) {
+        when(io.wen) {
+          tselectr := io.wdata
+        }.elsewhen(io.sen) {
+          tselectr := tselectr | io.wdata
+        }.elsewhen(io.cen) {
+          tselectr := tselectr & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.tdata1) {
+        when(io.wen) {
+          tdata1r := io.wdata
+        }.elsewhen(io.sen) {
+          tdata1r := tdata1r | io.wdata
+        }.elsewhen(io.cen) {
+          tdata1r := tdata1r & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.tdata2) {
+        when(io.wen) {
+          tdata2r := io.wdata
+        }.elsewhen(io.sen) {
+          tdata2r := tdata2r | io.wdata
+        }.elsewhen(io.cen) {
+          tdata2r := tdata2r & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.tdata3) {
+        when(io.wen) {
+          tdata3r := io.wdata
+        }.elsewhen(io.sen) {
+          tdata3r := tdata3r | io.wdata
+        }.elsewhen(io.cen) {
+          tdata3r := tdata3r & (~io.wdata)
+        }
       }
     }
   }
+
+  io.illegal_csr := csr_not_exists & (io.cen | io.wen | io.sen)
 }
 
 class ExceptionJudgerIO extends Bundle with phvntomParams {
@@ -359,10 +428,12 @@ class ExceptionJudgerIO extends Bundle with phvntomParams {
   val mem_is_ld = Input(Bool())
   val mem_is_st = Input(Bool())
   val illegal_mem_addr = Input(Bool())
+  val illegal_inst_addr = Input(Bool())
+  val inst_access_fault = Input(Bool())
+  val mem_access_fault = Input(Bool())
   val mem_pf = Input(Bool())
   val mem_type = Input(UInt(ControlConst.memBits.W))
-  val wb_inst = Input(UInt(xlen.W))
-  val wb_csr_addr = Input(UInt(12.W))
+  val wb_inst = Input(UInt(32.W))
   val has_except = Output(Bool())
   val except_out = Output(UInt(4.W))
 }
@@ -370,19 +441,25 @@ class ExceptionJudgerIO extends Bundle with phvntomParams {
 class ExceptionJudger extends Module with phvntomParams {
   val io = IO(new ExceptionJudgerIO)
 
-  when(io.if_pc_check & io.if_inst_addr(1, 0).orR) {
+  when(io.inst_access_fault) {
     io.has_except := true.B
-    io.except_out := Exception.InstAddrMisaligned
+    io.except_out := Exception.InstAccessFault
   }.elsewhen(io.if_pf) {
     io.has_except := true.B
     io.except_out := Exception.InstPageFault
   }.elsewhen(io.decode_illegal_inst) {
     io.has_except := true.B
     io.except_out := Exception.IllegalInst
+  }.elsewhen(io.if_pc_check & io.illegal_inst_addr) {
+    io.has_except := true.B
+    io.except_out := Exception.InstAddrMisaligned
   }.elsewhen(io.mem_is_ld) {
     when(io.illegal_mem_addr) {
       io.has_except := true.B
       io.except_out := Exception.LoadAddrMisaligned
+    }.elsewhen(io.mem_access_fault) {
+      io.has_except := true.B
+      io.except_out := Exception.LoadAccessFault
     }.elsewhen(io.mem_pf) {
       io.has_except := true.B
       io.except_out := Exception.LoadPageFault
@@ -394,6 +471,9 @@ class ExceptionJudger extends Module with phvntomParams {
     when(io.illegal_mem_addr) {
       io.has_except := true.B
       io.except_out := Exception.StoreAddrMisaligned
+    }.elsewhen(io.mem_access_fault) {
+      io.has_except := true.B
+      io.except_out := Exception.StoreAccessFault
     }.elsewhen(io.mem_pf) {
       io.has_except := true.B
       io.except_out := Exception.StorePageFault
@@ -409,7 +489,7 @@ class ExceptionJudger extends Module with phvntomParams {
     io.except_out := Exception.Breakpoint
   }.otherwise {
     io.has_except := false.B
-    io.except_out := Exception.InstAddrMisaligned
+    io.except_out := Exception.IllegalInst
   }
 }
 
@@ -461,12 +541,15 @@ class CSRIO extends Bundle with phvntomParams {
   // Exception
   val pc = Input(UInt(xlen.W))
   val illegal_mem_addr = Input(Bool())
-  val inst = Input(UInt(xlen.W))
+  val illegal_inst_addr = Input(Bool())
+  val inst = Input(UInt(32.W))
   val illegal = Input(Bool())
   val is_load = Input(Bool())
   val is_store = Input(Bool())
   val mem_type = Input(UInt(ControlConst.memBits.W))
   val pc_check = Input(Bool())
+  val inst_access_fault = Input(Bool())
+  val mem_access_fault = Input(Bool())
   val expt = Output(Bool())
   val ret = Output(Bool())
   val evec = Output(UInt(xlen.W))
@@ -498,10 +581,12 @@ class CSR extends Module with phvntomParams {
   exception_judger.io.mem_is_ld := io.is_load
   exception_judger.io.mem_is_st := io.is_store
   exception_judger.io.illegal_mem_addr := io.illegal_mem_addr
+  exception_judger.io.illegal_inst_addr := io.illegal_inst_addr
+  exception_judger.io.inst_access_fault := io.inst_access_fault
+  exception_judger.io.mem_access_fault := io.mem_access_fault
   exception_judger.io.mem_pf := false.B
   exception_judger.io.mem_type := io.mem_type
   exception_judger.io.wb_inst := io.inst
-  exception_judger.io.wb_csr_addr := csr_addr
 
   csr_regfile.io.which_reg := csr_addr
   csr_regfile.io.wen := io.cmd === ControlConst.wenCSRW
@@ -517,7 +602,8 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.is_eret := io.inst === "b00110000001000000000000001110011".U
 
   io.out := csr_regfile.io.rdata
-  io.expt := (interrupt_judger.io.has_int & csr_regfile.io.global_int_enable) | exception_judger.io.has_except // here we temporarily do not consider if the CSR file is valid
+  io.expt := ((interrupt_judger.io.has_int & csr_regfile.io.global_int_enable) |
+    exception_judger.io.has_except | csr_regfile.io.illegal_csr) // here we temporarily do not consider if the CSR file is valid
   io.evec := Mux(csr_regfile.io.evec_out.orR, csr_regfile.io.evec_out, io.pc + 4.U)
   io.epc := csr_regfile.io.epc_out
   io.ret := csr_regfile.io.is_eret

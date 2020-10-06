@@ -151,5 +151,5 @@ unsigned long dtengine_t::sim_get_pc() {
 }
 
 bool dtengine_t::is_finish() {
-    return Verilated::gotFinish() || zjv->io_difftest_trmt;
+    return Verilated::gotFinish() || zjv->io_poweroff;
 }

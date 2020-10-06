@@ -1,3 +1,4 @@
+
 rv64ui_test_target = \
 	$(rv64ui_exception) \
 	$(rv64ui_r_type) \
@@ -7,7 +8,6 @@ rv64ui_test_target = \
 	$(rv64ui_b_type) \
 	$(rv64ui_s_type) \
 	$(rv64ui_z_type) \
-	# $(rv64ui_exception) \
 
 
 rv64ui_r_type = \
@@ -76,11 +76,14 @@ rv64ui_z_type = \
 	mcsr   \
 
 rv64ui_exception = \
+	sbreak  \
+	scall   \
+    illegal \
 	ma_addr     \
-	#ma_fetch    \
-	#illegal \
-	#access  \
+	ma_fetch    \
 	#breakpoint  \
+	#access  \
+
 
 
 

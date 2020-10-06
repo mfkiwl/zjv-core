@@ -11,8 +11,8 @@ class DiffTestIO extends Bundle with phvntomParams {
   val pc   = Output(UInt(xlen.W))
   val inst = Output(UInt(xlen.W))
   val valid = Output(Bool())
-  val trmt = Output(Bool())
   val csr_cmd = Output(UInt(ControlConst.wenBits.W))
+  val tick = Output(Bool())
 }
 
 class TopIO extends Bundle with phvntomParams {
@@ -32,11 +32,13 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.pc,    "difftestPC")
   BoringUtils.addSink(difftest.inst,  "difftestInst")
   BoringUtils.addSink(difftest.valid, "difftestValid")
-  BoringUtils.addSink(difftest.trmt,  "difftestTerminate")
   BoringUtils.addSink(difftest.csr_cmd, "difftestCSRCmd")
-
+  BoringUtils.addSink(difftest.tick, "difftestTick")
   val poweroff = WireInit(false.B)
   BoringUtils.addSink(poweroff, "poweroff")
+
+//  val tick = WireInit(false.B)
+
 
   val mtip = WireInit(false.B)
   val msip = WireInit(false.B)
@@ -45,7 +47,6 @@ class Top extends Module with phvntomParams {
 
   io.difftest := difftest
   io.poweroff := poweroff
-
 }
 
 object elaborate {

@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 
    bool startTest = false;
 
-   while (!Verilated::gotFinish()) {
+   while (!engine.is_finish()) {
 
       engine.emu_step(1);
       // printf("\x1b[31memu pc: %016lX inst: %016lX valid: %016lX\x1b[0m\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.emu_difftest_valid());
