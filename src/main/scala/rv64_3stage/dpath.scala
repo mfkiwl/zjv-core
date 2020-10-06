@@ -356,6 +356,8 @@ class DataPath extends Module with phvntomParams {
   csrFile.io.stall := exe_stall
   csrFile.io.cmd := wen
   csrFile.io.in := wb_alu
+  // minstret
+  csrFile.io.bubble := wb_inst === BUBBLE
   // exception in
   csrFile.io.pc := wb_pc
   csrFile.io.illegal_mem_addr := mem_addr_misaligned

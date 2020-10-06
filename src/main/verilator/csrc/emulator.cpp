@@ -57,7 +57,7 @@ int main(int argc, char** argv)
    dtengine_t engine(argv[1]);
    engine.emu_reset(10);
    #ifdef ZJV_DEBUG
-      printf("[Emu] Reset after 10 cycles \n");
+      fprintf(stderr, "[Emu] Reset after 10 cycles \n");
    #endif
 
    bool startTest = false;
@@ -69,20 +69,20 @@ int main(int argc, char** argv)
       if (!startTest && engine.emu_get_pc() == 0x80000000) {
          startTest = true;
          #ifdef ZJV_DEBUG
-            printf("[Emu] DiffTest Start \n");
+            fprintf(stderr, "[Emu] DiffTest Start \n");
          #endif
       }
 
       #ifdef ZJV_DEBUG
-         printf("\t\t\t\t [ ROUND %ld ]\n", engine.trace_count);
-         printf("zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+         fprintf(stderr, "\t\t\t\t [ ROUND %lx ]\n", engine.trace_count);
+         fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
       #endif 
 
       if (engine.is_finish()) {
          if (engine.emu_get_poweroff() == (long)PROGRAM_PASS)
-            printf("\n\t\t \x1b[32m========== [ %s PASS ] ==========\x1b[0m\n", argv[1]);
+            fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS ] ==========\x1b[0m\n", argv[1]);
          else
-            printf("\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
+            fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
          break;
       }
 
@@ -91,38 +91,38 @@ int main(int argc, char** argv)
 
           for (int i = 0; i < REG_G_NUM; i++) {
              if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
-                printf("\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+                fprintf(stderr, "\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
              else
-                printf("[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+                fprintf(stderr, "[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
              if (i % 3 == 2)
-                printf("\n");
+                fprintf(stderr, "\n");
           }
           if (REG_G_NUM % 3 != 0)
-             printf("\n");
+             fprintf(stderr, "\n");
 
-          printf("zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+          fprintf(stderr, "zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
           if (REG_G_NUM % 3 != 0)
-             printf("\n");
+             fprintf(stderr, "\n");
 
       if((engine.emu_get_pc() != engine.sim_get_pc()) ||
             (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ) ) {
-            printf("\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
+            fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
             if (engine.emu_get_pc() != engine.sim_get_pc())
-               printf("emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
+               fprintf(stderr, "emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
             for (int i = 0; i < REG_G_NUM; i++) {
                if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
-                  printf("\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+                  fprintf(stderr, "\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
                else
-                  printf("[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+                  fprintf(stderr, "[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
                if (i % 3 == 2)
-                  printf("\n");
+                  fprintf(stderr, "\n");
             }
             exit(-1);
          }
 
       }
       #ifdef ZJV_DEBUG
-         // printf("\n");
+         // fprintf(stderr, "\n");
       #endif  
 
       // sleep(1);
