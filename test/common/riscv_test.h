@@ -145,11 +145,12 @@ handle_exception:                                                       \
         /* some unhandlable exception occurred */                       \
   1:    ori TESTNUM, TESTNUM, 1337;                                     \
   write_tohost:                                                         \
-        sw TESTNUM, tohost, t5;                                         \
-        j write_tohost;                                                 \
+  	    lui	  t0, %hi(0xc001babe);                                      \
+  	    addi  t0, t0, %lo(0xc001babe);                                  \
+        sd    t0, 0x100(zero);                                          \
 reset_vector:                                                           \
         RISCV_MULTICORE_DISABLE;                                        \
-        INIT_SATP;                                                     \
+        INIT_SATP;                                                      \
         INIT_PMP;                                                       \
         DELEGATE_NO_TRAPS;                                              \
         li TESTNUM, 0;                                                  \
@@ -193,8 +194,8 @@ reset_vector:                                                           \
 #define RVTEST_PASS                                                     \
         fence;                                                          \
         li TESTNUM, 1;                                                  \
-	      lui	  t0, %hi(0xc001babe);                                      \
-	      addi	t0, t0, %lo(0xc001babe);                                  \
+	    lui	  t0, %hi(0xc001babe);                                      \
+	    addi  t0, t0, %lo(0xc001babe);                                  \
         sd    t0, 0x100(zero);
 //        ebreak
         
@@ -205,8 +206,8 @@ reset_vector:                                                           \
 1:      beqz TESTNUM, 1b;                                               \
         sll TESTNUM, TESTNUM, 1;                                        \
         or TESTNUM, TESTNUM, 1;                                         \
-	      lui	  t0, %hi(0xdeadbabe);                                      \
-	      addi	t0, t0, %lo(0xdeadbabe);                                  \
+	    lui	  t0, %hi(0xdeadbabe);                                      \
+	    addi  t0, t0, %lo(0xdeadbabe);                                \
         sd    t0, 0x100(zero);
 //        ecall
 

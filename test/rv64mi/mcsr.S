@@ -11,7 +11,7 @@
 #include "test_macros.h"
 
 RVTEST_RV64M
-RVTEST_BARE_CODE_BEGIN
+RVTEST_CODE_BEGIN
 
   # Check that mcpuid reports the correct XLEN
 #if __riscv_xlen == 64

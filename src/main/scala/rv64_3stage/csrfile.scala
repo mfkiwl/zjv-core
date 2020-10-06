@@ -99,6 +99,7 @@ class CSRFileIO extends Bundle with phvntomParams {
   val sen = Input(Bool())
   val cen = Input(Bool())
   val wdata = Input(UInt(xlen.W))
+  val illegal_addr = Input(UInt(xlen.W))
   val has_int = Input(Bool())
   val int_type = Input(UInt(4.W))
   val has_except = Input(Bool())
@@ -154,7 +155,7 @@ class CSRFile extends Module with phvntomParams {
   val mtvecr = RegInit(0.U(xlen.W))
   val mhartidr = 0.U(xlen.W)
   val mier = Cat(0.U((xlen - 12).W), mier_meie, false.B, mier_seie, false.B,
-    mier_mtie, false.B, mier_stie, false.B, mier_msie, false.B,
+    mier_mtie, false.B, mier_stie, false.B,
     mier_msie, false.B, mier_ssie, false.B) // interrupt[i] => mi(e/p)r[i], no s-mode, hardwired to zero
   val mstatusr = Cat(mstatusr_sd, 0.U((xlen - 39).W), mstatusr_mbe, mstatusr_sbe, mstatusr_sxl, mstatusr_uxl,
     "b000000000".U(9.W), mstatusr_tsr, mstatusr_tw, mstatusr_tvm, mstatusr_mxr, mstatusr_sum,
@@ -167,6 +168,8 @@ class CSRFile extends Module with phvntomParams {
   val mvendoridr = 0.U(xlen.W)
   val marchidr = 5.U(xlen.W)
   val mscratchr = RegInit(0.U(xlen.W))
+  val mtvalr = RegInit(0.U(xlen.W))
+  val mimpidr = RegInit(0.U(xlen.W))
 
   // debug registers
   val tselectr = RegInit(0.U(xlen.W))
@@ -215,11 +218,17 @@ class CSRFile extends Module with phvntomParams {
   }.elsewhen(io.which_reg === CSR.mscratch) {
     io.rdata := mscratchr
     csr_not_exists := false.B
-  }.elsewhen(io.which_reg === CSR.pmpaddr0 || io.which_reg === CSR.pmpcfg0 || io.which_reg === CSR.mtval) { // TODO implementation
+  }.elsewhen(io.which_reg === CSR.pmpaddr0 || io.which_reg === CSR.pmpcfg0) { // TODO implementation
     io.rdata := mhartidr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.mtval) {
+    io.rdata := mtvalr
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.mhartid) {
     io.rdata := mhartidr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.mimpid) {
+    io.rdata := mimpidr
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.tselect) {
     io.rdata := tselectr
@@ -251,6 +260,11 @@ class CSRFile extends Module with phvntomParams {
         mepcr := io.current_pc
         mcauser_int := 0.U(1.W)
         mcauser_cause := io.except_type
+        when(io.except_type === Exception.LoadAddrMisaligned || io.except_type === Exception.StoreAddrMisaligned) {
+          mtvalr := io.illegal_addr
+        }.elsewhen(io.except_type === Exception.InstAddrMisaligned) {
+          mtvalr := Cat(io.illegal_addr(xlen - 1, 1), Fill(1, 0.U))
+        }
       }
       // disable int enable, machine mode only for now
       mstatusr_mpie := mstatusr_mie
@@ -292,6 +306,22 @@ class CSRFile extends Module with phvntomParams {
           mscratchr := mscratchr | io.wdata
         }.elsewhen(io.cen) {
           mscratchr := mscratchr & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.mtval) {
+        when(io.wen) {
+          mtvalr := io.wdata
+        }.elsewhen(io.sen) {
+          mtvalr := mtvalr | io.wdata
+        }.elsewhen(io.cen) {
+          mtvalr := mtvalr & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.mimpid) {
+        when(io.wen) {
+          mimpidr := io.wdata
+        }.elsewhen(io.sen) {
+          mimpidr := mimpidr | io.wdata
+        }.elsewhen(io.cen) {
+          mimpidr := mimpidr & (~io.wdata)
         }
       }.elsewhen(io.which_reg === CSR.mie) {
         when(io.wen) {
@@ -600,11 +630,12 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.int_type := interrupt_judger.io.int_out
   csr_regfile.io.current_pc := Cat(io.pc(31, 2), 0.U(2.W))
   csr_regfile.io.is_eret := io.inst === "b00110000001000000000000001110011".U
+  csr_regfile.io.illegal_addr := io.in
 
   io.out := csr_regfile.io.rdata
   io.expt := ((interrupt_judger.io.has_int & csr_regfile.io.global_int_enable) |
     exception_judger.io.has_except | csr_regfile.io.illegal_csr) // here we temporarily do not consider if the CSR file is valid
-  io.evec := Mux(csr_regfile.io.evec_out.orR, csr_regfile.io.evec_out, io.pc + 4.U)
+  io.evec := csr_regfile.io.evec_out
   io.epc := csr_regfile.io.epc_out
   io.ret := csr_regfile.io.is_eret
 }

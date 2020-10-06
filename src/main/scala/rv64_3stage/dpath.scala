@@ -188,7 +188,7 @@ class DataPath extends Module with phvntomParams {
             pcPlus4 -> if_pc_4,
             pcBubble -> if_pc,
             pcBranch -> Mux(brCond.io.branch, Mux(inst_addr_misaligned, if_pc_4, alu.io.out), if_pc_4),
-            pcJump -> Mux(inst_addr_misaligned, if_pc_4, alu.io.out)
+            pcJump -> Mux(inst_addr_misaligned, if_pc_4, Cat(alu.io.out(xlen - 1, 1), Fill(1, 0.U)))
           )
         )
       )
@@ -200,7 +200,7 @@ class DataPath extends Module with phvntomParams {
   }.elsewhen(csrFile.io.ret) {
     if_pc := csrFile.io.epc
   }.elsewhen(brCond.io.branch || io.ctrl.pcSelect === pcJump) {
-    if_pc := alu.io.out
+    if_pc := Cat(alu.io.out(xlen - 1, 1), Fill(1, 0.U))
   }.elsewhen(!if_stall) {
     if_pc := if_npc
   }
@@ -285,7 +285,7 @@ class DataPath extends Module with phvntomParams {
   alu.io.opType := io.ctrl.aluType
   alu.io.a := Mux(io.ctrl.ASelect === APC, exe_pc, rs1)
   alu.io.b := Mux(io.ctrl.BSelect === BIMM, immExt.io.out, rs2)
-  inst_addr_misaligned := alu.io.out(1,0).orR && (io.ctrl.pcSelect === pcJump || io.ctrl.pcSelect === pcBranch)
+  inst_addr_misaligned := alu.io.out(1) && (io.ctrl.pcSelect === pcJump || brCond.io.branch)
 
   when(!exe_stall) {
     wb_pc := exe_pc
@@ -302,7 +302,6 @@ class DataPath extends Module with phvntomParams {
     }.otherwise {
       wb_inst_addr_misaligned := inst_addr_misaligned
       wb_illegal := io.ctrl.instType === ControlConst.Illegal
-      wb_inst := exe_inst
       wb_inst_access_fault := exe_inst_access_fault
       when(inst_addr_misaligned || exe_inst_access_fault) {
         wb_memType := memXXX
@@ -312,6 +311,11 @@ class DataPath extends Module with phvntomParams {
         wb_memType := io.ctrl.memType
         wb_select := io.ctrl.wbSelect
         wen := io.ctrl.wbEnable
+      }
+      when(exe_inst_access_fault) {
+        wb_inst := BUBBLE
+      }.otherwise {
+        wb_inst := exe_inst
       }
     }
   }

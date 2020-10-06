@@ -15,7 +15,7 @@
 #define __MACHINE_MODE
 
 RVTEST_RV64S
-RVTEST_BARE_CODE_BEGIN
+RVTEST_CODE_BEGIN
 
 #ifdef __MACHINE_MODE
   #define sscratch mscratch
