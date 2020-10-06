@@ -71,71 +71,72 @@ static void update_value()
     line_status = 0x40 | 0x20 | (front != rear);
 }
 
-extern "C" void uart_getc(char addr, uint64_t *data) // read
+extern "C" void uart_getc(char addr, char *data) // read
+// extern "C" void uart_getc(char addr, uint64_t *data) // read
 {
-    // switch (addr)
-    // {
-    // case UART_RHR: // 0
-    //     if (line_control < 0)
-    //     {
-    //         *data = divisor_latch_low;
-    //     }
-    //     else
-    //     {
-    //         *data = uart_dequeue();
-    //     }
-    //     break;
-    // case UART_IER: // 1
-    //     if (line_control < 0)
-    //     {
-    //         *data = divisor_latch_high;
-    //     }
-    //     else
-    //     {
-    //         *data = interrupt_enable;
-    //     }
-    //     break;
-    // case UART_ISR: // 2
-    //     *data = interrupt_status;
-    //     break;
-    // case UART_LCR: // 3
-    //     *data = line_control;
-    //     break;
-    // case UART_MCR: // 4
-    //     *data = modem_control;
-    //     break;
-    // case UART_LSR: // 5
-    //     *data = line_status;
-    //     break;
-    // case UART_MSR: // 6
-    //     *data = modem_status;
-    //     break;
-    // case UART_SPR: // 7
-    //     *data = scratch_pad;
-    //     break;
+    switch (addr)
+    {
+    case UART_RHR: // 0
+        if (line_control < 0)
+        {
+            *data = divisor_latch_low;
+        }
+        else
+        {
+            *data = uart_dequeue();
+        }
+        break;
+    case UART_IER: // 1
+        if (line_control < 0)
+        {
+            *data = divisor_latch_high;
+        }
+        else
+        {
+            *data = interrupt_enable;
+        }
+        break;
+    case UART_ISR: // 2
+        *data = interrupt_status;
+        break;
+    case UART_LCR: // 3
+        *data = line_control;
+        break;
+    case UART_MCR: // 4
+        *data = modem_control;
+        break;
+    case UART_LSR: // 5
+        *data = line_status;
+        break;
+    case UART_MSR: // 6
+        *data = modem_status;
+        break;
+    case UART_SPR: // 7
+        *data = scratch_pad;
+        break;
 
-    // default:
-    //     break;
-    // }
-    // printf("In uart_getc: addr = %d, data = %d\n", addr, *data);
-
-#define read(name, offset) ((uint64_t)read_##name << (offset * 8))
-
-    if (line_control < 0) {
-        *data = read(prescalar_division, UART_PSD) | 
-                read(divisor_latch_high, UART_DLM) |
-                read(divisor_latch_low, UART_DLL);
+    default:
+        break;
     }
-    else {
-        *data = read(scratch_pad, UART_SPR) |
-                read(modem_status, UART_MSR) |
-                read(line_status, UART_LSR) |
-                read(modem_control, UART_MCR) |
-                read(line_control, UART_LCR) |
-                read(interrupt_status, UART_ISR) |
-                read(interrupt_enable, UART_IER) |
-                ((uint64_t)uart_dequeue() << (UART_RHR * 8));       
-    }
+    printf("In uart_getc: addr = %d, data = %d\n", addr, *data);
+
+// #define read(name, offset) ((uint64_t)read_##name << (offset * 8))
+
+//     if (line_control < 0) {
+//         *data = read(prescalar_division, UART_PSD) | 
+//                 read(divisor_latch_high, UART_DLM) |
+//                 read(divisor_latch_low, UART_DLL);
+//     }
+//     else {
+//         *data = read(scratch_pad, UART_SPR) |
+//                 read(modem_status, UART_MSR) |
+//                 read(line_status, UART_LSR) |
+//                 read(modem_control, UART_MCR) |
+//                 read(line_control, UART_LCR) |
+//                 read(interrupt_status, UART_ISR) |
+//                 read(interrupt_enable, UART_IER) |
+//                 ((uint64_t)uart_dequeue() << (UART_RHR * 8));       
+//     }
 }
 
 extern "C" void uart_putc(char addr, char data) // write
@@ -184,5 +185,5 @@ extern "C" void uart_putc(char addr, char data) // write
         break;
     }
     update_value();
-    // printf("In uart_putc: addr = %d, data = %d\n", addr, data);
+     printf("In uart_putc: addr = %d, data = %d\n", addr, data);
 }

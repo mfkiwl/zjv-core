@@ -62,6 +62,9 @@ object CSR {
   val tdata1 = 0x7a1.U(12.W)
   val tdata2 = 0x7a2.U(12.W)
   val tdata3 = 0x7a3.U(12.W)
+  // PERFORMANCE
+  val mcycle = 0xb00.U(12.W)
+  val minstret = 0xb02.U(12.W)
 }
 
 object Exception {
@@ -105,6 +108,7 @@ class CSRFileIO extends Bundle with phvntomParams {
   val has_except = Input(Bool())
   val except_type = Input(UInt(4.W))
   val stall = Input(Bool())
+  val bubble = Input(Bool())
   val is_eret = Input(Bool())
   val rdata = Output(UInt(xlen.W))
   val evec_out = Output(UInt(xlen.W))
@@ -170,6 +174,8 @@ class CSRFile extends Module with phvntomParams {
   val mscratchr = RegInit(0.U(xlen.W))
   val mtvalr = RegInit(0.U(xlen.W))
   val mimpidr = RegInit(0.U(xlen.W))
+  val mcycler = RegInit(UInt(64.W), 0.U)
+  val minstretr = RegInit(0.U(64.W))
 
   // debug registers
   val tselectr = RegInit(0.U(xlen.W))
@@ -183,6 +189,36 @@ class CSRFile extends Module with phvntomParams {
   val machine_int_enable = mier(io.int_type) & machine_int_global_enable
   val csr_not_exists = WireInit(false.B)
   io.global_int_enable := machine_int_enable
+
+  // printf(">>>>>>>>>> mcycle = %x \n", mcycler)
+
+  // mcycle and minstret increment
+  when(!io.stall && io.which_reg === CSR.mcycle) {
+    when(io.wen) {
+      mcycler := io.wdata
+    }.elsewhen(io.sen) {
+      when(io.wdata.orR) {
+        mcycler := mcycler | io.wdata
+      }.otherwise {
+        mcycler := mcycler + 1.U(1.W)
+      }
+    }.elsewhen(io.cen) {
+      mcycler := mcycler & (~io.wdata)
+    }
+  }.otherwise {
+    mcycler := mcycler + 1.U(1.W)
+  }
+  when(!io.stall && io.which_reg === CSR.minstret) {
+    when(io.wen) {
+      minstretr := io.wdata
+    }.elsewhen(io.sen) {
+      minstretr := minstretr | io.wdata
+    }.elsewhen(io.cen) {
+      minstretr := minstretr & (~io.wdata)
+    }
+  }.elsewhen(!io.stall && !io.bubble) {
+    minstretr := minstretr + 1.U(1.W)
+  }
 
   // combo-logic for output
   when(io.which_reg === CSR.mepc) {
@@ -241,6 +277,12 @@ class CSRFile extends Module with phvntomParams {
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.tdata3) {
     io.rdata := tdata3r
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.mcycle) {
+    io.rdata := mcycler + 1.U(1.W)
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.minstret) {
+    io.rdata := minstretr
     csr_not_exists := false.B
   }.otherwise {
     io.rdata := mhartidr
@@ -568,6 +610,8 @@ class CSRIO extends Bundle with phvntomParams {
   val cmd = Input(UInt(ControlConst.wenBits.W))
   val in = Input(UInt(xlen.W))
   val out = Output(UInt(xlen.W))
+  // Minstret
+  val bubble = Input(Bool())
   // Exception
   val pc = Input(UInt(xlen.W))
   val illegal_mem_addr = Input(Bool())
@@ -631,6 +675,7 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.current_pc := Cat(io.pc(31, 2), 0.U(2.W))
   csr_regfile.io.is_eret := io.inst === "b00110000001000000000000001110011".U
   csr_regfile.io.illegal_addr := io.in
+  csr_regfile.io.bubble := io.bubble
 
   io.out := csr_regfile.io.rdata
   io.expt := ((interrupt_judger.io.has_int & csr_regfile.io.global_int_enable) |
