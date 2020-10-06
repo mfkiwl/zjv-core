@@ -55,7 +55,7 @@ class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   io.in.r.bits <> routSelResp.r.bits
   // io.in.resp.bits.exc.get := r_state === s_error
   routSelResp.r.ready := io.in.r.ready
-  io.in.ar.ready := routSel.ar.ready || rreqInvalidAddr
+  io.in.ar.ready := (routSel.ar.ready && r_state === s_idle) || rreqInvalidAddr
 
   // write channel
   // select the output channel according to the address
@@ -96,55 +96,34 @@ class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   io.in.b.bits <> woutSelResp.b.bits
   // io.in.resp.bits.exc.get := w_state === s_error
   woutSelResp.b.ready := io.in.b.ready
-  io.in.aw.ready := woutSel.aw.ready || wreqInvalidAddr
+  io.in.aw.ready := (woutSel.aw.ready && w_state === s_idle) || wreqInvalidAddr
   io.in.w.ready := woutSel.w.ready
 
   // printf("-----------Xbar1toN Debug Start-----------\n")
-  // printf(p"routSelVec = ${routSelVec}, routSelIdx = ${routSelIdx}, rreqInvalidAddr = ${rreqInvalidAddr}\n")
+  // printf(p"r_state = ${r_state}, routSelVec = ${routSelVec}, routSelIdx = ${routSelIdx}, rreqInvalidAddr = ${rreqInvalidAddr}\n")
   // printf(
-  //   "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
-  //   routSel.aw.valid,
-  //   routSel.w.valid,
-  //   routSel.b.valid,
+  //   "ar.valid = %d, r.valid = %d, ar.ready = %d, r.ready = %d\n",
   //   routSel.ar.valid,
-  //   routSel.r.valid
-  // )
-  // printf(
-  //   "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
-  //   routSel.aw.ready,
-  //   routSel.w.ready,
-  //   routSel.b.ready,
+  //   routSel.r.valid,
   //   routSel.ar.ready,
   //   routSel.r.ready
   // )
-  // printf(p"routSel.aw.bits: ${routSel.aw.bits}\n")
-  // printf(p"routSel.w.bits: ${routSel.w.bits}\n")
-  // printf(p"routSel.b.bits: ${routSel.b.bits}\n")
   // printf(p"routSel.ar.bits: ${routSel.ar.bits}\n")
   // printf(p"routSel.r.bits: ${routSel.r.bits}\n")
   // printf("--------------------------------------------------------\n")
-  // printf(p"woutSelVec = ${woutSelVec}, woutSelIdx = ${woutSelIdx}, wreqInvalidAddr = ${wreqInvalidAddr}\n")
+  // printf(p"w_state = ${w_state}, woutSelVec = ${woutSelVec}, woutSelIdx = ${woutSelIdx}, wreqInvalidAddr = ${wreqInvalidAddr}\n")
   // printf(
-  //   "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
+  //   "aw.valid = %d, w.valid = %d, b.valid = %d, aw.ready = %d, w.ready = %d, b.ready = %d\n",
   //   woutSel.aw.valid,
   //   woutSel.w.valid,
   //   woutSel.b.valid,
-  //   woutSel.ar.valid,
-  //   woutSel.r.valid
-  // )
-  // printf(
-  //   "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
   //   woutSel.aw.ready,
   //   woutSel.w.ready,
-  //   woutSel.b.ready,
-  //   woutSel.ar.ready,
-  //   woutSel.r.ready
+  //   woutSel.b.ready
   // )
   // printf(p"woutSel.aw.bits: ${woutSel.aw.bits}\n")
   // printf(p"woutSel.w.bits: ${woutSel.w.bits}\n")
   // printf(p"woutSel.b.bits: ${woutSel.b.bits}\n")
-  // printf(p"woutSel.ar.bits: ${woutSel.ar.bits}\n")
-  // printf(p"woutSel.r.bits: ${woutSel.r.bits}\n")
   // printf("-----------Xbar1toN Debug Done-----------\n")
 
   // when(!(!io.in.req.valid || routSelVec.asUInt.orR) || !(!(io.in.req.valid && routSelVec.asUInt.andR))){
