@@ -46,7 +46,7 @@ protected:
 
   void read_chunk(addr_t taddr, size_t len, void* dst);
   void write_chunk(addr_t taddr, size_t len, const void* src);
-  void clear_chunk(addr_t taddr, size_t len) {}
+  void clear_chunk(addr_t taddr, size_t len);
 
   size_t chunk_max_size() { return width; }
   size_t chunk_align()    { return width; }
@@ -101,6 +101,26 @@ void htif_simmem_t::write_chunk(addr_t taddr, size_t len, const void* vsrc)
     len -= width;
     taddr += width;
   }
+}
+
+void htif_simmem_t::clear_chunk(addr_t taddr, size_t len) {
+  // printf("Write 0x%lx - %lx\n", taddr, len);
+  taddr -= base;
+
+  assert(len % chunk_align() == 0);
+
+  while(len)
+  {
+    if(mem[taddr/width].size() == 0)
+      mem[taddr/width].resize(width,0);
+
+    for(size_t j = 0; j < width; j++)
+      mem[taddr/width][j] = 0;
+
+    len -= width;
+    taddr += width;
+  }
+
 }
 
 #endif // _SIMMEM_H
