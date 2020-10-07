@@ -2,7 +2,9 @@
 .idea/
 .vscode/
 .metals/
-.scalafmt.conf
+.bloop/
+metals.sbt
+
 
 # Project Generated
 target/

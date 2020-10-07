@@ -62,6 +62,4 @@ class Clint extends AXI4Slave(new ClintIO) with AXI4Parameters {
 
   io.extra.get.mtip := RegNext(mtime >= mtimecmp)
   io.extra.get.msip := RegNext(msip =/= 0.U)
-
-  BoringUtils.addSource(tick, "difftestTick")
 }

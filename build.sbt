@@ -51,6 +51,8 @@ val defaultVersions = Seq(
 libraryDependencies ++= defaultVersions.map { case (dep, ver) =>
   "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", ver) }
 
+scalacOptions := Seq("-unchecked", "-deprecation")
+
 scalacOptions ++= scalacOptionsVersion(scalaVersion.value)
 
 javacOptions ++= javacOptionsVersion(scalaVersion.value)

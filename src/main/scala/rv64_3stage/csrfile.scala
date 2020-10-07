@@ -185,7 +185,7 @@ class CSRFile extends Module with phvntomParams {
 
   // combo-logic for int control, machine mode only now
   val current_prv = CSR.PRV_M // support Machine mode only
-  val machine_int_global_enable = current_prv != CSR.PRV_M || mstatusr_mie
+  val machine_int_global_enable = current_prv =/= CSR.PRV_M || mstatusr_mie
   val machine_int_enable = mier(io.int_type) & machine_int_global_enable
   val csr_not_exists = WireInit(false.B)
   io.global_int_enable := machine_int_enable
