@@ -70,6 +70,7 @@ public:
 
     unsigned long sim_get_pc();
     void sim_sync_cycle();
+    void sim_set_x15(unsigned long x);
 
     bool is_finish();
     unsigned long emu_difftest_valid();
