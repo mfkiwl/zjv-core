@@ -187,10 +187,11 @@ class CSRFile extends Module with phvntomParams {
   val current_prv = CSR.PRV_M // support Machine mode only
   val machine_int_global_enable = current_prv != CSR.PRV_M || mstatusr_mie
   val machine_int_enable = mier(io.int_type) & machine_int_global_enable
+  //printf("Machine INT Enable %x\n", mier)
   val csr_not_exists = WireInit(false.B)
   io.global_int_enable := machine_int_enable
 
-  printf(">>>>>>>>>> mcycle = %x \n", mcycler)
+//  //printf(">>>>>>>>>> mcycle = %x \n", mcycler)
 
   // mcycle and minstret increment
   when(!io.stall && io.which_reg === CSR.mcycle) {
@@ -309,10 +310,12 @@ class CSRFile extends Module with phvntomParams {
         }
       }
       // disable int enable, machine mode only for now
+      //printf("MSTATUS_MIE to 0, MSTATUS_MPIE to %x\n", mstatusr_mie)
       mstatusr_mpie := mstatusr_mie
       mstatusr_mie := false.B
       mstatusr_mpp := CSR.PRV_M
     }.elsewhen(io.is_eret) { // enable interrupt signal again
+      //printf("MSTATUS_MIE to %x\n", mstatusr_mpie)
       mstatusr_mie := mstatusr_mpie
       mstatusr_mpie := true.B
       mstatusr_mpp := CSR.PRV_M
@@ -367,6 +370,7 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.mie) {
         when(io.wen) {
+          //printf("Change MIE to %x\n", io.wdata);
           mier_meie := io.wdata(11)
           mier_seie := io.wdata(9)
           mier_mtie := io.wdata(7)
@@ -374,22 +378,25 @@ class CSRFile extends Module with phvntomParams {
           mier_msie := io.wdata(3)
           mier_ssie := io.wdata(1)
         }.elsewhen(io.sen) {
+          //printf("Set MIE with %x\n", mier | io.wdata);
           mier_meie := mier_meie | io.wdata(11)
           mier_seie := mier_seie | io.wdata(9)
           mier_mtie := mier_mtie | io.wdata(7)
           mier_stie := mier_stie | io.wdata(5)
-          mier_mtie := mier_mtie | io.wdata(3)
-          mier_stie := mier_stie | io.wdata(1)
+          mier_msie := mier_mtie | io.wdata(3)
+          mier_ssie := mier_stie | io.wdata(1)
         }.elsewhen(io.cen) {
+          //printf("Clear MIE with %x\n", mier & ~io.wdata);
           mier_meie := mier_meie & ~io.wdata(11)
           mier_seie := mier_seie & ~io.wdata(9)
           mier_mtie := mier_mtie & ~io.wdata(7)
           mier_stie := mier_stie & ~io.wdata(5)
-          mier_mtie := mier_mtie & ~io.wdata(3)
-          mier_stie := mier_stie & ~io.wdata(1)
+          mier_msie := mier_mtie & ~io.wdata(3)
+          mier_ssie := mier_stie & ~io.wdata(1)
         }
       }.elsewhen(io.which_reg === CSR.mstatus) {
         when(io.wen) {
+          //printf("Change MSTATUS_MIE to %x\n", io.wdata(3));
           mstatusr_sd := io.wdata(xlen - 1)
           mstatusr_mbe := io.wdata(37)
           mstatusr_sbe := io.wdata(36)
@@ -411,6 +418,7 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_mie := io.wdata(3)
           mstatusr_sie := io.wdata(1)
         }.elsewhen(io.sen) {
+          //printf("Set MSTATUS_MIE with %x\n", mstatusr(3) | io.wdata(3));
           mstatusr_sd := mstatusr(xlen - 1) | io.wdata(xlen - 1)
           mstatusr_mbe := mstatusr(37) | io.wdata(37)
           mstatusr_sbe := mstatusr(36) | io.wdata(36)
@@ -432,6 +440,7 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_mie := mstatusr(3) | io.wdata(3)
           mstatusr_sie := mstatusr(1) | io.wdata(1)
         }.elsewhen(io.cen) {
+          //printf("Clear MSTATUS_MIE with %x\n", mstatusr(3) & ~io.wdata(3));
           mstatusr_sd := mstatusr(xlen - 1) & ~io.wdata(xlen - 1)
           mstatusr_mbe := mstatusr(37) & ~io.wdata(37)
           mstatusr_sbe := mstatusr(36) & ~io.wdata(36)

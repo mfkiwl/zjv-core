@@ -392,14 +392,19 @@ class DataPath extends Module with phvntomParams {
       dtest_inst := wb_inst
       dtest_expt := csrFile.io.expt
     }
-    dtest_int := io.int.msip | io.int.mtip
+    dtest_int := dtest_expt & (io.int.msip | io.int.mtip)
 
     BoringUtils.addSource(dtest_pc, "difftestPC")
     BoringUtils.addSource(dtest_inst, "difftestInst")
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
+    BoringUtils.addSource(dtest_int, "difftestInt")
 
     when (pipeTrace.B && dtest_expt){
       printf("[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n", dtest_expt, dtest_int);
+    }
+
+    when (dtest_int) {
+      printf("Interrupt mtvec: %x!\n", csrFile.io.evec);
     }
 
     if (pipeTrace) {
@@ -413,6 +418,7 @@ class DataPath extends Module with phvntomParams {
         wb_inst,
         dtest_inst
       )
+      printf("alu_in %x, alu_out %x, wb_alu %x\n", alu.io.a, alu.io.b, wb_alu)
       printf(
         "      if_stall [%c] \t exe_stall [%c] \t\t\t\t valid [%c]\n\n",
         Mux(if_stall, Str("*"), Str(" ")),

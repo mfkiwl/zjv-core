@@ -128,6 +128,7 @@ void dtengine_t::emu_get_state() {
     emu_state.pc    = zjv->io_difftest_pc;
     emu_state.inst  = zjv->io_difftest_inst;
     emu_state.valid = zjv->io_difftest_valid;
+    emu_state.interrupt   = zjv->io_difftest_int;
 }
 
 void dtengine_t::sim_get_state() {
@@ -136,6 +137,10 @@ void dtengine_t::sim_get_state() {
 
 unsigned long dtengine_t::emu_difftest_valid() {
     return emu_state.valid;
+}
+
+unsigned long dtengine_t::emu_difftest_int() {
+    return emu_state.interrupt;
 }
 
 unsigned long dtengine_t::emu_get_pc() {

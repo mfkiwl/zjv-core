@@ -73,6 +73,7 @@ public:
 
     bool is_finish();
     unsigned long emu_difftest_valid();
+    unsigned long emu_difftest_int();
 
 };
 

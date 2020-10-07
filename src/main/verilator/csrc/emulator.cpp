@@ -61,10 +61,15 @@ int main(int argc, char** argv)
    #endif
 
    bool startTest = false;
+   int faultExitLatency = 0;
+   bool faultFlag = false;
+   bool lastIsInt = false;
 
    while (!engine.is_finish()) {
       engine.emu_step(1);
       engine.sim_sync_cycle();
+      lastIsInt = engine.emu_difftest_int();
+      printf("<-----------LAST IS INT %x\n", lastIsInt);
 
       if (!startTest && engine.emu_get_pc() == 0x80000000) {
          startTest = true;
@@ -76,7 +81,7 @@ int main(int argc, char** argv)
       #ifdef ZJV_DEBUG
          fprintf(stderr, "\t\t\t\t [ ROUND %lx ]\n", engine.trace_count);
          fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
-      #endif 
+      #endif
 
       if (engine.is_finish()) {
          if (engine.emu_get_poweroff() == (long)PROGRAM_PASS)
@@ -86,9 +91,12 @@ int main(int argc, char** argv)
          break;
       }
 
+      if(lastIsInt)
+         engine.sim_step(1);
       if (startTest && engine.emu_difftest_valid()) {
          engine.sim_step(1);
 
+          fprintf(stderr, "emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
           for (int i = 0; i < REG_G_NUM; i++) {
              if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
                 fprintf(stderr, "\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
@@ -117,13 +125,17 @@ int main(int argc, char** argv)
                if (i % 3 == 2)
                   fprintf(stderr, "\n");
             }
-            exit(-1);
+            faultFlag = true;
+            if (faultFlag)
+                faultExitLatency++;
+            if (faultExitLatency == 1)
+                exit(-1);
          }
 
       }
       #ifdef ZJV_DEBUG
          // fprintf(stderr, "\n");
-      #endif  
+      #endif
 
       // sleep(1);
    }
