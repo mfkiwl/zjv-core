@@ -296,7 +296,6 @@ class DataPath extends Module with phvntomParams {
   inst_addr_misaligned := alu.io.out(1) && (io.ctrl.pcSelect === pcJump || brCond.io.branch)
 
   when(!exe_stall) {
-    wb_mtip := exe_mtip
     wb_pc := exe_pc
     wb_alu := alu.io.out
     wb_wdata := rs2
@@ -308,6 +307,7 @@ class DataPath extends Module with phvntomParams {
       wb_illegal := false.B
       wb_inst_addr_misaligned := false.B
       wb_inst_access_fault := false.B
+      wb_mtip := false.B
     }.otherwise {
       wb_inst_addr_misaligned := inst_addr_misaligned
       wb_illegal := io.ctrl.instType === ControlConst.Illegal
@@ -323,10 +323,18 @@ class DataPath extends Module with phvntomParams {
       }
       when(exe_inst_access_fault) {
         wb_inst := BUBBLE
+        wb_mtip := false.B
       }.otherwise {
         wb_inst := exe_inst
+        when(exe_inst === BUBBLE) {
+          wb_mtip := false.B
+        }.otherwise {
+          wb_mtip := io.int.mtip
+        }
       }
     }
+  }.otherwise {
+    wb_mtip := false.B
   }
 
   // ******************************
@@ -381,14 +389,14 @@ class DataPath extends Module with phvntomParams {
   csrFile.io.inst_access_fault := wb_inst_access_fault
   csrFile.io.mem_access_fault := mem_access_fault
   // interupt signals in, XIP from CLINT or PLIC
-  csrFile.io.tim_int := wb_mtip // io.int.mtip
+  csrFile.io.tim_int := wb_mtip
   csrFile.io.soft_int := io.int.msip
   csrFile.io.external_int := false.B  // TODO
 
   // ******************************
   //        Diff Test Stage
   // ******************************
-  printf("<----STALL IF[%x], EXE[%x]---->\n", istall, dstall)
+  //printf("<----STALL IF[%x], EXE[%x]---->\n", istall, dstall)
 
   if (diffTest) {
     val dtest_pc = RegInit(UInt(xlen.W), 0.U)
@@ -416,12 +424,13 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_int, "difftestInt")
 
     when (pipeTrace.B && dtest_expt){
-      printf("[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n", dtest_expt, dtest_int);
+      // printf("[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n", dtest_expt, dtest_int);
     }
 
-//    when (dtest_int) {
-//      printf("Interrupt mtvec: %x stall_req %x!\n", csrFile.io.evec, csrFile.io.stall_req);
-//    }
+    // printf("Interrupt if %x exe: %x wb %x [EPC]] %x!\n", if_mtip, exe_mtip, wb_mtip, csrFile.io.epc);
+    when (dtest_int) {
+      // printf("Interrupt mtvec: %x stall_req %x!\n", csrFile.io.evec, csrFile.io.stall_req);
+    }
 //    printf("------->stall_req %x, imenreq_valid %x, imem_pc %x, csr_out %x, dmemaddr %x!\n", csrFile.io.stall_req, io.imem.req.valid, if_pc, csrFile.io.out, io.dmem.req.bits.addr)
 
     if (pipeTrace) {
