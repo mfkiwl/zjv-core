@@ -27,16 +27,17 @@ sim_t* dtengine_t::sim_init(std::string elfpath) {
     const char *log_path = nullptr;
     bool dtb_enabled = true;
     const char* dtb_file = NULL;
+    bool diffTest = true;
 
     spike = new sim_t(isa, priv, varch, nprocs, halted, real_time_clint, initrd_start, initrd_end, bootargs, start_pc, 
-                    mems, plugin_devices, htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file);
+                    mems, plugin_devices, htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file,
+                    diffTest, "/tmp/zjv");
 
     #ifdef ZJV_DEBUG
         // spike->set_log_commits(true);
         spike->set_procs_debug(true);
     #endif
     // spike->run();
-    spike->set_diffTest(true);
     spike->difftest_setup();
 }
 

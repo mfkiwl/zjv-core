@@ -138,6 +138,7 @@ extern "C" void uart_putc(char addr, char data) // write
         else
         {
             fprintf(stderr, "%c", data);
+            fflush(stderr);
             // uart_enqueue(data);
         }
         break;
