@@ -1,8 +1,10 @@
 package rv64_3stage
 
 import chisel3._
+import chisel3.stage._
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
+
 
 import common._
 
@@ -29,10 +31,10 @@ class Top extends Module with phvntomParams {
   val tile = Module(new Tile)
 
   val difftest = WireInit(0.U.asTypeOf(new DiffTestIO))
-  BoringUtils.addSink(difftest.regs,  "difftestRegs")
-  BoringUtils.addSink(difftest.pc,    "difftestPC")
-  BoringUtils.addSink(difftest.inst,  "difftestInst")
-  BoringUtils.addSink(difftest.valid, "difftestValid")
+  BoringUtils.addSink(difftest.regs,    "difftestRegs")
+  BoringUtils.addSink(difftest.pc,      "difftestPC")
+  BoringUtils.addSink(difftest.inst,    "difftestInst")
+  BoringUtils.addSink(difftest.valid,   "difftestValid")
   BoringUtils.addSink(difftest.csr_cmd, "difftestCSRCmd")
   BoringUtils.addSink(difftest.tick, "difftestTick")
   BoringUtils.addSink(difftest.int, "difftestInt")
@@ -53,9 +55,14 @@ class Top extends Module with phvntomParams {
 
 object elaborate {
   def main(args: Array[String]): Unit = {
+    val packageName = this.getClass.getPackage.getName
+
     if (args.isEmpty)
-      chisel3.Driver.execute(Array("--target-dir", "build/verilog/rv64_3stage"), () => new Top)
+      (new chisel3.stage.ChiselStage).execute(
+      Array("-td", "build/verilog/"+packageName, "-X", "verilog"),
+      Seq(ChiselGeneratorAnnotation(() => new Top)))
     else
-      chisel3.Driver.execute(args, () => new Top)
+      (new chisel3.stage.ChiselStage).execute(args,
+      Seq(ChiselGeneratorAnnotation(() => new Top)))    
   }
 }

@@ -168,7 +168,7 @@ class DataPath extends Module with phvntomParams {
   val if_pc_4 = if_pc + 4.U(xlen.W)
   val inst_access_fault = if_pc(xlen - 1, 48).orR
   val istall = (!io.imem.resp.valid && !inst_access_fault)
-  val dstall = (io.dmem.req.valid && !io.dmem.resp.valid)
+  val dstall = (io.dmem.req.valid && !io.dmem.resp.valid) || csrFile.io.stall_req
   val if_stall = istall || dstall
   val exe_stall = dstall
 
@@ -209,7 +209,7 @@ class DataPath extends Module with phvntomParams {
   io.imem.req.bits.data := DontCare
   val if_inst = io.imem.resp.bits.data
 
-  io.imem.req.valid := !io.ctrl.bubble && !inst_access_fault
+  io.imem.req.valid := !io.ctrl.bubble && !inst_access_fault && !csrFile.io.stall_req
   io.imem.req.bits.wen := false.B
   io.imem.req.bits.memtype := memWordU
 

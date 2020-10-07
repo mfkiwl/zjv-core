@@ -33,7 +33,7 @@ class ALUTester(c: ALU) extends PeekPokeTester(c)  {
   def alu_srlw:(Long, Long) => Long = (rs1, rs2) => { cut32(rs1) >>> (rs2 & 0x1f) }
   def alu_sraw:(Long, Long) => Long = (rs1, rs2) => { cut32(rs1) >> (rs2 & 0x1f) }
 
-  val opType  = List(aluADD,  aluSUB,  aluSLL,  aluSLT,  aluSLTU,  aluXOR,  aluSRL,  aluSRA,  aluOR,  aluAND,  aluCPA,  aluCPB, aluADDIW, aluSLLIW, aluSRLIW, aluSRAIW, aluADDW , aluSUBW , aluSLLW , aluSRLW , aluSRAW)
+  val opType  = List(aluADD,  aluSUB,  aluSLL,  aluSLT,  aluSLTU,  aluXOR,  aluSRL,  aluSRA,  aluOR,  aluAND,  aluCPA,  aluCPB, aluADDW, aluSLLW, aluSRLW, aluSRAW, aluADDW , aluSUBW , aluSLLW , aluSRLW , aluSRAW)
   val alu_op  = List(alu_add, alu_sub, alu_sll, alu_slt, alu_sltu, alu_xor, alu_srl, alu_sra, alu_or, alu_and, alu_cpa, alu_cpb, alu_addiw, alu_slliw, alu_srliw, alu_sraiw, alu_addw , alu_subw, alu_sllw, alu_srlw, alu_sraw)
   val op_name = List("ADD", "SUB", "SLL", "SLT", "SLTU", "XOR", "SRL", "SRA", "OR", "AND", "COPYA", "COPYB", "ADDIW", "SLLIW", "SRLIW", "SRAIW", "ADDW", "SUBW", "SLLW", "SRLW", "SRAW")
 
