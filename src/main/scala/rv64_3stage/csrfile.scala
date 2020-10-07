@@ -3,6 +3,10 @@ package rv64_3stage
 import chisel3._
 import chisel3.util._
 
+object CSRConfig {
+  val patch_for_d = true
+}
+
 class InterruptIO extends Bundle with phvntomParams {
   val mtip = Input(Bool())
   val msip = Input(Bool())
@@ -115,6 +119,7 @@ class CSRFileIO extends Bundle with phvntomParams {
   val epc_out = Output(UInt(xlen.W))
   val global_int_enable = Output(Bool())
   val illegal_csr = Output(Bool())
+  val change_enable_when_int = Output(Bool())
 }
 
 class CSRFile extends Module with phvntomParams {
@@ -183,15 +188,18 @@ class CSRFile extends Module with phvntomParams {
   val tdata2r = RegInit(0.U(xlen.W))
   val tdata3r = RegInit(0.U(xlen.W))
 
-  // combo-logic for int control, machine mode only now
+  // Global Interrupt Enable
   val current_prv = CSR.PRV_M // support Machine mode only
-  val machine_int_global_enable = current_prv != CSR.PRV_M || mstatusr_mie
-  val machine_int_enable = mier(io.int_type) & machine_int_global_enable
+  val machine_int_global_enable = current_prv != CSR.PRV_M || (mstatusr_mie || enable_mstatusr_mie_when_int)
+  val machine_int_enable = (mier(io.int_type) || enable_mier_when_int(io.int_type)) & machine_int_global_enable
   //printf("Machine INT Enable %x\n", mier)
   val csr_not_exists = WireInit(false.B)
   io.global_int_enable := machine_int_enable
 
-//  //printf(">>>>>>>>>> mcycle = %x \n", mcycler)
+  val enable_mstatusr_mie_when_int = WireInit(false.B)
+  val enable_mier_when_int = WireInit(0.U(xlen.W))
+
+  //  //printf(">>>>>>>>>> mcycle = %x \n", mcycler)
 
   // mcycle and minstret increment
   when(!io.stall && io.which_reg === CSR.mcycle) {
@@ -292,28 +300,39 @@ class CSRFile extends Module with phvntomParams {
   io.epc_out := mepcr
   io.evec_out := mtvecr
 
+  // Interrupt Enable Signals Forwarding
+
+
   // seq-logic to write csr file
   when(!io.stall) {
     when((io.has_int & machine_int_enable) | io.has_except | io.illegal_csr) { // handle interrupt and exception
-      when(io.has_int) {
-        mepcr := io.current_pc + 4.U
+      when(io.is_eret) {
+        mstatusr_mie := false.B
+        mstatusr_mpie := true.B
+        mstatusr_mpp := CSR.PRV_M
         mcauser_int := 1.U(1.W)
         mcauser_cause := io.int_type
       }.otherwise {
-        mepcr := io.current_pc
-        mcauser_int := 0.U(1.W)
-        mcauser_cause := io.except_type
-        when(io.except_type === Exception.LoadAddrMisaligned || io.except_type === Exception.StoreAddrMisaligned) {
-          mtvalr := io.illegal_addr
-        }.elsewhen(io.except_type === Exception.InstAddrMisaligned) {
-          mtvalr := Cat(io.illegal_addr(xlen - 1, 1), Fill(1, 0.U))
+        when(io.has_int) {
+          mepcr := io.current_pc + 4.U
+          mcauser_int := 1.U(1.W)
+          mcauser_cause := io.int_type
+        }.otherwise {
+          mepcr := io.current_pc
+          mcauser_int := 0.U(1.W)
+          mcauser_cause := io.except_type
+          when(io.except_type === Exception.LoadAddrMisaligned || io.except_type === Exception.StoreAddrMisaligned) {
+            mtvalr := io.illegal_addr
+          }.elsewhen(io.except_type === Exception.InstAddrMisaligned) {
+            mtvalr := Cat(io.illegal_addr(xlen - 1, 1), Fill(1, 0.U))
+          }
         }
+        // disable int enable, machine mode only for now
+        //printf("MSTATUS_MIE to 0, MSTATUS_MPIE to %x\n", mstatusr_mie)
+        mstatusr_mpie := mstatusr_mie
+        mstatusr_mie := false.B
+        mstatusr_mpp := CSR.PRV_M
       }
-      // disable int enable, machine mode only for now
-      //printf("MSTATUS_MIE to 0, MSTATUS_MPIE to %x\n", mstatusr_mie)
-      mstatusr_mpie := mstatusr_mie
-      mstatusr_mie := false.B
-      mstatusr_mpp := CSR.PRV_M
     }.elsewhen(io.is_eret) { // enable interrupt signal again
       //printf("MSTATUS_MIE to %x\n", mstatusr_mpie)
       mstatusr_mie := mstatusr_mpie
@@ -409,7 +428,7 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_sum := io.wdata(18)
           mstatusr_mprv := io.wdata(17)
           mstatusr_xs := io.wdata(16, 15)
-          mstatusr_fs := io.wdata(14, 13)
+          // mstatusr_fs := io.wdata(14, 13)
           // mstatusr_mpp := io.wdata(12, 11) TODO M-Mode, so always 3
           mstatusr_spp := io.wdata(8)
           mstatusr_mpie := io.wdata(7)
@@ -431,7 +450,7 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_sum := mstatusr(18) | io.wdata(18)
           mstatusr_mprv := mstatusr(17) | io.wdata(17)
           mstatusr_xs := mstatusr(16, 15) | io.wdata(16, 15)
-          mstatusr_fs := mstatusr(14, 13) | io.wdata(14, 13)
+          // mstatusr_fs := mstatusr(14, 13) | io.wdata(14, 13)
           // mstatusr_mpp := mstatusr(12, 11) | io.wdata(12, 11) TODO M-Mode, so always 3
           mstatusr_spp := mstatusr(8) | io.wdata(8)
           mstatusr_mpie := mstatusr(7) | io.wdata(7)
@@ -453,7 +472,7 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_sum := mstatusr(18) & ~io.wdata(18)
           mstatusr_mprv := mstatusr(17) & ~io.wdata(17)
           mstatusr_xs := mstatusr(16, 15) & ~io.wdata(16, 15)
-          mstatusr_fs := mstatusr(14, 13) & ~io.wdata(14, 13)
+          // mstatusr_fs := mstatusr(14, 13) & ~io.wdata(14, 13)
           // mstatusr_mpp := mstatusr(12, 11) & ~io.wdata(12, 11) TODO M-Mode, so always 3
           mstatusr_spp := mstatusr(8) & ~io.wdata(8)
           mstatusr_mpie := mstatusr(7) & ~io.wdata(7)
@@ -687,9 +706,9 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.bubble := io.bubble
 
   io.out := csr_regfile.io.rdata
-  io.expt := ((interrupt_judger.io.has_int & csr_regfile.io.global_int_enable) |
+  io.expt := ((interrupt_judger.io.has_int & (csr_regfile.io.global_int_enable | csr_regfile.io.change_enable_when_int)) |
     exception_judger.io.has_except | csr_regfile.io.illegal_csr) // here we temporarily do not consider if the CSR file is valid
   io.evec := csr_regfile.io.evec_out
   io.epc := csr_regfile.io.epc_out
-  io.ret := csr_regfile.io.is_eret
+  io.ret := csr_regfile.io.is_eret & ~csr_regfile.io.change_enable_when_int
 }

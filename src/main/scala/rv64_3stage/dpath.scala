@@ -425,7 +425,6 @@ class DataPath extends Module with phvntomParams {
         Mux(exe_stall, Str("*"), Str(" ")),
         Mux(dtest_wbvalid, Str("*"), Str(" "))
       )
-      // }
     }
   }
 }

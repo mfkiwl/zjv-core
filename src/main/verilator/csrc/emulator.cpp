@@ -96,6 +96,7 @@ int main(int argc, char** argv)
       if (startTest && engine.emu_difftest_valid()) {
          engine.sim_step(1);
 
+
           fprintf(stderr, "emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
           for (int i = 0; i < REG_G_NUM; i++) {
              if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
@@ -111,6 +112,7 @@ int main(int argc, char** argv)
           fprintf(stderr, "zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
           if (REG_G_NUM % 3 != 0)
              fprintf(stderr, "\n");
+
 
       if((engine.emu_get_pc() != engine.sim_get_pc()) ||
             (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ) ) {
