@@ -183,10 +183,26 @@ class CSRFile extends Module with phvntomParams {
   val tdata2r = RegInit(0.U(xlen.W))
   val tdata3r = RegInit(0.U(xlen.W))
 
+  // fwd
+  val mier_fwd = Mux(io.which_reg === CSR.mie,
+    Mux(io.wen, io.wdata,
+      Mux(io.sen, mier | io.wdata,
+        Mux(io.cen, mier & ~io.wdata, 0.U(xlen.W)))
+    ),
+    0.U(xlen.W)
+  )
+  val mstatusr_mie_fwd = Mux(io.which_reg === CSR.mstatus,
+    Mux(io.wen, io.wdata(3),
+      Mux(io.sen, mstatusr_mie | io.wdata(3),
+        Mux(io.cen, mstatusr_mie & ~io.wdata(3), 0.U(1.W)))
+    ),
+    0.U(1.W)
+  )
+
   // combo-logic for int control, machine mode only now
   val current_prv = CSR.PRV_M // support Machine mode only
-  val machine_int_global_enable = current_prv =/= CSR.PRV_M || mstatusr_mie
-  val machine_int_enable = mier(io.int_type) & machine_int_global_enable
+  val machine_int_global_enable = current_prv =/= CSR.PRV_M || (mstatusr_mie || mstatusr_mie_fwd.orR)
+  val machine_int_enable = (mier(io.int_type) | mier_fwd(io.int_type)) & machine_int_global_enable
   val csr_not_exists = WireInit(false.B)
   io.global_int_enable := machine_int_enable
 
@@ -290,10 +306,10 @@ class CSRFile extends Module with phvntomParams {
   io.evec_out := mtvecr
 
   // seq-logic to write csr file
-  when(!io.stall) {
+  when(!io.stall && !io.bubble) {
     when((io.has_int & machine_int_enable) | io.has_except | io.illegal_csr) { // handle interrupt and exception
       when(io.has_int) {
-        mepcr := io.current_pc + 4.U
+        mepcr := io.current_pc
         mcauser_int := 1.U(1.W)
         mcauser_cause := io.int_type
       }.otherwise {
@@ -625,6 +641,7 @@ class CSRIO extends Bundle with phvntomParams {
   val inst_access_fault = Input(Bool())
   val mem_access_fault = Input(Bool())
   val expt = Output(Bool())
+  val int = Output(Bool())
   val ret = Output(Bool())
   val evec = Output(UInt(xlen.W))
   val epc = Output(UInt(xlen.W))
@@ -681,11 +698,15 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.bubble := io.bubble
 
   io.out := csr_regfile.io.rdata
-  io.expt := ((interrupt_judger.io.has_int & csr_regfile.io.global_int_enable) |
+  io.int := (interrupt_judger.io.has_int & csr_regfile.io.global_int_enable &
+    !io.stall && !io.bubble)
+  io.expt := (io.int |
     exception_judger.io.has_except | csr_regfile.io.illegal_csr) // here we temporarily do not consider if the CSR file is valid
   io.evec := csr_regfile.io.evec_out
   io.epc := csr_regfile.io.epc_out
   io.ret := csr_regfile.io.is_eret
-  io.stall_req := !last_stall_req && (csr_regfile.io.cen || csr_regfile.io.wen ||
-    csr_regfile.io.sen || csr_regfile.io.is_eret)
+
+  io.stall_req := false.B
+  //  io.stall_req := !last_stall_req && (csr_regfile.io.cen || csr_regfile.io.wen ||
+//    csr_regfile.io.sen || csr_regfile.io.is_eret)
 }
