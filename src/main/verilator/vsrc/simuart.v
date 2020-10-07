@@ -1,8 +1,7 @@
 `define XLEN 64
 import "DPI-C" function void uart_putc (
     input  byte  waddr,
-    input  byte  wdata,
-    input  bit   wen
+    input  byte  wdata
 );
 
 import "DPI-C" function void uart_getc (
@@ -23,7 +22,7 @@ module SimUART (
 );
 
   always @(posedge clk) begin
-    if (wen) uart_putc(waddr, wdata, wen);
+    if (wen) uart_putc(waddr, wdata);
     if (ren) uart_getc(raddr, rdata);
   end
 

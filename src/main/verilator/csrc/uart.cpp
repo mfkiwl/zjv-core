@@ -126,7 +126,7 @@ extern "C" void uart_getc(char addr, char *data) // read
 //     }
 }
 
-extern "C" void uart_putc(char addr, char data, bool wen) // write
+extern "C" void uart_putc(char addr, char data) // write
 {
     switch (addr)
     {
@@ -137,7 +137,7 @@ extern "C" void uart_putc(char addr, char data, bool wen) // write
         }
         else
         {
-            if (wen) fprintf(stderr, "%c", data);
+            fprintf(stderr, "%c", data);
             // uart_enqueue(data);
         }
         break;
