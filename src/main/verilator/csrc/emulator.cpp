@@ -43,9 +43,7 @@ int main(int argc, char** argv)
    // Shift HTIF options to the front of argv
    int htif_argc = 1 + argc - optind;
    for (int i = 1; optind < argc;)
-   {
       argv[i++] = argv[optind++];
-   }
 
    if (htif_argc != 2) {
       #ifdef ZJV_DEBUG
@@ -66,6 +64,7 @@ int main(int argc, char** argv)
    bool lastIsInt = false, lastLastInt = false;
    int cont_count = 0;
    int bubble_cnt = 0;
+   int int_total_cnt = 0;
 
    while (!engine.is_finish()) {
       engine.emu_step(1);
@@ -106,6 +105,11 @@ int main(int argc, char** argv)
       if(lastIsInt) {
          engine.sim_set_mip();     // TODO only mtip for now
          engine.sim_step(1);
+         int_total_cnt++;
+         if (int_total_cnt > 20) {
+            printf("Total Int Cnt is %d!\n", int_total_cnt);
+            exit(100);
+         }
       }
       if (startTest && engine.emu_difftest_valid()) {
          bubble_cnt = 0;
@@ -137,6 +141,7 @@ int main(int argc, char** argv)
 //               engine.sim_set_x15(engine.emu_state.regs[15]);
 //            else
                 faultExitLatency++;
+
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
             if (engine.emu_get_pc() != engine.sim_get_pc())
                fprintf(stderr, "emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());

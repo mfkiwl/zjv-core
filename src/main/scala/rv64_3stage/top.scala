@@ -5,7 +5,6 @@ import chisel3.stage._
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
 
-
 import common._
 
 class DiffTestIO extends Bundle with phvntomParams {
@@ -36,13 +35,10 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.inst,    "difftestInst")
   BoringUtils.addSink(difftest.valid,   "difftestValid")
   BoringUtils.addSink(difftest.csr_cmd, "difftestCSRCmd")
-  BoringUtils.addSink(difftest.tick, "difftestTick")
   BoringUtils.addSink(difftest.int, "difftestInt")
+
   val poweroff = WireInit(0.U(xlen.W))
   BoringUtils.addSink(poweroff, "poweroff")
-
-//  val tick = WireInit(false.B)
-
 
   val mtip = WireInit(false.B)
   val msip = WireInit(false.B)

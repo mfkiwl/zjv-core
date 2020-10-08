@@ -7,15 +7,15 @@ typedef uint64_t paddr_t;
 htif_simmem_t *mem;
 memif_t *memif;
 
-void init_ram(const char *img)
+void init_ram(const std::string img)
 {
 
   mem = new htif_simmem_t();
   memif = new memif_t(mem);
   reg_t entry;
-  load_elf(img, memif, &entry);
+  load_elf(img.c_str(), memif, &entry);
 
-  printf("[SimMem] load elf %s\n", img);
+  printf("[SimMem] load elf %s\n", img.c_str());
 
   //  mem->mem_check();
 }
