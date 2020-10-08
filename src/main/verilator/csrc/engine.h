@@ -57,17 +57,15 @@ public:
 
     unsigned long emu_get_pc();
     unsigned long emu_get_inst();
-    unsigned long emu_get_poweroff();
-    bool emu_get_tick();
+    unsigned long emu_get_int();
 
     unsigned long sim_get_pc();
     void sim_sync_cycle();
-    void sim_set_x15(unsigned long x);
     void sim_set_mip();
 
     bool is_finish();
     unsigned long emu_difftest_valid();
-    unsigned long emu_difftest_int();
+    unsigned long emu_difftest_poweroff();
 
     difftest_sim_state_t sim_state;
     difftest_emu_state_t emu_state;

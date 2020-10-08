@@ -69,7 +69,7 @@ int main(int argc, char** argv)
    while (!engine.is_finish()) {
       engine.emu_step(1);
       engine.sim_sync_cycle();
-      lastIsInt = engine.emu_difftest_int();
+      lastIsInt = engine.emu_get_int();
       lastLastInt = lastIsInt;
 //      printf("<-----------LAST IS INT %x\n", lastIsInt);
       if(lastLastInt == lastIsInt && lastIsInt == true) {
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
       #endif
 
       if (engine.is_finish()) {
-         if (engine.emu_get_poweroff() == (long)PROGRAM_PASS)
+         if (engine.emu_difftest_poweroff() == (long)PROGRAM_PASS)
             fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS ] ==========\x1b[0m\n", argv[1]);
          else
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
@@ -106,15 +106,14 @@ int main(int argc, char** argv)
          engine.sim_set_mip();     // TODO only mtip for now
          engine.sim_step(1);
          int_total_cnt++;
-         if (int_total_cnt > 20) {
-            printf("Total Int Cnt is %d!\n", int_total_cnt);
-            exit(100);
-         }
+         // if (int_total_cnt > 20) {
+         //    printf("Total Int Cnt is %d!\n", int_total_cnt);
+         //    exit(0);
+         // }
       }
       if (startTest && engine.emu_difftest_valid()) {
          bubble_cnt = 0;
          engine.sim_step(1);
-
 
 //          fprintf(stderr, "emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
 //          for (int i = 0; i < REG_G_NUM; i++) {
@@ -132,7 +131,6 @@ int main(int argc, char** argv)
 //          if (REG_G_NUM % 3 != 0)
 //             fprintf(stderr, "\n");
 //          fprintf(stderr, "\n");
-
 
       if(((engine.emu_get_pc() != engine.sim_get_pc()) ||
             (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ))) {
