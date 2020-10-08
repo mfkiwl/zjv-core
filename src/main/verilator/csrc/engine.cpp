@@ -172,6 +172,10 @@ void dtengine_t::sim_set_x15(unsigned long x) {
     spike->set_x15(x);
 }
 
+void dtengine_t::sim_set_mip() {
+    spike->set_mip();
+}
+
 bool dtengine_t::is_finish() {
     return Verilated::gotFinish() || emu_get_poweroff() != 0;
 }

@@ -416,7 +416,7 @@ class DataPath extends Module with phvntomParams {
       }
       dtest_expt := csrFile.io.expt
     }
-    dtest_int := dtest_expt & (io.int.msip | io.int.mtip)
+    dtest_int := csrFile.io.int // dtest_expt & (io.int.msip | io.int.mtip)
 
     BoringUtils.addSource(dtest_pc, "difftestPC")
     BoringUtils.addSource(dtest_inst, "difftestInst")

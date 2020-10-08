@@ -78,7 +78,7 @@ int main(int argc, char** argv)
       } else {
         cont_count = 0;
       }
-      if(cont_count == 5) {
+      if(cont_count == 2) {
         fprintf(stderr, "OUT\n");
         exit(1);
       }
@@ -91,8 +91,8 @@ int main(int argc, char** argv)
       }
 
       #ifdef ZJV_DEBUG
-//         fprintf(stderr, "\t\t\t\t [ ROUND %lx ]\n", engine.trace_count);
-//         fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+         fprintf(stderr, "\t\t\t\t [ ROUND %lx ]\n", engine.trace_count);
+         fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
       #endif
 
       if (engine.is_finish()) {
@@ -103,13 +103,15 @@ int main(int argc, char** argv)
          break;
       }
 
-//      if(lastIsInt)
-//         engine.sim_step(1);
+      if(lastIsInt) {
+         engine.sim_set_mip();     // TODO only mtip for now
+         engine.sim_step(1);
+      }
       if (startTest && engine.emu_difftest_valid()) {
          bubble_cnt = 0;
-//         engine.sim_step(1);
-//
-//
+         engine.sim_step(1);
+
+
 //          fprintf(stderr, "emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
 //          for (int i = 0; i < REG_G_NUM; i++) {
 //             if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
@@ -125,30 +127,31 @@ int main(int argc, char** argv)
 //          fprintf(stderr, "zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
 //          if (REG_G_NUM % 3 != 0)
 //             fprintf(stderr, "\n");
-//
-//
-//      if(((engine.emu_get_pc() != engine.sim_get_pc()) ||
-//            (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ))) {
+//          fprintf(stderr, "\n");
+
+
+      if(((engine.emu_get_pc() != engine.sim_get_pc()) ||
+            (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ))) {
 //            if ((engine.sim_get_pc() >= 0x800009b4L && engine.sim_get_pc() <= 0x800009fcL)
 //                            || (engine.sim_get_pc() >= 0x80000a10L && engine.sim_get_pc() <= 0x80000a64L))
 //               engine.sim_set_x15(engine.emu_state.regs[15]);
 //            else
-//                faultExitLatency++;
-//            fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
-//            if (engine.emu_get_pc() != engine.sim_get_pc())
-//               fprintf(stderr, "emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
-//            for (int i = 0; i < REG_G_NUM; i++) {
-//               if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
-//                  fprintf(stderr, "\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
-//               else
-//                  fprintf(stderr, "[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
-//               if (i % 3 == 2)
-//                  fprintf(stderr, "\n");
-//            }
-//            if (faultExitLatency == 3)
-//                exit(-1);
-//         }
-
+                faultExitLatency++;
+            fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
+            if (engine.emu_get_pc() != engine.sim_get_pc())
+               fprintf(stderr, "emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
+            for (int i = 0; i < REG_G_NUM; i++) {
+               if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
+                  fprintf(stderr, "\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+               else
+                  fprintf(stderr, "[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+               if (i % 3 == 2)
+                  fprintf(stderr, "\n");
+            }
+            fprintf(stderr, "\n");
+            if (faultExitLatency == 3)
+                exit(-1);
+         }
       }
       else {
         bubble_cnt++;
