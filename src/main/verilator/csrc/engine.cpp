@@ -31,20 +31,21 @@ sim_t* dtengine_t::sim_init(std::string elfpath) {
 
     spike = new sim_t(isa, priv, varch, nprocs, halted, real_time_clint, initrd_start, initrd_end, bootargs, start_pc, 
                     mems, plugin_devices, htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file,
-                    diffTest, "/tmp/zjv");
+                    diffTest, file_fifo_path);
 
     #ifdef ZJV_DEBUG
         // spike->set_log_commits(true);
         spike->set_procs_debug(true);
     #endif
+    
     // spike->run();
     spike->difftest_setup();
 }
 
 emu_t* dtengine_t::emu_init(std::string elfpath) {
     zjv = new emu_t;
-    extern void init_ram(const char *img);
     init_ram(elfpath.c_str());
+    init_uart(file_fifo_path);
 }
 
 void dtengine_t::emu_reset(uint cycle) {
@@ -86,6 +87,8 @@ void dtengine_t::emu_step(uint step) {
 }
 
 dtengine_t::dtengine_t(std::string elfpath) {
+
+    file_fifo_path = "/tmp/zjv";
 
     emu_init(elfpath);
     sim_init(elfpath);

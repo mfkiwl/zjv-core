@@ -43,9 +43,7 @@ int main(int argc, char** argv)
    // Shift HTIF options to the front of argv
    int htif_argc = 1 + argc - optind;
    for (int i = 1; optind < argc;)
-   {
       argv[i++] = argv[optind++];
-   }
 
    if (htif_argc != 2) {
       #ifdef ZJV_DEBUG
@@ -104,7 +102,7 @@ int main(int argc, char** argv)
          //  if (REG_G_NUM % 3 != 0)
          //     fprintf(stderr, "\n");
 
-      if((engine.emu_get_pc() != engine.sim_get_pc()) ||
+         if((engine.emu_get_pc() != engine.sim_get_pc()) ||
             (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ) ) {
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
             if (engine.emu_get_pc() != engine.sim_get_pc())
