@@ -153,6 +153,7 @@ class DataPath extends Module with phvntomParams {
   val wb_wdata = Reg(UInt(xlen.W))
   val wb_inst_addr_misaligned = RegInit(Bool(), false.B)
   val wb_inst_access_fault = RegInit(Bool(), false.B)
+  val wb_mtip = RegInit(Bool(), false.B)
 
   // Control Signal of Write Back Stage (1 cycle delay)
   val wb_memType = Reg(UInt())
@@ -299,6 +300,7 @@ class DataPath extends Module with phvntomParams {
       wb_illegal := false.B
       wb_inst_addr_misaligned := false.B
       wb_inst_access_fault := false.B
+      wb_mtip := false.B
     }.otherwise {
       wb_inst_addr_misaligned := inst_addr_misaligned
       wb_illegal := io.ctrl.instType === ControlConst.Illegal
@@ -314,10 +316,18 @@ class DataPath extends Module with phvntomParams {
       }
       when(exe_inst_access_fault) {
         wb_inst := BUBBLE
+        wb_mtip := false.B
       }.otherwise {
         wb_inst := exe_inst
+        when(exe_inst === BUBBLE) {
+          wb_mtip := false.B
+        }.otherwise {
+          wb_mtip := io.int.mtip
+        }
       }
     }
+  }.otherwise {
+    wb_mtip := false.B
   }
 
   // ******************************
@@ -344,10 +354,11 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.data := wb_wdata
 
   io.dmem.req.valid := wb_memType.orR && mem_addr_misaligned === false.B && mem_access_fault === false.B
-  io.dmem.req.bits.wen := wen === wenMem
+  io.dmem.req.bits.wen := wen === wenMem && csrFile.io.expt === false.B
   io.dmem.req.bits.memtype := wb_memType
 
-  regFile.io.wen := ((wen === wenReg && mem_addr_misaligned === false.B && mem_access_fault === false.B) ||
+  regFile.io.wen := ((wen === wenReg &&
+    csrFile.io.expt === false.B) ||
     wen === wenCSRW || wen === wenCSRC || wen === wenCSRS)
   regFile.io.rd_addr := rd_addr
   regFile.io.rd_data := wb_data
@@ -371,13 +382,15 @@ class DataPath extends Module with phvntomParams {
   csrFile.io.inst_access_fault := wb_inst_access_fault
   csrFile.io.mem_access_fault := mem_access_fault
   // interupt signals in, XIP from CLINT or PLIC
-  csrFile.io.tim_int := io.int.mtip
+  csrFile.io.tim_int := wb_mtip
   csrFile.io.soft_int := io.int.msip
   csrFile.io.external_int := false.B  // TODO
 
   // ******************************
   //        Diff Test Stage
   // ******************************
+  //printf("<----STALL IF[%x], EXE[%x]---->\n", istall, dstall)
+
   if (diffTest) {
     val dtest_pc = RegInit(UInt(xlen.W), 0.U)
     val dtest_inst = RegInit(UInt(xlen.W), BUBBLE)
