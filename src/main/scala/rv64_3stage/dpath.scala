@@ -141,9 +141,11 @@ class DataPath extends Module with phvntomParams {
   val csrFile = Module(new CSR)
 
   /* Fetch / Execute Register */
+  val if_mtip = RegInit(Bool(), false.B)
   val exe_inst = RegInit(UInt(xlen.W), BUBBLE)
   val exe_pc = RegInit(UInt(xlen.W), 0.U)
   val exe_inst_access_fault = RegInit(Bool(), false.B)
+  val exe_mtip = RegInit(Bool(), false.B)
 
   /* Execute / Write Back Register */
   val inst_addr_misaligned = WireInit(false.B)
@@ -359,7 +361,7 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.data := wb_wdata
 
   io.dmem.req.valid := wb_memType.orR && mem_addr_misaligned === false.B && mem_access_fault === false.B
-  io.dmem.req.bits.wen := wen === wenMem
+  io.dmem.req.bits.wen := wen === wenMem && csrFile.io.expt === false.B
   io.dmem.req.bits.memtype := wb_memType
 
   regFile.io.wen := ((wen === wenReg &&
