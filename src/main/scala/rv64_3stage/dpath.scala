@@ -361,7 +361,7 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.data := wb_wdata
 
   io.dmem.req.valid := wb_memType.orR && mem_addr_misaligned === false.B && mem_access_fault === false.B
-  io.dmem.req.bits.wen := wen === wenMem
+  io.dmem.req.bits.wen := wen === wenMem && csrFile.io.expt === false.B
   io.dmem.req.bits.memtype := wb_memType
 
   regFile.io.wen := ((wen === wenReg &&
