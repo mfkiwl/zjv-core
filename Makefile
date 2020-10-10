@@ -5,7 +5,7 @@
 WORK_DIR	:=	$(CURDIR)/build
 SRC_DIR		:=	$(CURDIR)/src
 
-TARGET_CORE ?= rv64_3stage
+TARGET_CORE ?= rv64_nstage.core
 VSRC_DIR := $(WORK_DIR)/verilog/$(TARGET_CORE)
 
 # Test ELF 
