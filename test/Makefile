@@ -33,10 +33,10 @@ endef
 $(DEST_DIR):
 	mkdir -p $(DEST_DIR)
 
-# $(eval $(call compile_template,rv64ui))
-# $(eval $(call compile_template,rv64um))
-$(eval $(call compile_template,rv64ua))
-# $(eval $(call compile_template,rv64mi))
+$(eval $(call compile_template,rv64ui))
+$(eval $(call compile_template,rv64um))
+# $(eval $(call compile_template,rv64ua))
+$(eval $(call compile_template,rv64mi))
 # $(eval $(call compile_template,uart))
 
 all: $(DEST_DIR) $(tests)

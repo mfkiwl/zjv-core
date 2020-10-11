@@ -110,7 +110,7 @@ class RegIdExe extends Module with phvntomParams {
   val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits).W),
     default_inst_info)
 
   when(!io.stall) {
@@ -176,7 +176,7 @@ class RegExeMem1 extends Module with phvntomParams {
   val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits).W),
     default_inst_info)
 
   when(!io.stall) {
@@ -274,7 +274,7 @@ class RegMem2Wb extends Module with phvntomParams {
   val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits).W),
     default_inst_info)
 
   when(!io.stall) {

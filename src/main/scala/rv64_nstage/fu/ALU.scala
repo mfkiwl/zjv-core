@@ -181,10 +181,15 @@ class Multiplier extends Module with phvntomParams {
 }
 
 class AMOALUIO extends Bundle with phvntomParams {
-
+  val a = Input(UInt(xlen.W))
+  val b = Input(UInt(xlen.W))
+  val op = Input(UInt(amoBits.W))
+  val is_word = Input(Bool())
+  val ret = Output(UInt(xlen.W))
 }
 
 class AMOALU extends Module with phvntomParams {
   val io = IO(new AMOALUIO)
+
 
 }
