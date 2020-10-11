@@ -14,22 +14,22 @@ object ControlConst {
   val startAddr = "h80000000".U
 
   // io.pcSelect
-  val pcPlus4  = 0.U(3.W)
-  val pcBubble = 1.U(3.W)
-  val pcBranch = 2.U(3.W)
-  val pcJump   = 3.U(3.W)
-  val pcEPC    = 4.U(3.W)
+  val pcPlus4  = 0.U(2.W)
+  val pcBranch = 1.U(2.W)
+  val pcJump   = 2.U(2.W)
+  val pcEPC    = 3.U(2.W)
   val pcSelectBits = pcPlus4.getWidth
 
   // ImmExt.io.instType
-  val instXXX = 0.U(3.W)
-  val IType   = 1.U(3.W)
-  val SType   = 2.U(3.W)
-  val BType   = 3.U(3.W)
-  val UType   = 4.U(3.W)
-  val JType   = 5.U(3.W)
-  val ZType   = 6.U(3.W) // Zicsr
-  val Illegal = 7.U(3.W)
+  val instXXX = 0.U(4.W)
+  val IType   = 1.U(4.W)
+  val SType   = 2.U(4.W)
+  val BType   = 3.U(4.W)
+  val UType   = 4.U(4.W)
+  val JType   = 5.U(4.W)
+  val ZType   = 6.U(4.W) // Zicsr
+  val MType   = 7.U(4.W)
+  val Illegal = 8.U(4.W)
   val instBits = instXXX.getWidth
 
   // BrCond.io.brType
@@ -56,24 +56,37 @@ object ControlConst {
   val BSelectBits = BXXX.getWidth
 
   // ALU.io.aluType
-  val aluXXX   =  0.U(5.W)
-  val aluADD   =  1.U(5.W)
-  val aluSUB   =  2.U(5.W)
-  val aluSLL   =  3.U(5.W)
-  val aluSLT   =  4.U(5.W)
-  val aluSLTU  =  5.U(5.W)
-  val aluXOR   =  6.U(5.W)
-  val aluSRL   =  7.U(5.W)
-  val aluSRA   =  8.U(5.W)
-  val aluOR    =  9.U(5.W)
-  val aluAND   = 10.U(5.W)
-  val aluCPA   = 11.U(5.W)
-  val aluCPB   = 12.U(5.W)
-  val aluADDW  = 13.U(5.W)
-  val aluSUBW  = 14.U(5.W)
-  val aluSLLW  = 15.U(5.W)
-  val aluSRLW  = 16.U(5.W)
-  val aluSRAW  = 17.U(5.W)
+  val aluXXX      =  0.U(5.W)
+  val aluADD      =  1.U(5.W)
+  val aluSUB      =  2.U(5.W)
+  val aluSLL      =  3.U(5.W)
+  val aluSLT      =  4.U(5.W)
+  val aluSLTU     =  5.U(5.W)
+  val aluXOR      =  6.U(5.W)
+  val aluSRL      =  7.U(5.W)
+  val aluSRA      =  8.U(5.W)
+  val aluOR       =  9.U(5.W)
+  val aluAND      = 10.U(5.W)
+  val aluCPA      = 11.U(5.W)
+  val aluCPB      = 12.U(5.W)
+  val aluADDW     = 13.U(5.W)
+  val aluSUBW     = 14.U(5.W)
+  val aluSLLW     = 15.U(5.W)
+  val aluSRLW     = 16.U(5.W)
+  val aluSRAW     = 17.U(5.W)
+  val aluMUL      = 18.U(5.W)
+  val aluMULH     = 19.U(5.W)
+  val aluMULHSU   = 20.U(5.W)
+  val aluMULHU    = 21.U(5.W)
+  val aluDIV      = 22.U(5.W)
+  val aluDIVU     = 23.U(5.W)
+  val aluREM      = 24.U(5.W)
+  val aluREMU     = 25.U(5.W)
+  val aluMULW     = 26.U(5.W)
+  val aluDIVW     = 27.U(5.W)
+  val aluDIVUW    = 28.U(5.W)
+  val aluREMW     = 29.U(5.W)
+  val aluREMUW    = 30.U(5.W)
   val aluBits = aluXXX.getWidth
 
   // io.memType
@@ -123,7 +136,7 @@ object ControlConst {
 class InstInfo extends Bundle with phvntomParams {
   val instType  = Output(UInt(instBits.W))
   val pcSelect  = Output(UInt(pcSelectBits.W))
-  val bubble    = Output(Bool())
+  val mult      = Output(Bool())
   val brType    = Output(UInt(brBits.W))
   val ASelect   = Output(UInt(ASelectBits.W))
   val BSelect   = Output(UInt(BSelectBits.W))
@@ -143,18 +156,18 @@ class ControlPath extends Module with phvntomParams {
 
   val controlSignal = ListLookup(io.inst,
     List(Illegal, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
-    Array(         /*      Inst  |   PC   |  Bubble | Branch |   A    |   B    |  alu   |  Mem  |     wb    |  wb      */
-      /*      Type  | Select |         |  Type  | Select | Select |  Type  | Type  |   Select  | Enable   */
+    Array(         /*      Inst  |   PC   | alu0 or |Branch|   A    |   B    |  alu   |  Mem  |     wb    |  wb      */
+                   /*      Type  | Select |  multi1 | Type | Select | Select |  Type  | Type  |   Select  | Enable   */
       LUI       -> List(UType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbALU,   wenReg),
       AUIPC     -> List(UType,   pcPlus4,  False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbALU,   wenReg),
-      JAL       -> List(JType,   pcJump,   True,    brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbPC,    wenReg),
-      JALR      -> List(IType,   pcJump,   True,    brXXX,    ARS1,    BIMM,   aluADD,  memXXX,    wbPC,    wenReg),
-      BEQ       -> List(BType,   pcBranch, True,    beqType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
-      BNE       -> List(BType,   pcBranch, True,    bneType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
-      BLT       -> List(BType,   pcBranch, True,    bltType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
-      BGE       -> List(BType,   pcBranch, True,    bgeType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
-      BLTU      -> List(BType,   pcBranch, True,    bltuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
-      BGEU      -> List(BType,   pcBranch, True,    bgeuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+      JAL       -> List(JType,   pcJump,   False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbPC,    wenReg),
+      JALR      -> List(IType,   pcJump,   False,   brXXX,    ARS1,    BIMM,   aluADD,  memXXX,    wbPC,    wenReg),
+      BEQ       -> List(BType,   pcBranch, False,   beqType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+      BNE       -> List(BType,   pcBranch, False,   bneType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+      BLT       -> List(BType,   pcBranch, False,   bltType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+      BGE       -> List(BType,   pcBranch, False,   bgeType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+      BLTU      -> List(BType,   pcBranch, False,   bltuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
+      BGEU      -> List(BType,   pcBranch, False,   bgeuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX),
       LB        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbMEM,   wenReg),
       LH        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbMEM,   wenReg),
       LW        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbMEM,   wenReg),
@@ -197,7 +210,7 @@ class ControlPath extends Module with phvntomParams {
       SLLW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLLW, memXXX,    wbALU,   wenReg),
       SRLW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRLW, memXXX,    wbALU,   wenReg),
       SRAW      -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRAW, memXXX,    wbALU,   wenReg),
-      FENCE_I   -> List(IType,   pcBubble, True,    brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
+      FENCE_I   -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
       CSRRW     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRW),
       CSRRS     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRS),
       CSRRC     -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRC),
@@ -205,12 +218,25 @@ class ControlPath extends Module with phvntomParams {
       CSRRSI    -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRS),
       CSRRCI    -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRC),
       MRET      -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX),
+      MUL       -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluMUL,  memXXX,    wbALU,   wenReg),
+      MULH      -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,  aluMULH,  memXXX,    wbALU,   wenReg),
+      MULHSU    -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluMULHSU, memXXX,    wbALU,   wenReg),
+      MULHU     -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluMULHU,  memXXX,    wbALU,   wenReg),
+      DIV       -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluDIV,  memXXX,    wbALU,   wenReg),
+      DIVU      -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluDIVU, memXXX,    wbALU,   wenReg),
+      REM       -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluREM,  memXXX,    wbALU,   wenReg),
+      REMU      -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluREMU, memXXX,    wbALU,   wenReg),
+      MULW      -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluMULW, memXXX,    wbALU,   wenReg),
+      DIVW      -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluDIVW, memXXX,    wbALU,   wenReg),
+      DIVUW     -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluDIVUW,  memXXX,    wbALU,   wenReg),
+      REMW      -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluREMW, memXXX,    wbALU,   wenReg),
+      REMUW     -> List(MType,   pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluREMUW,  memXXX,    wbALU,   wenReg),
     )
   )
 
   io.inst_info_out.instType := controlSignal(0)
   io.inst_info_out.pcSelect := controlSignal(1)
-  io.inst_info_out.bubble   := controlSignal(2)
+  io.inst_info_out.mult     := controlSignal(2)
   io.inst_info_out.brType   := controlSignal(3)
 
   io.inst_info_out.ASelect  := controlSignal(4)

@@ -29,6 +29,7 @@ class DataPath extends Module with phvntomParams {
   val branch_cond = Module(new BrCond)
   val imm_ext = Module(new ImmExt)
   val alu = Module(new ALU)
+  val multiplier = Module(new Multiplier)
   val reg_exe_mem1 = Module(new RegExeMem1)
   val csr = Module(new CSR)
   val reg_mem2_wb = Module(new RegMem2Wb)
@@ -118,30 +119,17 @@ class DataPath extends Module with phvntomParams {
   alu.io.a := Mux(reg_id_exe.io.inst_info_out.ASelect === APC, reg_id_exe.io.pc_out, rs1)
   alu.io.b := Mux(reg_id_exe.io.inst_info_out.BSelect === BIMM, imm_ext.io.out, rs2)
 
+  multiplier.io.start := reg_id_exe.io.inst_info_out.mult && !scheduler.io.stall_req
+  multiplier.io.a := rs1
+  multiplier.io.b := rs2
+  multiplier.io.op := reg_id_exe.io.inst_info_out.aluType
+
   branch_cond.io.rs1 := rs1
   branch_cond.io.rs2 := rs2
   branch_cond.io.brType := reg_id_exe.io.inst_info_out.brType
 
   br_jump_flush := branch_cond.io.branch || reg_id_exe.io.inst_info_out.pcSelect === pcJump
   inst_addr_misaligned := alu.io.out(1) && (reg_id_exe.io.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
-
-  // TODO add mul and div
-
-  val rs1_used_exe = Input(Bool())
-  val rs1_addr_exe = Input(UInt(regWidth.W))
-  val rs2_used_exe = Input(Bool())
-  val rs2_addr_exe = Input(UInt(regWidth.W))
-  val rd_used_mem1 = Input(Bool())
-  val rd_addr_mem1 = Input(UInt(regWidth.W))
-  val rd_used_wb = Input(Bool())
-  val rd_addr_wb= Input(UInt(regWidth.W))
-  val rs1_from_reg = Input(UInt(xlen.W))
-  val rs2_from_reg = Input(UInt(xlen.W))
-  val rd_from_mem1 = Input(UInt(xlen.W))
-  val rd_from_wb = Input(UInt(xlen.W))
-  val stall_req = Output(Bool())
-  val rs1_val = Output(UInt(xlen.W))
-  val rs2_val = Output(UInt(xlen.W))
 
   scheduler.io.rs1_used_exe := reg_id_exe.io.inst_info_out.ASelect === ARS1
   scheduler.io.rs1_addr_exe := reg_id_exe.io.inst_out(19, 15)
@@ -170,7 +158,7 @@ class DataPath extends Module with phvntomParams {
     )
   )
 
-  stall_req_exe := scheduler.io.stall_req
+  stall_req_exe := scheduler.io.stall_req || multiplier.io.stall_req
   rs1 := scheduler.io.rs1_val
   rs2 := scheduler.io.rs2_val
 
@@ -183,7 +171,7 @@ class DataPath extends Module with phvntomParams {
   reg_exe_mem1.io.pc_in := reg_id_exe.io.pc_out
   reg_exe_mem1.io.inst_info_in := reg_id_exe.io.inst_info_out
   reg_exe_mem1.io.inst_addr_misaligned_in := inst_addr_misaligned
-  reg_exe_mem1.io.alu_val_in := alu.io.out
+  reg_exe_mem1.io.alu_val_in := Mux(reg_id_exe.io.inst_info_out.mult, multiplier.io.mult_out, alu.io.out)
   reg_exe_mem1.io.mem_wdata_in := rs2
   reg_exe_mem1.io.timer_int_in := io.int.mtip
   reg_exe_mem1.io.software_int_in := io.int.msip
@@ -206,6 +194,8 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.valid := (reg_exe_mem1.io.inst_info_out.memType.orR && csr.io.expt === false.B)
   io.dmem.req.bits.wen := reg_exe_mem1.io.inst_info_out.wbEnable === wenMem && csr.io.expt === false.B
   io.dmem.req.bits.memtype := reg_exe_mem1.io.inst_info_out.memType
+
+  // TODO AMOALU and D$ wrapper
 
   csr.io.stall := false.B
   csr.io.cmd := reg_exe_mem1.io.inst_info_out.wbEnable
@@ -268,7 +258,8 @@ class DataPath extends Module with phvntomParams {
   reg_file.io.rs2_addr := reg_id_exe.io.inst_out(24, 20)
 
   // TODO from here is difftest, which is not formally included in the CPU
-  // Difftest
+  // TODO Difftest
+  // TODO Don't care the low-end code style
   if (diffTest) {
     val dtest_pc = RegInit(UInt(xlen.W), 0.U)
     val dtest_inst = RegInit(UInt(xlen.W), BUBBLE)

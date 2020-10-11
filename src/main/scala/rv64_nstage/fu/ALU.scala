@@ -45,6 +45,26 @@ class ALU extends Module with phvntomParams {
   io.zero := ~io.out.orR
 }
 
+class MultiplierIO extends Bundle with phvntomParams {
+  val start = Input(Bool())
+  val a = Input(UInt(xlen.W))
+  val b = Input(UInt(xlen.W))
+  val op = Input(UInt(aluBits.W))
+  val stall_req = Output(Bool())
+  val mult_out = Output(UInt(xlen.W))
+}
+
+class Multiplier extends Module with phvntomParams {
+  val io = IO(new MultiplierIO)
+
+  val last_a = RegInit(UInt(xlen.W), 0.U)
+  val last_b = RegInit(UInt(xlen.W), 0.U)
+  val last_op = RegInit(UInt(aluBits.W), aluXXX)
+  val busy = RegInit(Bool(), false.B)
+
+
+}
+
 // TODO AMOALU
 //class AMOALUIO extends Bundle with phvntomParams {
 //
