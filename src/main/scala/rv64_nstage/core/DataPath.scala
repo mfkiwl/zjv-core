@@ -267,7 +267,7 @@ class DataPath extends Module with phvntomParams {
     val dtest_expt = RegInit(false.B)
     val dtest_int = RegInit(false.B)
 
-    dtest_wbvalid := !reg_mem2_wb.io.bubble_out && !reg_mem2_wb.io.expt_out
+    dtest_wbvalid := !reg_mem2_wb.io.bubble_out && !reg_mem2_wb.io.int_resp_out
 
     when(!stall_mem2_wb) {
       dtest_pc := reg_mem2_wb.io.pc_out
