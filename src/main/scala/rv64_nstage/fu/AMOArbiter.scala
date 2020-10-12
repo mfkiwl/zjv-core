@@ -106,7 +106,7 @@ class Reservation extends Module with phvntomParams {
   val empty = RegInit(Bool(), true.B)
   val addr = RegInit(UInt(xlen.W), 0.U)
   val is_word = RegInit(Bool(), false.B)
-printf("----? addr %x, t1 %x, t2 %x\n", addr, addr, io.compare_addr)
+//printf("----? addr %x, t1 %x, t2 %x\n", addr, addr, io.compare_addr)
   when(io.push) {
     empty := false.B
     addr := io.push_addr
