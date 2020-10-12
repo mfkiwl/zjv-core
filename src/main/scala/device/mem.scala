@@ -1,28 +1,35 @@
-package rv64_3stage
+package device
 
 import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFile
+import rv64_3stage._
 
 import ControlConst._
 
-class MemReq extends Bundle() with phvntomParams {  // write
+class MemReq extends Bundle with phvntomParams {  // write
   val addr  = Output(UInt(xlen.W))
   val data  = Output(UInt(xlen.W))
   val wen   = Output(Bool())
   val memtype = Output(UInt(xlen.W))
+
+  // override def cloneType: this.type = new MemIO(dataBits).asInstanceOf[this.type]
 }
 
-class MemResp extends Bundle() with phvntomParams {  // read
-  val data = UInt(xlen.W)
+class MemResp extends Bundle with phvntomParams {  // read
+  val data = Output(UInt(xlen.W))
+
+  // override def cloneType: this.type = new MemIO(dataBits).asInstanceOf[this.type]
 }
 
 class MemIO extends Bundle with phvntomParams {
   val req  = Flipped(Valid(new MemReq))
   val resp = Valid(new MemResp)
+
+  // override def cloneType: this.type = new MemIO(dataBits).asInstanceOf[this.type]
 }
 
-class SimMemLiteIO extends Bundle with phvntomParams {
+class SimMemIO extends Bundle with phvntomParams {
   val clk = Input(Clock())
   val raddr = Input(UInt(xlen.W))
   val rdata = Output(UInt(xlen.W))
@@ -33,5 +40,5 @@ class SimMemLiteIO extends Bundle with phvntomParams {
 }
 
 class SimMem extends BlackBox {
-  val io = IO(new SimMemLiteIO)
+  val io = IO(new SimMemIO)
 }

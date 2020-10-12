@@ -6,6 +6,8 @@ import ControlConst._
 import chisel3.util.experimental.BoringUtils
 
 import common._
+import mem._
+import device._
 
 class BrCondIO extends Bundle with phvntomParams {
   val rs1 = Input(UInt(xlen.W))
@@ -187,8 +189,16 @@ class DataPath extends Module with phvntomParams {
           Seq(
             pcPlus4 -> if_pc_4,
             pcBubble -> if_pc,
-            pcBranch -> Mux(brCond.io.branch, Mux(inst_addr_misaligned, if_pc_4, alu.io.out), if_pc_4),
-            pcJump -> Mux(inst_addr_misaligned, if_pc_4, Cat(alu.io.out(xlen - 1, 1), Fill(1, 0.U)))
+            pcBranch -> Mux(
+              brCond.io.branch,
+              Mux(inst_addr_misaligned, if_pc_4, alu.io.out),
+              if_pc_4
+            ),
+            pcJump -> Mux(
+              inst_addr_misaligned,
+              if_pc_4,
+              Cat(alu.io.out(xlen - 1, 1), Fill(1, 0.U))
+            )
           )
         )
       )
@@ -215,7 +225,9 @@ class DataPath extends Module with phvntomParams {
 
   when(!exe_stall) {
     exe_pc := if_pc
-    when(io.ctrl.bubble || brCond.io.branch || istall || csrFile.io.expt || csrFile.io.ret) {
+    when(
+      io.ctrl.bubble || brCond.io.branch || istall || csrFile.io.expt || csrFile.io.ret
+    ) {
       exe_inst := BUBBLE
       exe_inst_access_fault := false.B
     }.otherwise {
@@ -249,7 +261,11 @@ class DataPath extends Module with phvntomParams {
       Mux(
         wb_select === wbPC && rs1Hazard,
         wb_pc + 4.U(xlen.W),
-        Mux(wb_select === wbCSR && rs1Hazard, csrFile.io.out, regFile.io.rs1_data)
+        Mux(
+          wb_select === wbCSR && rs1Hazard,
+          csrFile.io.out,
+          regFile.io.rs1_data
+        )
       )
     )
   )
@@ -263,7 +279,11 @@ class DataPath extends Module with phvntomParams {
       Mux(
         wb_select === wbPC && rs2Hazard,
         wb_pc + 4.U(xlen.W),
-        Mux(wb_select === wbCSR && rs2Hazard, csrFile.io.in, regFile.io.rs2_data)
+        Mux(
+          wb_select === wbCSR && rs2Hazard,
+          csrFile.io.in,
+          regFile.io.rs2_data
+        )
       )
     )
   )
@@ -285,7 +305,9 @@ class DataPath extends Module with phvntomParams {
   alu.io.opType := io.ctrl.aluType
   alu.io.a := Mux(io.ctrl.ASelect === APC, exe_pc, rs1)
   alu.io.b := Mux(io.ctrl.BSelect === BIMM, immExt.io.out, rs2)
-  inst_addr_misaligned := alu.io.out(1) && (io.ctrl.pcSelect === pcJump || brCond.io.branch)
+  inst_addr_misaligned := alu.io.out(
+    1
+  ) && (io.ctrl.pcSelect === pcJump || brCond.io.branch)
 
   when(!exe_stall) {
     wb_pc := exe_pc
@@ -323,22 +345,31 @@ class DataPath extends Module with phvntomParams {
   // ******************************
   //        Write Back Stage
   // ******************************
-  val mem_addr_misaligned = MuxLookup(wb_memType, false.B, Seq(
-    memByte -> false.B,
-    memByteU -> false.B,
-    memHalf -> wb_alu(0),
-    memHalfU -> wb_alu(0),
-    memWord -> wb_alu(1, 0).orR,
-    memWordU -> wb_alu(1, 0).orR,
-    memDouble -> wb_alu(2, 0).orR
-  ))
+  val mem_addr_misaligned = MuxLookup(
+    wb_memType,
+    false.B,
+    Seq(
+      memByte -> false.B,
+      memByteU -> false.B,
+      memHalf -> wb_alu(0),
+      memHalfU -> wb_alu(0),
+      memWord -> wb_alu(1, 0).orR,
+      memWordU -> wb_alu(1, 0).orR,
+      memDouble -> wb_alu(2, 0).orR
+    )
+  )
   val mem_access_fault = wb_memType.orR && wb_alu(xlen - 1, 48).orR
   val wb_pc_4 = wb_pc + 4.U(xlen.W)
-  val wb_data = MuxLookup(wb_select, "hdeadbeef".U, Seq(
-    wbALU -> wb_alu,
-    wbMEM -> io.dmem.resp.bits.data,
-    wbPC -> wb_pc_4,
-    wbCSR -> csrFile.io.out))
+  val wb_data = MuxLookup(
+    wb_select,
+    "hdeadbeef".U,
+    Seq(
+      wbALU -> wb_alu,
+      wbMEM -> io.dmem.resp.bits.data,
+      wbPC -> wb_pc_4,
+      wbCSR -> csrFile.io.out
+    )
+  )
 
   io.dmem.req.bits.addr := wb_alu
   io.dmem.req.bits.data := wb_wdata
@@ -373,7 +404,7 @@ class DataPath extends Module with phvntomParams {
   // interupt signals in, XIP from CLINT or PLIC
   csrFile.io.tim_int := io.int.mtip
   csrFile.io.soft_int := io.int.msip
-  csrFile.io.external_int := false.B  // TODO
+  csrFile.io.external_int := false.B // TODO
 
   // ******************************
   //        Diff Test Stage
@@ -398,28 +429,31 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_inst, "difftestInst")
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
 
-    when (pipeTrace.B && dtest_expt){
-      printf("[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n", dtest_expt, dtest_int);
+    when(pipeTrace.B && dtest_expt) {
+      printf(
+        "[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n",
+        dtest_expt,
+        dtest_int
+      );
     }
 
-    // if (pipeTrace) {
-    //   // when (!stall) {
-    //   printf("      if stage \t\t exe stage \t\t wb stage \t\t debug stage\n")
-    //   printf("pc    %x\t %x\t %x\t %x \n", if_pc, exe_pc, wb_pc, dtest_pc)
-    //   printf(
-    //     "inst  %x\t %x\t %x\t %x \n",
-    //     if_inst,
-    //     exe_inst,
-    //     wb_inst,
-    //     dtest_inst
-    //   )
-    //   printf(
-    //     "      if_stall [%c] \t exe_stall [%c] \t\t\t\t valid [%c]\n\n",
-    //     Mux(if_stall, Str("*"), Str(" ")),
-    //     Mux(exe_stall, Str("*"), Str(" ")),
-    //     Mux(dtest_wbvalid, Str("*"), Str(" "))
-    //   )
-      // }
-    // }
+    if (pipeTrace) {
+      // when (!stall) {
+      printf("      if stage \t\t exe stage \t\t wb stage \t\t debug stage\n")
+      printf("pc    %x\t %x\t %x\t %x \n", if_pc, exe_pc, wb_pc, dtest_pc)
+      printf(
+        "inst  %x\t %x\t %x\t %x \n",
+        if_inst,
+        exe_inst,
+        wb_inst,
+        dtest_inst
+      )
+      printf(
+        "      if_stall [%c] \t exe_stall [%c] \t\t\t\t valid [%c]\n\n",
+        Mux(if_stall, Str("*"), Str(" ")),
+        Mux(exe_stall, Str("*"), Str(" ")),
+        Mux(dtest_wbvalid, Str("*"), Str(" "))
+      )
+    }
   }
 }

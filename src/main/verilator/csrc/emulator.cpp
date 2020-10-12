@@ -74,8 +74,8 @@ int main(int argc, char** argv)
       }
 
       #ifdef ZJV_DEBUG
-         // fprintf(stderr, "\t\t\t\t [ ROUND %lx ]\n", engine.trace_count);
-         // fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+         fprintf(stderr, "\t\t\t\t [ ROUND %lx ]\n", engine.trace_count);
+         fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
       #endif 
 
       if (engine.is_finish()) {
