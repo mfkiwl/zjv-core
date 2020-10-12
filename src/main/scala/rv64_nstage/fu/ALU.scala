@@ -57,10 +57,31 @@ class MultiplierIO extends Bundle with phvntomParams {
 class Multiplier extends Module with phvntomParams {
   val io = IO(new MultiplierIO)
 
-  // TODO these buffers are used for the sequence MUL and MULH
+  def resemble_op(op: UInt, op_history: UInt): Bool = {
+    (((op_history === aluMULHU || op_history === aluMULH || op_history === aluMULHSU) && op === aluMUL) ||
+      (op_history === aluDIV && op === aluREM) ||
+      (op_history === aluDIVU && op === aluREMU) ||
+      (op_history === aluDIVUW && op === aluREMUW) ||
+      (op_history === aluDIVW && op === aluREMW) ||
+      (op === aluDIV && op_history === aluREM) ||
+      (op === aluDIVU && op_history === aluREMU) ||
+      (op === aluDIVUW && op_history === aluREMUW) ||
+      (op === aluDIVW && op_history === aluREMW))
+  }
+
+  def check_history_same(a: UInt, b: UInt, op: UInt, ha: UInt, hb: UInt, hop: UInt): Bool = {
+    a === ha && b === hb && resemble_op(op, hop)
+  }
+
   val last_a = RegInit(UInt(xlen.W), 0.U)
   val last_b = RegInit(UInt(xlen.W), 0.U)
   val last_op = RegInit(UInt(aluBits.W), aluXXX)
+
+  when(io.start) {
+    last_a := io.a
+    last_b := io.b
+    last_op := io.op
+  }
 
   val is_mult = io.op === aluMUL || io.op === aluMULH || io.op === aluMULHSU || io.op === aluMULHU || io.op === aluMULW
   val res = RegInit(UInt((2 * xlen).W), 0.U)
@@ -123,10 +144,12 @@ class Multiplier extends Module with phvntomParams {
       }.otherwise {
         mult_cnt := 0.U
       }
-      when(!last_stall_req) {
-        res := Cat(Fill(xlen, 0.U), abs_b)
-      }.otherwise {
-        res := Cat(front_val(xlen), step_result(2 * xlen - 1, 1))
+      when(io.stall_req) {
+        when(!last_stall_req) {
+          res := Cat(Fill(xlen, 0.U), abs_b)
+        }.otherwise {
+          res := Cat(front_val(xlen), step_result(2 * xlen - 1, 1))
+        }
       }
     }.otherwise {
       when (io.stall_req) {
@@ -134,13 +157,16 @@ class Multiplier extends Module with phvntomParams {
       }.otherwise {
         div_cnt := 0.U
       }
-      when(!last_stall_req) {
-        res := Cat(Fill(xlen - 1, 0.U), abs_a, Fill(1, 0.U))
-      }.elsewhen(div_cnt === xlen.U) {
-        res := Cat(front_val(xlen - 1), step_result(2 * xlen - 1, xlen + 1), step_result(xlen - 1, 0))
-      }.otherwise {
-        res := step_result
+      when(io.stall_req) {
+        when(!last_stall_req) {
+          res := Cat(Fill(xlen - 1, 0.U), abs_a, Fill(1, 0.U))
+        }.elsewhen(div_cnt === xlen.U) {
+          res := Cat(front_val(xlen - 1), step_result(2 * xlen - 1, xlen + 1), step_result(xlen - 1, 0))
+        }.otherwise {
+          res := step_result
+        }
       }
+
     }
   }
 
@@ -150,7 +176,7 @@ class Multiplier extends Module with phvntomParams {
   when(is_mult) {
     front_val := Cat(Fill(1, 0.U), Mux(res(0), abs_a, 0.U(xlen.W))) + Cat(Fill(1, 0.U), res(2 * xlen - 1, xlen))
     step_result := Cat(front_val(xlen - 1, 0), res(xlen - 1, 0))
-    io.stall_req := io.start && (mult_cnt =/= (xlen + 1).U || !last_stall_req)
+    io.stall_req := io.start && (mult_cnt =/= (xlen + 1).U || (!last_stall_req && !check_history_same(io.a, io.b, io.op, last_a, last_b, last_op)))
     io.mult_out := MuxLookup(io.op, Cat(Fill(32, res(31)), res(31, 0)),
       Seq(
         aluMUL -> res(xlen - 1, 0),
@@ -163,7 +189,7 @@ class Multiplier extends Module with phvntomParams {
   }.otherwise {
     front_val := Mux(res(2 * xlen - 1, xlen) >= abs_b, res(2 * xlen - 1, xlen) - abs_b, res(2 * xlen - 1, xlen))
     step_result := Cat(front_val(xlen - 2, 0), res(xlen - 1, 0), (res(2 * xlen - 1, xlen) >= abs_b).asUInt)
-    io.stall_req := io.start && (div_cnt =/= (xlen + 1).U || !last_stall_req)
+    io.stall_req := io.start && (div_cnt =/= (xlen + 1).U || (!last_stall_req && !check_history_same(io.a, io.b, io.op, last_a, last_b, last_op)))
     io.mult_out := MuxLookup(io.op, 0.U,
       Seq(
         aluDIV -> Mux(io.b.orR, res_divs, Fill(xlen, 1.U)),
@@ -191,5 +217,28 @@ class AMOALUIO extends Bundle with phvntomParams {
 class AMOALU extends Module with phvntomParams {
   val io = IO(new AMOALUIO)
 
+  def sign_ext32(a: UInt): UInt = { Cat(Fill(32, a(31)), a(31, 0)) }
+  val real_a = Mux(io.is_word, sign_ext32(io.a), io.a)
+  val real_b = Mux(io.is_word, sign_ext32(io.b), io.b)
+  val out = MuxLookup(
+    io.op,
+    "hdeadbeef".U,
+    Seq(
+      amoSWAP -> real_b,
+      amoADD  -> (real_a + real_b),
+      amoAND  -> (real_a & real_b),
+      amoOR   -> (real_a | real_b),
+      amoXOR  -> (real_a ^ real_b),
+      amoMAX  -> Mux(real_a.asSInt > real_b.asSInt, real_a, real_b),
+      amoMAXU -> Mux(real_a > real_b, real_a, real_b),
+      amoMIN  -> Mux(real_a.asSInt < real_b.asSInt, real_a, real_b),
+      amoMINU -> Mux(real_a < real_b, real_a, real_b)
+    )
+  )
 
+  when(io.is_word) {
+    io.ret := Cat(Fill(32, out(31)), out(31, 0))
+  }.otherwise {
+    io.ret := out
+  }
 }

@@ -1,7 +1,7 @@
 #include "engine.h"
 
 sim_t* dtengine_t::sim_init(std::string elfpath) {
-    const char* isa = "RV64IM";
+    const char* isa = "RV64IMA";
     const char* priv = "M";
     const char* varch = "vlen:128,elen:64,slen:128";
     size_t nprocs = 1;
