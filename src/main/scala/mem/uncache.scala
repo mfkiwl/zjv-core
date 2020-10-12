@@ -1,8 +1,10 @@
-package rv64_3stage
+package mem
 
 import chisel3._
 import chisel3.util._
+import rv64_3stage._
 import bus._
+import device._
 import ControlConst._
 import scala.annotation.switch
 
@@ -13,7 +15,7 @@ class UncacheIO extends Bundle with phvntomParams {
 }
 
 // serve as a simple convertor from MemIO to AXI4 interface
-class Uncache extends Module with phvntomParams with AXI4Parameters {
+class Uncache extends Module with AXI4Parameters {
   val io = IO(new UncacheIO)
   val blen = log2Ceil(xlen / 8)
   // cache states

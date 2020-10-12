@@ -37,7 +37,7 @@ class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
     }
   }
   for (i <- 0 until addressSpace.length) {
-    when(routSelIdx === i.U && routSelIdx =/= (addressSpace.length - 1).U) { // minus base addr except mem
+    when(routSelIdx === i.U) { // minus base addr
       io.out(i).ar.bits.addr := io.in.ar.bits.addr - addressSpace(i)._1.U
     }
   }
@@ -126,13 +126,13 @@ class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   // printf(p"woutSel.b.bits: ${woutSel.b.bits}\n")
   // printf("-----------Xbar1toN Debug Done-----------\n")
 
-  // when(!(!io.in.req.valid || routSelVec.asUInt.orR) || !(!(io.in.req.valid && routSelVec.asUInt.andR))){
-  //   Debug(){
-  //     printf("crossbar access bad addr %x, time %d\n", addr, GTimer())
-  //   }
-  // }
-  // assert(!io.in.req.valid || routSelVec.asUInt.orR, "address decode error, bad addr = 0x%x\n", addr)
-  // assert(!(io.in.req.valid && routSelVec.asUInt.andR), "address decode error, bad addr = 0x%x\n", addr)
+  // // when(!(!io.in.req.valid || routSelVec.asUInt.orR) || !(!(io.in.req.valid && routSelVec.asUInt.andR))){
+  // //   Debug(){
+  // //     printf("crossbar access bad addr %x, time %d\n", addr, GTimer())
+  // //   }
+  // // }
+  // // assert(!io.in.req.valid || routSelVec.asUInt.orR, "address decode error, bad addr = 0x%x\n", addr)
+  // // assert(!(io.in.req.valid && routSelVec.asUInt.andR), "address decode error, bad addr = 0x%x\n", addr)
 }
 
 class CrossbarNto1(n: Int) extends Module {

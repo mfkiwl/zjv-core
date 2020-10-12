@@ -18,8 +18,8 @@ trait AXI4Parameters extends phvntomParams{
 
   // These are not fixed:
   val idBits = 1
-  val addrBits = 64 // PAddrBits
-  val dataBits = 64 // DataBits
+  val addrBits = xlen // PAddrBits
+  val dataBits = xlen // DataBits
   val userBits = 1
 
   def CACHE_RALLOCATE = 8.U(cacheBits.W)

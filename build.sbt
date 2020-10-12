@@ -54,5 +54,8 @@ libraryDependencies ++= defaultVersions.map { case (dep, ver) =>
 scalacOptions := Seq("-unchecked", "-deprecation")
 
 scalacOptions ++= scalacOptionsVersion(scalaVersion.value)
+// scalacOptions += "-deprecation"
+// scalacOptions += "-feature"
+// scalacOptions ++= Seq("-deprecation", "-feature")
 
 javacOptions ++= javacOptionsVersion(scalaVersion.value)
