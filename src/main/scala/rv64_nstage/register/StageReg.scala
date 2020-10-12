@@ -162,14 +162,12 @@ class RegExeMem1IO extends RegIdExeIO with phvntomParams {
   val alu_val_in = Input(UInt(xlen.W))
   val inst_addr_misaligned_in = Input(Bool())
   val mem_wdata_in = Input(UInt(xlen.W))
-  val rs2_val_in = Input(UInt(xlen.W))
   val external_int_in = Input(Bool())
   val software_int_in = Input(Bool())
   val timer_int_in = Input(Bool())
   val alu_val_out = Output(UInt(xlen.W))
   val inst_addr_misaligned_out = Output(Bool())
   val mem_wdata_out = Output(UInt(xlen.W))
-  val rs2_val_out = Output(UInt(xlen.W))
   val external_int_out = Output(Bool())
   val software_int_out = Output(Bool())
   val timer_int_out = Output(Bool())
@@ -231,7 +229,6 @@ class RegExeMem1 extends Module with phvntomParams {
   val soft_int = RegInit(Bool(), false.B)
   val extern_int = RegInit(Bool(), false.B)
   val timer_int = RegInit(Bool(), false.B)
-  val rs2_val = RegInit(UInt(xlen.W), 0.U)
 
   when(!io.stall) {
     when((last_delay && delay_flush) || io.bubble_in || io.flush_one) {
@@ -241,7 +238,6 @@ class RegExeMem1 extends Module with phvntomParams {
       soft_int := false.B
       extern_int := false.B
       timer_int := false.B
-      rs2_val := 0.U
     }.otherwise {
       alu_val := io.alu_val_in
       inst_addr_misaligned := io.inst_addr_misaligned_in
@@ -249,7 +245,6 @@ class RegExeMem1 extends Module with phvntomParams {
       soft_int := io.software_int_in
       extern_int := io.external_int_in
       timer_int := io.timer_int_in
-      rs2_val := io.rs2_val_in
     }
   }.otherwise {
     soft_int := false.B
@@ -260,7 +255,6 @@ class RegExeMem1 extends Module with phvntomParams {
   io.alu_val_out := alu_val
   io.inst_addr_misaligned_out := inst_addr_misaligned
   io.mem_wdata_out := mem_wdata
-  io.rs2_val_out := rs2_val
   io.external_int_out := extern_int
   io.software_int_out := soft_int
   io.timer_int_out := timer_int
@@ -309,7 +303,7 @@ class RegMem1Mem2 extends Module with phvntomParams {
   io.pc_out := pc
   io.inst_out := inst
 
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
     aluBits + memBits + wbBits + wenBits + amoBits).W),
@@ -331,7 +325,6 @@ class RegMem1Mem2 extends Module with phvntomParams {
   val soft_int = RegInit(Bool(), false.B)
   val extern_int = RegInit(Bool(), false.B)
   val timer_int = RegInit(Bool(), false.B)
-  val rs2_val = RegInit(UInt(xlen.W), 0.U)
 
   when(!io.stall) {
     when((last_delay && delay_flush) || io.bubble_in || io.flush_one) {
@@ -341,7 +334,6 @@ class RegMem1Mem2 extends Module with phvntomParams {
       soft_int := false.B
       extern_int := false.B
       timer_int := false.B
-      rs2_val := 0.U
     }.otherwise {
       alu_val := io.alu_val_in
       inst_addr_misaligned := io.inst_addr_misaligned_in
@@ -349,18 +341,12 @@ class RegMem1Mem2 extends Module with phvntomParams {
       soft_int := io.software_int_in
       extern_int := io.external_int_in
       timer_int := io.timer_int_in
-      rs2_val := io.rs2_val_in
     }
-  }.otherwise {
-    soft_int := false.B
-    extern_int := false.B
-    timer_int := false.B
   }
 
   io.alu_val_out := alu_val
   io.inst_addr_misaligned_out := inst_addr_misaligned
   io.mem_wdata_out := mem_wdata
-  io.rs2_val_out := rs2_val
   io.external_int_out := extern_int
   io.software_int_out := soft_int
   io.timer_int_out := timer_int
@@ -447,7 +433,6 @@ class RegMem2Wb extends Module with phvntomParams {
   val soft_int = RegInit(Bool(), false.B)
   val extern_int = RegInit(Bool(), false.B)
   val timer_int = RegInit(Bool(), false.B)
-  val rs2_val = RegInit(UInt(xlen.W), 0.U)
 
   when(!io.stall) {
     when((last_delay && delay_flush) || io.bubble_in || io.flush_one) {
@@ -457,7 +442,6 @@ class RegMem2Wb extends Module with phvntomParams {
       soft_int := false.B
       extern_int := false.B
       timer_int := false.B
-      rs2_val := 0.U
     }.otherwise {
       alu_val := io.alu_val_in
       inst_addr_misaligned := io.inst_addr_misaligned_in
@@ -465,18 +449,12 @@ class RegMem2Wb extends Module with phvntomParams {
       soft_int := io.software_int_in
       extern_int := io.external_int_in
       timer_int := io.timer_int_in
-      rs2_val := io.rs2_val_in
     }
-  }.otherwise {
-    soft_int := false.B
-    extern_int := false.B
-    timer_int := false.B
   }
 
   io.alu_val_out := alu_val
   io.inst_addr_misaligned_out := inst_addr_misaligned
   io.mem_wdata_out := mem_wdata
-  io.rs2_val_out := rs2_val
   io.external_int_out := extern_int
   io.software_int_out := soft_int
   io.timer_int_out := timer_int

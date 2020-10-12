@@ -108,6 +108,7 @@ object ControlConst {
   val wenCSRW = 3.U(3.W)
   val wenCSRS = 4.U(3.W)
   val wenCSRC = 5.U(3.W)
+  val wenRes  = 6.U(3.W)
   val wenBits = wenXXX.getWidth
 
   // io.wbSelect
@@ -116,6 +117,7 @@ object ControlConst {
   val wbMEM = 2.U(3.W)
   val wbPC  = 3.U(3.W)
   val wbCSR = 4.U(3.W)
+  val wbCond = 5.U(3.W)
   val wbBits = wbXXX.getWidth
 
   // io.amoSelect
@@ -255,8 +257,8 @@ class ControlPath extends Module with phvntomParams {
       AMOMINU_W -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoMINU),
       AMOMAXU_W -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoMAXU),
       AMOSWAP_W -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoSWAP),
-//      LR_W      -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoXXX),
-//      SC_W      -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoXXX),
+      LR_W      -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenRes   ,  amoXXX),
+      SC_W      -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbCond,  wenMem   ,  amoXXX),
       AMOADD_D  -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoADD),
       AMOXOR_D  -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoXOR),
       AMOOR_D   -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoOR),
@@ -266,8 +268,8 @@ class ControlPath extends Module with phvntomParams {
       AMOMINU_D -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoMINU),
       AMOMAXU_D -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoMAXU),
       AMOSWAP_D -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoSWAP),
-//      LR_D      -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoXXX),
-//      SC_D      -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoXXX),
+      LR_D      -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenRes   ,  amoXXX),
+      SC_D      -> List(AType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbCond,  wenMem   ,  amoXXX),
     )
   )
 

@@ -40,6 +40,7 @@ class DataPath extends Module with phvntomParams {
   val reg_file = Module(new RegFile)
   val scheduler = Module(new ALUScheduler)
   val amo_arbiter = Module(new AMOArbiter)
+  val reservation = Module(new Reservation)
 
   // Stall Request Signals
   val stall_req_if2 = WireInit(Bool(), false.B)
@@ -212,7 +213,6 @@ class DataPath extends Module with phvntomParams {
   reg_exe_mem1.io.timer_int_in := io.int.mtip
   reg_exe_mem1.io.software_int_in := io.int.msip
   reg_exe_mem1.io.external_int_in := false.B
-  reg_exe_mem1.io.rs2_val_in := reg_file.io.rs2_data
 
   amo_bubble_inserter := reg_exe_mem1.io.inst_info_out.amoSelect.orR
 
@@ -270,14 +270,14 @@ class DataPath extends Module with phvntomParams {
   reg_mem1_mem2.io.expt_in := csr.io.expt
   reg_mem1_mem2.io.int_resp_in := csr.io.int
   reg_mem1_mem2.io.csr_val_in := csr.io.out
-  reg_mem1_mem2.io.rs2_val_in := reg_exe_mem1.io.rs2_val_out
 
   // Memory and AMO
   io.dmem.req.bits.addr := reg_mem1_mem2.io.alu_val_out
   io.dmem.req.bits.data := Mux(amo_arbiter.io.write_now, amo_arbiter.io.write_what, reg_mem1_mem2.io.mem_wdata_out)
-  io.dmem.req.valid := (reg_mem1_mem2.io.expt_out === false.B && ((reg_mem1_mem2.io.inst_info_out.memType.orR &&
+  io.dmem.req.valid := Mux(reservation.io.compare, reservation.io.succeed,
+    (reg_mem1_mem2.io.expt_out === false.B && ((reg_mem1_mem2.io.inst_info_out.memType.orR &&
     !amo_arbiter.io.dont_read_again) ||
-    amo_arbiter.io.write_now))
+    amo_arbiter.io.write_now)))
   io.dmem.req.bits.wen := (reg_mem1_mem2.io.inst_info_out.wbEnable === wenMem || amo_arbiter.io.write_now)
   io.dmem.req.bits.memtype := reg_mem1_mem2.io.inst_info_out.memType
 
@@ -285,8 +285,17 @@ class DataPath extends Module with phvntomParams {
   amo_arbiter.io.amo_op := reg_mem1_mem2.io.inst_info_out.amoSelect
   amo_arbiter.io.dmem_valid := io.dmem.resp.valid
   amo_arbiter.io.dmem_data := io.dmem.resp.bits.data
-  amo_arbiter.io.reg_val := reg_mem1_mem2.io.rs2_val_out
+  amo_arbiter.io.reg_val := reg_mem1_mem2.io.mem_wdata_out
   amo_arbiter.io.mem_type := reg_mem1_mem2.io.inst_info_out.memType
+
+  reservation.io.push := reg_mem1_mem2.io.inst_info_out.wbEnable === wenRes
+  reservation.io.push_is_word := reg_mem1_mem2.io.inst_info_out.memType === memWord
+  reservation.io.push_addr := reg_mem1_mem2.io.alu_val_out
+  reservation.io.compare := reg_mem1_mem2.io.inst_info_out.wbSelect === wbCond
+  reservation.io.compare_is_word := reg_mem1_mem2.io.inst_info_out.memType === memWord
+  reservation.io.compare_addr := reg_mem1_mem2.io.alu_val_out
+  reservation.io.flush := false.B
+  reservation.io.sc_mem_resp := io.dmem.resp.valid
 
   stall_req_mem2 := io.dmem.req.valid && !io.dmem.resp.valid || amo_arbiter.io.stall_req
 
@@ -296,7 +305,6 @@ class DataPath extends Module with phvntomParams {
   reg_mem2_wb.io.last_stage_stall_req := stall_req_mem2
   reg_mem2_wb.io.stall := stall_mem2_wb
   reg_mem2_wb.io.flush_one := false.B
-  reg_mem2_wb.io.rs2_val_in := "hdeadbeef".U
   reg_mem2_wb.io.bubble_in := reg_mem1_mem2.io.bubble_out || stall_req_mem2
   reg_mem2_wb.io.inst_in := reg_mem1_mem2.io.inst_out
   reg_mem2_wb.io.pc_in := reg_mem1_mem2.io.pc_out
@@ -311,20 +319,24 @@ class DataPath extends Module with phvntomParams {
   reg_mem2_wb.io.int_resp_in := reg_mem1_mem2.io.int_resp_out
   reg_mem2_wb.io.csr_val_in := reg_mem1_mem2.io.csr_val_out
   reg_mem2_wb.io.mem_val_in := Mux(amo_arbiter.io.force_mem_val_out, amo_arbiter.io.mem_val_out,
-    io.dmem.resp.bits.data)
+    Mux(reservation.io.compare, (!reservation.io.succeed).asUInt, io.dmem.resp.bits.data))
 
   // Register File
   reg_file.io.wen := (reg_mem2_wb.io.inst_info_out.wbEnable === wenReg ||
     reg_mem2_wb.io.inst_info_out.wbEnable === wenCSRW ||
     reg_mem2_wb.io.inst_info_out.wbEnable === wenCSRC ||
-    reg_mem2_wb.io.inst_info_out.wbEnable === wenCSRS) && reg_mem2_wb.io.expt_out === false.B
+    reg_mem2_wb.io.inst_info_out.wbEnable === wenCSRS ||
+    reg_mem2_wb.io.inst_info_out.wbEnable === wenRes ||
+    reg_mem2_wb.io.inst_info_out.wbSelect === wbCond) && reg_mem2_wb.io.expt_out === false.B
   reg_file.io.rd_addr := reg_mem2_wb.io.inst_out(11, 7)
   reg_file.io.rd_data := MuxLookup(reg_mem2_wb.io.inst_info_out.wbSelect,
     "hdeadbeef".U, Seq(
-    wbALU -> reg_mem2_wb.io.alu_val_out,
-    wbMEM -> reg_mem2_wb.io.mem_val_out,
-    wbPC -> (reg_mem2_wb.io.pc_out + 4.U),
-    wbCSR -> reg_mem2_wb.io.csr_val_out)
+      wbALU -> reg_mem2_wb.io.alu_val_out,
+      wbMEM -> reg_mem2_wb.io.mem_val_out,
+      wbPC -> (reg_mem2_wb.io.pc_out + 4.U),
+      wbCSR -> reg_mem2_wb.io.csr_val_out,
+      wbCond -> reg_mem2_wb.io.mem_val_out
+    )
   )
   reg_file.io.rs1_addr := reg_id_exe.io.inst_out(19, 15)
   reg_file.io.rs2_addr := reg_id_exe.io.inst_out(24, 20)
@@ -352,6 +364,9 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_inst, "difftestInst")
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_int, "difftestInt")
+
+
+    printf("------> compare %x, succeed %x, push %x\n", reservation.io.compare, reservation.io.succeed, reservation.io.push)
 
 //    printf("-------> exit flush %x, br_flush %x, pco %x, if_pco %x, \n", expt_int_flush, br_jump_flush, pc_gen.io.pc_out, reg_if2_id.io.pc_out)
 //    printf("-----> Mem req valid %x addr %x, resp valid %x data %x\n", io.dmem.req.valid, io.dmem.req.bits.addr, io.dmem.resp.valid, io.dmem.resp.bits.data)

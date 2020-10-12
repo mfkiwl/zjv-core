@@ -87,3 +87,33 @@ class AMOArbiter extends Module with phvntomParams {
   io.mem_val_out := mem_val
   io.force_mem_val_out := last_stall_req && !io.stall_req
 }
+
+class ReservationIO extends Bundle with phvntomParams {
+  val push = Input(Bool())
+  val push_is_word = Input(Bool())
+  val push_addr = Input(UInt(xlen.W))
+  val compare = Input(Bool())
+  val compare_is_word = Input(Bool())
+  val compare_addr = Input(UInt(xlen.W))
+  val flush = Input(Bool())
+  val sc_mem_resp = Input(Bool())
+  val succeed = Output(Bool())
+}
+
+class Reservation extends Module with phvntomParams {
+  val io = IO(new ReservationIO)
+
+  val empty = RegInit(Bool(), true.B)
+  val addr = RegInit(UInt(xlen.W), 0.U)
+  val is_word = RegInit(Bool(), false.B)
+printf("----? addr %x, t1 %x, t2 %x\n", addr, addr, io.compare_addr)
+  when(io.push) {
+    empty := false.B
+    addr := io.push_addr
+    is_word := io.push_is_word
+  }.elsewhen(io.compare && (io.sc_mem_resp || !io.succeed) || io.flush) {
+    empty := true.B
+  }
+
+  io.succeed := !empty && (addr === io.compare_addr && is_word === io.compare_is_word) && io.compare
+}
