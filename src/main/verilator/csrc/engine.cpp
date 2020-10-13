@@ -34,7 +34,6 @@ sim_t* dtengine_t::sim_init(std::string elfpath) {
                     diffTest, file_fifo_path);
 
     #ifdef ZJV_DEBUG
-        // spike->set_log_commits(true);
         spike->set_procs_debug(true);
     #endif
     
@@ -132,7 +131,8 @@ void dtengine_t::emu_get_state() {
     emu_state.pc    = zjv->io_difftest_pc;
     emu_state.inst  = zjv->io_difftest_inst;
     emu_state.valid = zjv->io_difftest_valid;
-    emu_state.interrupt   = zjv->io_difftest_int;
+    emu_state.interrupt = zjv->io_difftest_int;
+    emu_state.poweroff  = zjv->io_poweroff;
 }
 
 void dtengine_t::sim_get_state() {
@@ -143,8 +143,8 @@ unsigned long dtengine_t::emu_difftest_valid() {
     return emu_state.valid;
 }
 
-unsigned long dtengine_t::emu_difftest_int() {
-    return emu_state.interrupt;
+unsigned long dtengine_t::emu_difftest_poweroff() {
+    return emu_state.poweroff;
 }
 
 unsigned long dtengine_t::emu_get_pc() {
@@ -155,24 +155,16 @@ unsigned long dtengine_t::emu_get_inst() {
     return emu_state.inst;
 }
 
-unsigned long dtengine_t::emu_get_poweroff() {
-    return zjv->io_poweroff;
-}
-
-bool dtengine_t::emu_get_tick() {
-    return zjv->io_difftest_tick;
-}
-
 unsigned long dtengine_t::sim_get_pc() {
     return sim_state.pc;
 }
 
-void dtengine_t::sim_sync_cycle() {
-    spike->sync_cycle();
+unsigned long dtengine_t::emu_get_int() {
+    return emu_state.interrupt;
 }
 
-void dtengine_t::sim_set_x15(unsigned long x) {
-    spike->set_x15(x);
+void dtengine_t::sim_sync_cycle() {
+    spike->sync_cycle();
 }
 
 void dtengine_t::sim_set_mip() {
@@ -180,5 +172,5 @@ void dtengine_t::sim_set_mip() {
 }
 
 bool dtengine_t::is_finish() {
-    return Verilated::gotFinish() || emu_get_poweroff() != 0;
+    return Verilated::gotFinish() || emu_difftest_poweroff() != 0;
 }

@@ -2,3 +2,6 @@
 	path = riscv-isa-sim
 	url = https://github.com/phantom-v/riscv-isa-sim.git
 	branch = difftest
+[submodule "zjv-soc-test"]
+	path = zjv-soc-test
+	url = https://github.com/phantom-v/zjv-soc-test.git
