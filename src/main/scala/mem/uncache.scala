@@ -8,8 +8,8 @@ import device._
 import ControlConst._
 import scala.annotation.switch
 
-class UncacheIO extends Bundle with phvntomParams {
-  val in = new MemIO
+class UncacheIO(val dataWidth: Int = 64) extends Bundle with phvntomParams {
+  val in = new MemIO(dataWidth)
   val out = new AXI4Bundle
   val offset = Output(UInt(xlen.W))
 }
@@ -132,7 +132,7 @@ class Uncache extends Module with AXI4Parameters {
         state := s_WB_WAIT_AWREADY
       }.otherwise {
         state := s_IDLE
-        // io.in.resp.valid := true.B
+        io.in.resp.valid := true.B
       }
     }
   }
@@ -143,44 +143,46 @@ class Uncache extends Module with AXI4Parameters {
   val realdata = Wire(UInt(xlen.W))
   mask := 0.U
   realdata := 0.U
-  io.in.resp.bits.data := 0.U
+  // io.in.resp.bits.data := 0.U
+  val resp_data = WireInit(UInt(xlen.W), 0.U)
   when(state === s_RECEIVING && io.out.r.valid) {
-    io.in.resp.valid := true.B
+    // io.in.resp.valid := true.B
     switch(io.in.req.bits.memtype) {
-      is(memXXX) { io.in.resp.bits.data := io.out.r.bits.data }
+      is(memXXX) { resp_data := io.out.r.bits.data }
       is(memByte) {
         mask := Fill(8, 1.U(1.W)) << offset
         realdata := (io.out.r.bits.data & mask) >> offset
-        io.in.resp.bits.data := Cat(Fill(56, realdata(7)), realdata(7, 0))
+        resp_data := Cat(Fill(56, realdata(7)), realdata(7, 0))
       }
       is(memHalf) {
         mask := Fill(16, 1.U(1.W)) << offset
         realdata := (io.out.r.bits.data & mask) >> offset
-        io.in.resp.bits.data := Cat(Fill(48, realdata(15)), realdata(15, 0))
+        resp_data := Cat(Fill(48, realdata(15)), realdata(15, 0))
       }
       is(memWord) {
         mask := Fill(32, 1.U(1.W)) << offset
         realdata := (io.out.r.bits.data & mask) >> offset
-        io.in.resp.bits.data := Cat(Fill(32, realdata(31)), realdata(31, 0))
+        resp_data := Cat(Fill(32, realdata(31)), realdata(31, 0))
       }
-      is(memDouble) { io.in.resp.bits.data := io.out.r.bits.data }
+      is(memDouble) { resp_data := io.out.r.bits.data }
       is(memByteU) {
         mask := Fill(8, 1.U(1.W)) << offset
         realdata := (io.out.r.bits.data & mask) >> offset
-        io.in.resp.bits.data := Cat(Fill(56, 0.U), realdata(7, 0))
+        resp_data := Cat(Fill(56, 0.U), realdata(7, 0))
       }
       is(memHalfU) {
         mask := Fill(16, 1.U(1.W)) << offset
         realdata := (io.out.r.bits.data & mask) >> offset
-        io.in.resp.bits.data := Cat(Fill(48, 0.U), realdata(15, 0))
+        resp_data := Cat(Fill(48, 0.U), realdata(15, 0))
       }
       is(memWordU) {
         mask := Fill(32, 1.U(1.W)) << offset
         realdata := (io.out.r.bits.data & mask) >> offset
-        io.in.resp.bits.data := Cat(Fill(32, 0.U), realdata(31, 0))
+        resp_data := Cat(Fill(32, 0.U), realdata(31, 0))
       }
     }
   }
+  io.in.resp.bits.data := RegNext(resp_data)
 
   // printf("-----------Uncache Debug Start-----------\n")
   // printf("state = %d\n", state);

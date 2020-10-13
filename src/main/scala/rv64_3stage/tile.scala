@@ -15,19 +15,21 @@ class TileIO extends Bundle with phvntomParams {
 class Tile extends Module with phvntomParams with projectConfig {
   val io = IO(new TileIO)
 
-  val core = Module(new Core)  
+  val core = Module(new Core)
   core.reset := reset
 
   // mem path
-  val icacheBus = Module(new Uncache)
+  val icache = Module(new ICacheSimple)
+  val icacheBus = Module(new DUncache(mname = "inst uncache"))
   val dcache = Module(new DCacheSimple)
-  val dcacheBus = Module(new DUncache)
-  val mmioBus = Module(new DUncache)
+  val dcacheBus = Module(new DUncache(xlen, "mem uncache"))
+  val mmioBus = Module(new DUncache(mname = "mmio uncache"))
   val mem_source = List(icacheBus, dcacheBus)
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
   val memxbar = Module(new CrossbarNto1(2))
 
-  core.io.imem <> icacheBus.io.in
+  core.io.imem <> icache.io.in
+  icache.io.mem <> icacheBus.io.in
   core.io.dmem <> dcache.io.in
   dcache.io.mem <> dcacheBus.io.in
   for (i <- 0 until mem_source.length) {

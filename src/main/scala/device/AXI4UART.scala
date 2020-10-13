@@ -22,7 +22,7 @@ class UARTIO extends Bundle with phvntomParams {
   val offset = Input(UInt(xlen.W))
 }
 
-class AXI4UART extends AXI4Slave(new UARTIO) with AXI4Parameters {
+class AXI4UART(name: String = "uart") extends AXI4Slave(new UARTIO, name) with AXI4Parameters {
 //   val rx_tx = RegInit(0.U(8.W))
 //   val interrupt_enable = RegInit(0.U(8.W))
 //   val interrupt_fifo = RegInit(0.U(8.W))

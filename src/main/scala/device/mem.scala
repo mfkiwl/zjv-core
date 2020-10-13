@@ -7,26 +7,26 @@ import rv64_3stage._
 
 import ControlConst._
 
-class MemReq extends Bundle with phvntomParams {  // write
-  val addr  = Output(UInt(xlen.W))
-  val data  = Output(UInt(xlen.W))
-  val wen   = Output(Bool())
+class MemReq(val dataWidth: Int = 64) extends Bundle with phvntomParams { // write
+  val addr = Output(UInt(xlen.W))
+  val data = Output(UInt(dataWidth.W))
+  val wen = Output(Bool())
   val memtype = Output(UInt(xlen.W))
 
-  // override def cloneType: this.type = new MemIO(dataBits).asInstanceOf[this.type]
+  // override def cloneType: this.type = new MemIO(dataWidth).asInstanceOf[this.type]
 }
 
-class MemResp extends Bundle with phvntomParams {  // read
-  val data = Output(UInt(xlen.W))
+class MemResp(val dataWidth: Int = 64) extends Bundle with phvntomParams { // read
+  val data = Output(UInt(dataWidth.W))
 
-  // override def cloneType: this.type = new MemIO(dataBits).asInstanceOf[this.type]
+  // override def cloneType: this.type = new MemIO(dataWidth).asInstanceOf[this.type]
 }
 
-class MemIO extends Bundle with phvntomParams {
-  val req  = Flipped(Valid(new MemReq))
-  val resp = Valid(new MemResp)
+class MemIO(val dataWidth: Int = 64) extends Bundle with phvntomParams {
+  val req = Flipped(Valid(new MemReq(dataWidth)))
+  val resp = Valid(new MemResp(dataWidth))
 
-  // override def cloneType: this.type = new MemIO(dataBits).asInstanceOf[this.type]
+  // override def cloneType: this.type = new MemIO(dataWidth).asInstanceOf[this.type]
 }
 
 class SimMemIO extends Bundle with phvntomParams {

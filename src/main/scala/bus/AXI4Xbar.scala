@@ -2,6 +2,7 @@ package bus
 
 import chisel3._
 import chisel3.util._
+import utils._
 
 class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   val io = IO(new Bundle {
@@ -99,7 +100,7 @@ class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   io.in.aw.ready := (woutSel.aw.ready && w_state === s_idle) || wreqInvalidAddr
   io.in.w.ready := woutSel.w.ready
 
-  // printf("-----------Xbar1toN Debug Start-----------\n")
+  // printf(p"[${GTimer()}]: Xbar1toN Debug Start-----------\n")
   // printf(p"r_state = ${r_state}, routSelVec = ${routSelVec}, routSelIdx = ${routSelIdx}, rreqInvalidAddr = ${rreqInvalidAddr}\n")
   // printf(
   //   "ar.valid = %d, r.valid = %d, ar.ready = %d, r.ready = %d\n",
@@ -142,7 +143,7 @@ class CrossbarNto1(n: Int) extends Module {
   })
 
   if (n > 1) {
-    val arbIdBits = log2Up(n)
+    val arbIdBits = log2Ceil(n)
 
     val ar_arb = Module(new RRArbiter(new AXI4BundleAR, n)) // or RRArbiter
     val aw_arb = Module(new RRArbiter(new AXI4BundleAW, n)) // or RRArbiter
@@ -203,29 +204,63 @@ class CrossbarNto1(n: Int) extends Module {
     // printf("out_r_arb_id = %d, out_b_arb_id = %d\n", out_r_arb_id, out_b_arb_id)
   } else { io.out <> io.in.head }
 
-  // printf("-----------XbarNto1 Debug Start-----------\n")
-  // printf(
-  //   "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
-  //   io.out.aw.valid,
-  //   io.out.w.valid,
-  //   io.out.b.valid,
-  //   io.out.ar.valid,
-  //   io.out.r.valid
-  // )
-  // printf(
-  //   "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
-  //   io.out.aw.ready,
-  //   io.out.w.ready,
-  //   io.out.b.ready,
-  //   io.out.ar.ready,
-  //   io.out.r.ready
-  // )
-  // printf(p"out.aw.bits: ${io.out.aw.bits}\n")
-  // printf(p"out.w.bits: ${io.out.w.bits}\n")
-  // printf(p"out.b.bits: ${io.out.b.bits}\n")
-  // printf(p"out.ar.bits: ${io.out.ar.bits}\n")
-  // printf(p"out.r.bits: ${io.out.r.bits}\n")
-  // printf("-----------XbarNto1 Debug Done-----------\n")
+  // val s_idle :: s_readResp :: s_writeResp :: Nil = Enum(3)
+  // val r_state = RegInit(s_idle)
+
+  // // val lockWriteFun = ((x: SimpleBusReqBundle) => x.isWrite() && x.isBurst())
+  // val inputArb = Module(new LockingArbiter(chiselTypeOf(io.in(0).ar.bits), n, 8))
+  // (inputArb.io.in zip io.in.map(_.ar)).map{ case (arb, in) => arb <> in }
+  // val thisReq = inputArb.io.out
+  // // assert(!(thisReq.valid && !thisReq.bits.isRead() && !thisReq.bits.isWrite()))
+  // val inflightSrc = Reg(UInt(log2Ceil(n).W))
+
+  // io.out.ar.bits := thisReq.bits
+  // // bind correct valid and ready signals
+  // io.out.ar.valid := thisReq.valid && (r_state === s_idle)
+  // thisReq.ready := io.out.ar.ready && (r_state === s_idle)
+
+  // io.in.map(_.r.bits := io.out.r.bits)
+  // io.in.map(_.r.valid := false.B)
+  // (io.in(inflightSrc).r, io.out.r) match { case (l, r) => {
+  //   l.valid := r.valid
+  //   r.ready := l.ready
+  // }}
+
+  // switch (r_state) {
+  //   is (s_idle) {
+  //     when (thisReq.fire()) {
+  //       inflightSrc := inputArb.io.chosen
+  //       when (thisReq.valid) { r_state := s_readResp }
+  //       // .elsewhen (thisReq.bits.isWriteLast() || thisReq.bits.isWriteSingle()) { r_state := s_writeResp }
+  //     }
+  //   }
+  //   is (s_readResp) { when (io.out.r.fire() && io.out.r.bits.last) { r_state := s_idle } }
+  //   // is (s_writeResp) { when (io.out.resp.fire()) { state := s_idle } }
+  // }
+
+  printf(p"[${GTimer()}]: XbarNto1 Debug Start-----------\n")
+  printf(
+    "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
+    io.out.aw.valid,
+    io.out.w.valid,
+    io.out.b.valid,
+    io.out.ar.valid,
+    io.out.r.valid
+  )
+  printf(
+    "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
+    io.out.aw.ready,
+    io.out.w.ready,
+    io.out.b.ready,
+    io.out.ar.ready,
+    io.out.r.ready
+  )
+  printf(p"out.aw.bits: ${io.out.aw.bits}\n")
+  printf(p"out.w.bits: ${io.out.w.bits}\n")
+  printf(p"out.b.bits: ${io.out.b.bits}\n")
+  printf(p"out.ar.bits: ${io.out.ar.bits}\n")
+  printf(p"out.r.bits: ${io.out.r.bits}\n")
+  printf("--------------------------------\n")
 }
 
 class AXI4Xbar(n: Int, addressSpace: List[(Long, Long)]) extends Module {
