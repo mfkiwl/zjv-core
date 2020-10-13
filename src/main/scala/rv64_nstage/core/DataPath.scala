@@ -401,24 +401,6 @@ class DataPath extends Module with phvntomParams {
     }
     //    printf("------->stall_req %x, imenreq_valid %x, imem_pc %x, csr_out %x, dmemaddr %x!\n", csrFile.io.stall_req, io.imem.req.valid, if_pc, csrFile.io.out, io.dmem.req.bits.addr)
 
-//    if (pipeTrace) {
-//      // when (!stall) {
-//      printf("      if stage \t\t exe stage \t\t wb stage \t\t debug stage\n")
-//      printf("pc    %x\t %x\t %x\t %x \n", if_pc, exe_pc, wb_pc, dtest_pc)
-//      printf(
-//        "inst  %x\t %x\t %x\t %x \n",
-//        if_inst,
-//        exe_inst,
-//        wb_inst,
-//        dtest_inst
-//      )
-//      // printf("alu_in %x, alu_out %x, wb_alu %x\n", alu.io.a, alu.io.b, wb_alu)
-//      printf(
-//        "      if_stall [%c] \t exe_stall [%c] \t\t\t\t valid [%c]\n\n",
-//        Mux(if_stall, Str("*"), Str(" ")),
-//        Mux(exe_stall, Str("*"), Str(" ")),
-//        Mux(dtest_wbvalid, Str("*"), Str(" "))
-//      )
-//    }
+
   }
 }

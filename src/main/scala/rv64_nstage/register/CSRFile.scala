@@ -6,6 +6,8 @@ import rv64_nstage.control._
 import rv64_nstage.control.ControlConst._
 import rv64_nstage.core.phvntomParams
 
+import chisel3.util.experimental.BoringUtils
+
 class InterruptIO extends Bundle with phvntomParams {
   val mtip = Input(Bool())
   val msip = Input(Bool())
@@ -210,6 +212,8 @@ class CSRFile extends Module with phvntomParams {
   io.global_int_enable := machine_int_enable
 
   // mcycle and minstret increment
+  BoringUtils.addSource(mcycler, "difftestmcycler")
+  // printf("mcycle %x\n", mcycler);
   when(!io.stall && io.which_reg === CSR.mcycle) {
     when(io.wen) {
       mcycler := io.wdata
@@ -296,7 +300,7 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := tdata3r
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.mcycle) {
-    io.rdata := mcycler + 2.U(2.W)
+    io.rdata := mcycler + 3.U(2.W)
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.minstret) {
     io.rdata := minstretr

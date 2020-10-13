@@ -56,6 +56,7 @@ void dtengine_t::emu_reset(uint cycle) {
         zjv->eval();
         zjv->reset = 0;
     }
+    emu_get_state();
 }
 
 void dtengine_t::sim_reset(uint cycle) {
@@ -133,6 +134,8 @@ void dtengine_t::emu_get_state() {
     emu_state.valid = zjv->io_difftest_valid;
     emu_state.interrupt = zjv->io_difftest_int;
     emu_state.poweroff  = zjv->io_poweroff;
+
+    // printf(">>>> %lx\n", emu_state.poweroff);
 }
 
 void dtengine_t::sim_get_state() {
@@ -145,6 +148,10 @@ unsigned long dtengine_t::emu_difftest_valid() {
 
 unsigned long dtengine_t::emu_difftest_poweroff() {
     return emu_state.poweroff;
+}
+
+unsigned long dtengine_t::emu_get_mcycle() {
+    return zjv->io_difftest_mcycler;
 }
 
 unsigned long dtengine_t::emu_get_pc() {

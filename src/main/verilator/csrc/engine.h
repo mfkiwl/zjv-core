@@ -58,6 +58,7 @@ public:
     unsigned long emu_get_pc();
     unsigned long emu_get_inst();
     unsigned long emu_get_int();
+    unsigned long emu_get_mcycle();
 
     unsigned long sim_get_pc();
     void sim_sync_cycle();
