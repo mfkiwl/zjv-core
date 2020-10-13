@@ -158,7 +158,7 @@ int main(int argc, char** argv)
                   fprintf(stderr, "\n");
             }
             fprintf(stderr, "\n");
-            if (faultExitLatency == 3)
+            if (faultExitLatency == 1)
                 exit(-1);
          }
       }

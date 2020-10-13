@@ -171,7 +171,7 @@ class CSRFile extends Module with phvntomParams {
     mstatusr_mie, false.B, mstatusr_sie, false.B)
   val medelegr = RegInit(0.U(xlen.W)) // never delegate the handler to other lower modes currently
   val midelegr = RegInit(0.U(xlen.W)) // so their values are 0
-  val misar = Cat(2.U(2.W), 0.U((xlen - 2 - 13).W), true.B, 0.U(3.W), true.B, 0.U(8.W)) // rv64+im
+  val misar = Cat(2.U(2.W), 0.U((xlen - 2 - 13).W), true.B, 0.U(3.W), true.B, 1.U(8.W)) // rv64+ima
   val mvendoridr = 0.U(xlen.W)
   val marchidr = 5.U(xlen.W)
   val mscratchr = RegInit(0.U(xlen.W))
@@ -319,7 +319,9 @@ class CSRFile extends Module with phvntomParams {
         mepcr := io.current_pc
         mcauser_int := 0.U(1.W)
         mcauser_cause := io.except_type
-        when(io.except_type === Exception.LoadAddrMisaligned || io.except_type === Exception.StoreAddrMisaligned) {
+        when(io.except_type === Exception.LoadAddrMisaligned || io.except_type === Exception.StoreAddrMisaligned ||
+          io.except_type === Exception.InstAccessFault || io.except_type === Exception.LoadAccessFault ||
+          io.except_type === Exception.StoreAccessFault) {
           mtvalr := io.illegal_addr
         }.elsewhen(io.except_type === Exception.InstAddrMisaligned) {
           mtvalr := Cat(io.illegal_addr(xlen - 1, 1), Fill(1, 0.U))

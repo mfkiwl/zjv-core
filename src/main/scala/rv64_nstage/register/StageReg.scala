@@ -15,9 +15,11 @@ class StageRegIO extends Bundle with phvntomParams {
   val last_stage_stall_req = Input(Bool())
   val bubble_in = Input(Bool())
   val pc_in = Input(UInt(xlen.W))
+  val inst_af_in = Input(Bool())
   // Output
   val bubble_out = Output(Bool())
   val pc_out = Output(UInt(xlen.W))
+  val inst_af_out = Output(Bool())
 }
 
 class RegIf1If2IO extends StageRegIO with phvntomParams {
@@ -29,6 +31,7 @@ class RegIf1If2 extends Module with phvntomParams {
 
   val bubble = RegInit(Bool(), true.B)
   val pc = RegInit(UInt(xlen.W), 0.U)
+  val inst_af = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -45,14 +48,17 @@ class RegIf1If2 extends Module with phvntomParams {
     when((last_delay && delay_flush) || io.bubble_in || io.flush_one) {
       pc := 0.U
       bubble := true.B
+      inst_af := false.B
     }.otherwise {
       pc := io.pc_in
       bubble := false.B
+      inst_af := io.inst_af_in
     }
   }
 
   io.bubble_out := bubble
   io.pc_out := pc
+  io.inst_af_out := inst_af
 }
 
 class RegIf2IdIO extends RegIf1If2IO with phvntomParams {
@@ -66,6 +72,7 @@ class RegIf2Id extends Module with phvntomParams {
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
+  val inst_af = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -90,16 +97,19 @@ class RegIf2Id extends Module with phvntomParams {
       pc := 0.U
       bubble := true.B
       inst := BUBBLE
+      inst_af := false.B
     }.otherwise {
       pc := io.pc_in
       bubble := false.B
       inst := io.inst_in
+      inst_af := io.inst_af_in
     }
   }
 
   io.bubble_out := bubble
   io.pc_out := pc
   io.inst_out := inst
+  io.inst_af_out := inst_af
 }
 
 class RegIdExeIO extends RegIf2IdIO with phvntomParams {
@@ -113,6 +123,7 @@ class RegIdExe extends Module with phvntomParams {
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
+  val inst_af = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -130,16 +141,19 @@ class RegIdExe extends Module with phvntomParams {
       pc := 0.U
       bubble := true.B
       inst := BUBBLE
+      inst_af := false.B
     }.otherwise {
       pc := io.pc_in
       bubble := false.B
       inst := io.inst_in
+      inst_af := io.inst_af_in
     }
   }
 
   io.bubble_out := bubble
   io.pc_out := pc
   io.inst_out := inst
+  io.inst_af_out := inst_af
   
   val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
@@ -179,6 +193,7 @@ class RegExeMem1 extends Module with phvntomParams {
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
+  val inst_af = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -196,16 +211,19 @@ class RegExeMem1 extends Module with phvntomParams {
       pc := 0.U
       bubble := true.B
       inst := BUBBLE
+      inst_af := false.B
     }.otherwise {
       pc := io.pc_in
       bubble := false.B
       inst := io.inst_in
+      inst_af := io.inst_af_in
     }
   }
 
   io.bubble_out := bubble
   io.pc_out := pc
   io.inst_out := inst
+  io.inst_af_out := inst_af
 
   val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
@@ -275,6 +293,7 @@ class RegMem1Mem2 extends Module with phvntomParams {
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
+  val inst_af = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -292,16 +311,19 @@ class RegMem1Mem2 extends Module with phvntomParams {
       pc := 0.U
       bubble := true.B
       inst := BUBBLE
+      inst_af := false.B
     }.otherwise {
       pc := io.pc_in
       bubble := false.B
       inst := io.inst_in
+      inst_af := io.inst_af_in
     }
   }
 
   io.bubble_out := bubble
   io.pc_out := pc
   io.inst_out := inst
+  io.inst_af_out := inst_af
 
   val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
@@ -383,6 +405,7 @@ class RegMem2Wb extends Module with phvntomParams {
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
+  val inst_af = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -400,16 +423,19 @@ class RegMem2Wb extends Module with phvntomParams {
       pc := 0.U
       bubble := true.B
       inst := BUBBLE
+      inst_af := false.B
     }.otherwise {
       pc := io.pc_in
       bubble := false.B
       inst := io.inst_in
+      inst_af := io.inst_af_in
     }
   }
 
   io.bubble_out := bubble
   io.pc_out := pc
   io.inst_out := inst
+  io.inst_af_out := inst_af
 
   val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +

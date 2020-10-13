@@ -64,16 +64,25 @@ class DataPath extends Module with phvntomParams {
   val stall_mem1_mem2 = WireInit(Bool(), false.B)
   val stall_mem2_wb = WireInit(Bool(), false.B)
 
+  // If1 Signals
+  val inst_af = WireInit(Bool(), false.B)
+
   // If2 Signals
   val inst_if2 = WireInit(UInt(32.W), BUBBLE)
 
   // Exe Signals
   val inst_addr_misaligned = WireInit(Bool(), false.B)
+  val mem_af = WireInit(Bool(), false.B)
   val rs1 = WireInit(UInt(xlen.W), 0.U)
   val rs2 = WireInit(UInt(xlen.W), 0.U)
 
   // Mem Signals
   val mem_addr_misaligned = WireInit(Bool(), false.B)
+
+  // TODO When AS is decided, this should be changed
+  def is_legal_addr(addr: UInt): Bool = {
+    addr(addr.getWidth - 1, addr.getWidth / 2) === 0.U
+  }
 
   // Stall Control Logic
   stall_mem2_wb := false.B
@@ -94,6 +103,9 @@ class DataPath extends Module with phvntomParams {
   pc_gen.io.branch_pc := alu.io.out
   pc_gen.io.inst_addr_misaligned := inst_addr_misaligned
 
+  // Inst Access Fault Detector
+  inst_af := !is_legal_addr(pc_gen.io.pc_out)
+
   // TODO Dummy stage
   // TODO ultimately, in this stage, I$ should access SRAM
   reg_if1_if2.io.stall := stall_if1_if2
@@ -101,13 +113,14 @@ class DataPath extends Module with phvntomParams {
   reg_if1_if2.io.bubble_in := false.B
   reg_if1_if2.io.pc_in := pc_gen.io.pc_out
   reg_if1_if2.io.last_stage_stall_req := false.B
+  reg_if1_if2.io.inst_af_in := inst_af
 
   // TODO before this is a dummy stage, because we only have 1-stage I$
   // TODO which is bound to be 2-or-3-stage later
   // I$ and Stall Request
   io.imem.req.bits.addr := reg_if1_if2.io.pc_out
   io.imem.req.bits.data := DontCare
-  io.imem.req.valid := !reg_if1_if2.io.bubble_out
+  io.imem.req.valid := !reg_if1_if2.io.bubble_out && !reg_if1_if2.io.inst_af_out
   io.imem.req.bits.wen := false.B
   io.imem.req.bits.memtype := memWordU
 
@@ -119,8 +132,9 @@ class DataPath extends Module with phvntomParams {
   reg_if2_id.io.stall := stall_if2_id
   reg_if2_id.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush
   reg_if2_id.io.bubble_in := stall_req_if2 || reg_if1_if2.io.bubble_out
-  reg_if2_id.io.inst_in := inst_if2
+  reg_if2_id.io.inst_in := Mux(reg_if1_if2.io.inst_af_out, BUBBLE, inst_if2)
   reg_if2_id.io.pc_in := reg_if1_if2.io.pc_out
+  reg_if2_id.io.inst_af_in := reg_if1_if2.io.inst_af_out
 
   // Decoder
   io.ctrl.inst := reg_if2_id.io.inst_out
@@ -133,6 +147,7 @@ class DataPath extends Module with phvntomParams {
   reg_id_exe.io.inst_in := reg_if2_id.io.inst_out
   reg_id_exe.io.pc_in := reg_if2_id.io.pc_out
   reg_id_exe.io.inst_info_in := io.ctrl.inst_info_out
+  reg_id_exe.io.inst_af_in := reg_if2_id.io.inst_af_out
 
   // ALU, Multipier, Branch and Jump
   imm_ext.io.inst := reg_id_exe.io.inst_out
@@ -213,6 +228,7 @@ class DataPath extends Module with phvntomParams {
   reg_exe_mem1.io.timer_int_in := io.int.mtip
   reg_exe_mem1.io.software_int_in := io.int.msip
   reg_exe_mem1.io.external_int_in := false.B
+  reg_exe_mem1.io.inst_af_in := reg_id_exe.io.inst_af_out
 
   amo_bubble_inserter := reg_exe_mem1.io.inst_info_out.amoSelect.orR
 
@@ -227,6 +243,7 @@ class DataPath extends Module with phvntomParams {
     memWordU -> reg_exe_mem1.io.alu_val_out(1, 0).orR,
     memDouble -> reg_exe_mem1.io.alu_val_out(2, 0).orR
   ))
+  mem_af := reg_exe_mem1.io.inst_info_out.memType.orR && !is_legal_addr(reg_exe_mem1.io.alu_val_out)
 
   csr.io.stall := false.B
   csr.io.cmd := reg_exe_mem1.io.inst_info_out.wbEnable
@@ -243,8 +260,8 @@ class DataPath extends Module with phvntomParams {
     reg_exe_mem1.io.inst_info_out.wbEnable === wenMem)
   csr.io.mem_type := reg_exe_mem1.io.inst_info_out.memType
   csr.io.pc_check := true.B
-  csr.io.inst_access_fault := false.B
-  csr.io.mem_access_fault := false.B
+  csr.io.inst_access_fault := reg_exe_mem1.io.inst_af_out
+  csr.io.mem_access_fault := mem_af
   csr.io.tim_int := reg_exe_mem1.io.timer_int_out
   csr.io.soft_int := reg_exe_mem1.io.software_int_out
   csr.io.external_int := reg_exe_mem1.io.external_int_out
@@ -270,6 +287,7 @@ class DataPath extends Module with phvntomParams {
   reg_mem1_mem2.io.expt_in := csr.io.expt
   reg_mem1_mem2.io.int_resp_in := csr.io.int
   reg_mem1_mem2.io.csr_val_in := csr.io.out
+  reg_mem1_mem2.io.inst_af_in := reg_exe_mem1.io.inst_af_out
 
   // Memory and AMO
   io.dmem.req.bits.addr := reg_mem1_mem2.io.alu_val_out
@@ -320,6 +338,7 @@ class DataPath extends Module with phvntomParams {
   reg_mem2_wb.io.csr_val_in := reg_mem1_mem2.io.csr_val_out
   reg_mem2_wb.io.mem_val_in := Mux(amo_arbiter.io.force_mem_val_out, amo_arbiter.io.mem_val_out,
     Mux(reservation.io.compare, (!reservation.io.succeed).asUInt, io.dmem.resp.bits.data))
+  reg_mem2_wb.io.inst_af_in := reg_mem1_mem2.io.inst_af_out
 
   // Register File
   reg_file.io.wen := (reg_mem2_wb.io.inst_info_out.wbEnable === wenReg ||
@@ -354,7 +373,7 @@ class DataPath extends Module with phvntomParams {
     dtest_wbvalid := !reg_mem2_wb.io.bubble_out && !reg_mem2_wb.io.int_resp_out
 
     when(!stall_mem2_wb) {
-      dtest_pc := reg_mem2_wb.io.pc_out
+      dtest_pc := Mux(reg_mem2_wb.io.inst_af_out || reg_mem2_wb.io.bubble_out || reg_mem2_wb.io.int_resp_out, dtest_pc, reg_mem2_wb.io.pc_out)
       dtest_inst := reg_mem2_wb.io.inst_out
       dtest_expt := reg_mem2_wb.io.int_resp_out
     }
