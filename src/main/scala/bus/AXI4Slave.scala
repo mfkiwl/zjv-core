@@ -3,9 +3,12 @@ package bus
 import chisel3._
 import chisel3.util._
 import rv64_3stage._
+import utils._
 
-abstract class AXI4Slave[B <: Data](_extra: B = null)
-    extends Module
+abstract class AXI4Slave[B <: Data](
+    _extra: B = null,
+    name: String = "AXI4Slave"
+) extends Module
     with phvntomParams {
   val io = IO(new Bundle {
     val in = Flipped(new AXI4Bundle)
@@ -38,7 +41,7 @@ abstract class AXI4Slave[B <: Data](_extra: B = null)
   // TODO 4K boundary check?
 
   // read/read address channel
-  val raddr = Wire(UInt())
+  val raddr = Wire(UInt(xlen.W))
   val ren = Wire(Bool())
   val c_r = Counter(256)
   val beatCnt = Counter(256)
@@ -86,7 +89,7 @@ abstract class AXI4Slave[B <: Data](_extra: B = null)
   )
 
   // write channel
-  val waddr = Wire(UInt())
+  val waddr = Wire(UInt(xlen.W))
   val c_w = Counter(256)
   waddr := HoldUnless(io.in.aw.bits.addr, io.in.aw.fire())
   when(io.in.w.fire()) {
@@ -111,27 +114,34 @@ abstract class AXI4Slave[B <: Data](_extra: B = null)
   io.in.r.bits.id := RegEnable(io.in.ar.bits.id, io.in.ar.fire())
   io.in.r.bits.user := RegEnable(io.in.ar.bits.user, io.in.ar.fire())
 
-  // printf("-----------AXI4Slave Debug Start-----------\n")
-  // printf(
-  //   "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
-  //   io.in.aw.valid,
-  //   io.in.w.valid,
-  //   io.in.b.valid,
-  //   io.in.ar.valid,
-  //   io.in.r.valid
-  // )
-  // printf(
-  //   "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
-  //   io.in.aw.ready,
-  //   io.in.w.ready,
-  //   io.in.b.ready,
-  //   io.in.ar.ready,
-  //   io.in.r.ready
-  // )
-  // printf(p"in.aw.bits: ${io.in.aw.bits}\n")
-  // printf(p"in.w.bits: ${io.in.w.bits}\n")
-  // printf(p"in.b.bits: ${io.in.b.bits}\n")
-  // printf(p"in.ar.bits: ${io.in.ar.bits}\n")
-  // printf(p"in.r.bits: ${io.in.r.bits}\n")
-  // printf("-----------AXI4Slave Debug Done-----------\n")
+  printf(p"[${GTimer()}]: ${name} Debug Start-----------\n")
+  printf(
+    p"ren=${ren}, wrapAddr=${Hexadecimal(wrapAddr)}, r_busy=${r_busy}, w_busy=${w_busy}\n"
+  )
+  printf(p"c_r=${c_r.value}, beatCnt=${beatCnt.value}, c_w=${c_w.value}\n")
+  printf(
+    p"readBeatCnt=${readBeatCnt}, writeBeatCnt=${writeBeatCnt}, rLast=${rLast}, wLast=${wLast}\n"
+  )
+  printf(
+    "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
+    io.in.aw.valid,
+    io.in.w.valid,
+    io.in.b.valid,
+    io.in.ar.valid,
+    io.in.r.valid
+  )
+  printf(
+    "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
+    io.in.aw.ready,
+    io.in.w.ready,
+    io.in.b.ready,
+    io.in.ar.ready,
+    io.in.r.ready
+  )
+  printf(p"in.aw.bits: ${io.in.aw.bits}\n")
+  printf(p"in.w.bits: ${io.in.w.bits}\n")
+  printf(p"in.b.bits: ${io.in.b.bits}\n")
+  printf(p"in.ar.bits: ${io.in.ar.bits}\n")
+  printf(p"in.r.bits: ${io.in.r.bits}\n")
+  printf("-----------AXI4Slave Debug Done-----------\n")
 }

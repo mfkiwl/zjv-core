@@ -4,6 +4,8 @@ import chisel3._
 import chisel3.util._
 import rv64_3stage._
 import bus._
+import device._
+import utils._
 import ControlConst._
 import scala.annotation.switch
 
@@ -14,9 +16,12 @@ import scala.annotation.switch
 // }
 
 // serve as a simple convertor from MemIO to AXI4 interface
-class DUncache extends Module with AXI4Parameters {
-  val io = IO(new UncacheIO)
+class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
+    extends Module
+    with AXI4Parameters {
+  val io = IO(new UncacheIO(dataWidth))
   val blen = log2Ceil(xlen / 8)
+  val burst_length = dataWidth / xlen
   // cache states
   val (s_IDLE :: s_WAIT_AXI_READY :: s_RECEIVING :: s_WB_WAIT_AWREADY :: s_WB_WRITE :: s_WB_WAIT_BVALID :: s_REFILL :: s_FINISH :: Nil) =
     Enum(8)
@@ -36,8 +41,8 @@ class DUncache extends Module with AXI4Parameters {
   io.out.aw.bits.id := 0.U
   io.out.ar.bits.id := 0.U
 
-  val readBeatCnt = Counter(4)
-  val writeBeatCnt = Counter(4)
+  val readBeatCnt = Counter(burst_length + 1)
+  val writeBeatCnt = Counter(burst_length + 1)
 
   when(state === s_IDLE) {
     when(io.in.req.valid) {
@@ -50,16 +55,17 @@ class DUncache extends Module with AXI4Parameters {
     io.out.w.valid := false.B
     io.out.b.ready := true.B
     io.out.aw.bits.addr := io.in.req.bits.addr
-    io.out.aw.bits.len := 0.U // 1 word
+    io.out.aw.bits.len := (burst_length - 1).U // len - 1
     io.out.aw.bits.size := "b011".U
     io.out.aw.bits.burst := BURST_INCR
     io.out.aw.bits.lock := 0.U
     io.out.aw.bits.cache := 0.U
     io.out.aw.bits.prot := 0.U
     io.out.aw.bits.qos := 0.U
-    io.out.w.bits.data := io.in.req.bits.data
+    val offset = writeBeatCnt.value << 8
+    io.out.w.bits.data := (io.in.req.bits.data >> offset)(xlen - 1, 0)
     io.out.w.bits.strb := Fill(xlen / 8, 1.U(1.W))
-    io.out.w.bits.last := true.B
+    io.out.w.bits.last := writeBeatCnt.value === burst_length.U
 
     when(state === s_WB_WAIT_AWREADY) {
       io.out.aw.valid := true.B
@@ -68,6 +74,9 @@ class DUncache extends Module with AXI4Parameters {
       }
     }.elsewhen(state === s_WB_WRITE) {
       io.out.w.valid := true.B
+      when(io.out.w.fire()) {
+        writeBeatCnt.inc()
+      }
       when(io.out.w.ready && io.out.w.bits.last) {
         state := s_WB_WAIT_BVALID
       }
@@ -80,7 +89,7 @@ class DUncache extends Module with AXI4Parameters {
       }
     }
   }.otherwise {
-    io.out.ar.bits.len := 0.U // one word
+    io.out.ar.bits.len := (burst_length - 1).U // len - 1
     io.out.ar.bits.size := "b011".U // 8 bytes
     io.out.ar.bits.burst := BURST_INCR
     io.out.ar.valid := false.B
@@ -93,6 +102,9 @@ class DUncache extends Module with AXI4Parameters {
     }.elsewhen(state === s_RECEIVING) {
       when(io.out.r.valid) {
         io.out.r.ready := true.B
+        when(io.out.r.fire()) {
+          readBeatCnt.inc()
+        }
         when(io.out.r.bits.last) {
           state := s_FINISH
         }
@@ -104,52 +116,59 @@ class DUncache extends Module with AXI4Parameters {
         state := s_WB_WAIT_AWREADY
       }.otherwise {
         state := s_IDLE
-        // io.in.resp.valid := true.B
+        io.in.resp.valid := true.B
       }
     }
   }
 
   io.offset := io.in.req.bits.addr(blen - 1, 0)
   io.in.resp.bits.data := DontCare
+  val data_vec = Reg(Vec(burst_length, UInt(xlen.W)))
   when(state === s_RECEIVING && io.out.r.valid) {
-    io.in.resp.valid := true.B
-    io.in.resp.bits.data := io.out.r.bits.data
+    // io.in.resp.valid := readBeatCnt.value === burst_length.U
+    data_vec(readBeatCnt.value) := io.out.r.bits.data
+    io.in.resp.bits.data := data_vec.asUInt
   }
 
-  // printf("-----------DUncache Debug Start-----------\n")
-  // printf("state = %d\n", state);
-  // // printf("offset = %x, mask = %x, realdata = %x\n", offset, mask, realdata)
-  // printf(
-  //   "req.valid = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d, resp.valid = %d, resp.data = %x\n",
-  //   io.in.req.valid,
-  //   io.in.req.bits.addr,
-  //   io.in.req.bits.data,
-  //   io.in.req.bits.wen,
-  //   io.in.req.bits.memtype,
-  //   io.in.resp.valid,
-  //   io.in.resp.bits.data
-  // )
-
-  // printf(
-  //   "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
-  //   io.out.aw.valid,
-  //   io.out.w.valid,
-  //   io.out.b.valid,
-  //   io.out.ar.valid,
-  //   io.out.r.valid
-  // )
-  // printf(
-  //   "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
-  //   io.out.aw.ready,
-  //   io.out.w.ready,
-  //   io.out.b.ready,
-  //   io.out.ar.ready,
-  //   io.out.r.ready
-  // )
-  // printf(p"aw.bits: ${io.out.aw.bits}\n")
-  // printf(p"w.bits: ${io.out.w.bits}\n")
-  // printf(p"b.bits: ${io.out.b.bits}\n")
-  // printf(p"ar.bits: ${io.out.ar.bits}\n")
-  // printf(p"r.bits: ${io.out.r.bits}\n")
-  // printf("-----------DUncache Debug Done-----------\n")
+  printf(p"[${GTimer()}]:${mname} Debug Start-----------\n")
+  printf("state = %d\n", state);
+  printf(
+    p"writeBeatCnt.value=${writeBeatCnt.value}, readBeatCnt.value=${readBeatCnt.value}\n"
+  )
+  printf(p"data_vec=${data_vec}\n")
+  printf(
+    "req.valid = %d, req.addr = %x, req.wen = %d, req.memtype = %d\n",
+    io.in.req.valid,
+    io.in.req.bits.addr,
+    io.in.req.bits.wen,
+    io.in.req.bits.memtype
+  )
+  printf("req.data = %x\n", io.in.req.bits.data)
+  printf(
+    "resp.valid = %d, resp.data = %x\n",
+    io.in.resp.valid,
+    io.in.resp.bits.data
+  )
+  printf(
+    "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
+    io.out.aw.valid,
+    io.out.w.valid,
+    io.out.b.valid,
+    io.out.ar.valid,
+    io.out.r.valid
+  )
+  printf(
+    "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
+    io.out.aw.ready,
+    io.out.w.ready,
+    io.out.b.ready,
+    io.out.ar.ready,
+    io.out.r.ready
+  )
+  printf(p"aw.bits: ${io.out.aw.bits}\n")
+  printf(p"w.bits: ${io.out.w.bits}\n")
+  printf(p"b.bits: ${io.out.b.bits}\n")
+  printf(p"ar.bits: ${io.out.ar.bits}\n")
+  printf(p"r.bits: ${io.out.r.bits}\n")
+  printf("-----------DUncache Debug Done-----------\n")
 }
