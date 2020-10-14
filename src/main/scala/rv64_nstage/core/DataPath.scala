@@ -8,6 +8,7 @@ import rv64_nstage.control._
 import rv64_nstage.control.ControlConst._
 import rv64_nstage.fu._
 import rv64_nstage.register._
+import device.MemIO
 
 class DataPathIO extends Bundle with phvntomParams {
   val ctrl = Flipped(new ControlPathIO)
@@ -123,6 +124,7 @@ class DataPath extends Module with phvntomParams {
   io.imem.req.valid := !reg_if1_if2.io.bubble_out && !reg_if1_if2.io.inst_af_out
   io.imem.req.bits.wen := false.B
   io.imem.req.bits.memtype := memWordU
+  io.imem.resp.ready := true.B
 
   inst_if2 := io.imem.resp.bits.data
   stall_req_if2 := io.imem.req.valid && !io.imem.resp.valid
@@ -298,6 +300,7 @@ class DataPath extends Module with phvntomParams {
     amo_arbiter.io.write_now)))
   io.dmem.req.bits.wen := (reg_mem1_mem2.io.inst_info_out.wbEnable === wenMem || amo_arbiter.io.write_now)
   io.dmem.req.bits.memtype := reg_mem1_mem2.io.inst_info_out.memType
+  io.dmem.resp.ready := true.B
 
   amo_arbiter.io.exception_or_int := reg_mem1_mem2.io.expt_out
   amo_arbiter.io.amo_op := reg_mem1_mem2.io.inst_info_out.amoSelect

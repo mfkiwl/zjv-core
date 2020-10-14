@@ -16,7 +16,7 @@ class ClintIO extends Bundle with phvntomParams {
 class Clint(name: String = "clint")
     extends AXI4Slave(new ClintIO, name)
     with AXI4Parameters {
-  val mtime = RegInit(0.S(xlen.W)) // unit: us
+  val mtime = RegInit(0.S(xlen.W).asUInt) // unit: us
   val mtimecmp = RegInit(1024.U(xlen.W))
   val msip = RegInit(0.U(xlen.W))
   val sim = true
