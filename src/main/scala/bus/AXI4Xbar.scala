@@ -142,124 +142,147 @@ class CrossbarNto1(n: Int) extends Module {
     val out = new AXI4Bundle
   })
 
-  if (n > 1) {
-    val arbIdBits = log2Ceil(n)
+  // if (n > 1) {
+  //   val arbIdBits = log2Ceil(n)
 
-    val ar_arb = Module(new RRArbiter(new AXI4BundleAR, n)) // or RRArbiter
-    val aw_arb = Module(new RRArbiter(new AXI4BundleAW, n)) // or RRArbiter
+  //   // val ar_arb = Module(new Arbiter(new AXI4BundleAR, n)) // or RRArbiter
+  //   val aw_arb = Module(new Arbiter(new AXI4BundleAW, n)) // or RRArbiter
 
-    val out_r_arb_id = io.out.r.bits.id(arbIdBits - 1, 0)
-    val out_b_arb_id = io.out.b.bits.id(arbIdBits - 1, 0)
+  //   // val out_r_arb_id = io.out.r.bits.id(arbIdBits - 1, 0)
+  //   val out_b_arb_id = io.out.b.bits.id(arbIdBits - 1, 0)
 
-    val w_chosen = Reg(UInt(arbIdBits.W))
-    val w_done = RegInit(true.B)
+  //   val w_chosen = Reg(UInt(arbIdBits.W))
+  //   val w_done = RegInit(true.B)
 
-    when(aw_arb.io.out.fire()) {
-      w_chosen := aw_arb.io.chosen
-      w_done := false.B
-    }
-
-    when(io.out.w.fire() && io.out.w.bits.last) {
-      w_done := true.B
-    }
-
-    for (i <- 0 until n) {
-      val m_ar = io.in(i).ar
-      val m_aw = io.in(i).aw
-      val m_r = io.in(i).r
-      val m_b = io.in(i).b
-      val a_ar = ar_arb.io.in(i)
-      val a_aw = aw_arb.io.in(i)
-      val m_w = io.in(i).w
-
-      a_ar <> m_ar
-      a_ar.bits.id := Cat(m_ar.bits.id, i.U(arbIdBits.W))
-
-      a_aw <> m_aw
-      a_aw.bits.id := Cat(m_aw.bits.id, i.U(arbIdBits.W))
-
-      m_r.valid := io.out.r.valid && out_r_arb_id === i.U
-      m_r.bits := io.out.r.bits
-      m_r.bits.id := io.out.r.bits.id >> arbIdBits.U
-
-      m_b.valid := io.out.b.valid && out_b_arb_id === i.U
-      m_b.bits := io.out.b.bits
-      m_b.bits.id := io.out.b.bits.id >> arbIdBits.U
-
-      m_w.ready := io.out.w.ready && w_chosen === i.U && !w_done
-    }
-
-    io.out.r.ready := io.in(out_r_arb_id).r.ready
-    io.out.b.ready := io.in(out_b_arb_id).b.ready
-
-    io.out.w.bits := io.in(w_chosen).w.bits
-    io.out.w.valid := io.in(w_chosen).w.valid && !w_done
-
-    io.out.ar <> ar_arb.io.out
-
-    io.out.aw.bits <> aw_arb.io.out.bits
-    io.out.aw.valid := aw_arb.io.out.valid && w_done
-    aw_arb.io.out.ready := io.out.aw.ready && w_done
-
-    // printf("out_r_arb_id = %d, out_b_arb_id = %d\n", out_r_arb_id, out_b_arb_id)
-  } else { io.out <> io.in.head }
-
-  // val s_idle :: s_readResp :: s_writeResp :: Nil = Enum(3)
-  // val r_state = RegInit(s_idle)
-
-  // // val lockWriteFun = ((x: SimpleBusReqBundle) => x.isWrite() && x.isBurst())
-  // val inputArb = Module(new LockingArbiter(chiselTypeOf(io.in(0).ar.bits), n, 8))
-  // (inputArb.io.in zip io.in.map(_.ar)).map{ case (arb, in) => arb <> in }
-  // val thisReq = inputArb.io.out
-  // // assert(!(thisReq.valid && !thisReq.bits.isRead() && !thisReq.bits.isWrite()))
-  // val inflightSrc = Reg(UInt(log2Ceil(n).W))
-
-  // io.out.ar.bits := thisReq.bits
-  // // bind correct valid and ready signals
-  // io.out.ar.valid := thisReq.valid && (r_state === s_idle)
-  // thisReq.ready := io.out.ar.ready && (r_state === s_idle)
-
-  // io.in.map(_.r.bits := io.out.r.bits)
-  // io.in.map(_.r.valid := false.B)
-  // (io.in(inflightSrc).r, io.out.r) match { case (l, r) => {
-  //   l.valid := r.valid
-  //   r.ready := l.ready
-  // }}
-
-  // switch (r_state) {
-  //   is (s_idle) {
-  //     when (thisReq.fire()) {
-  //       inflightSrc := inputArb.io.chosen
-  //       when (thisReq.valid) { r_state := s_readResp }
-  //       // .elsewhen (thisReq.bits.isWriteLast() || thisReq.bits.isWriteSingle()) { r_state := s_writeResp }
-  //     }
+  //   when(aw_arb.io.out.fire()) {
+  //     w_chosen := aw_arb.io.chosen
+  //     w_done := false.B
   //   }
-  //   is (s_readResp) { when (io.out.r.fire() && io.out.r.bits.last) { r_state := s_idle } }
-  //   // is (s_writeResp) { when (io.out.resp.fire()) { state := s_idle } }
-  // }
+
+  //   when(io.out.w.fire() && io.out.w.bits.last) {
+  //     w_done := true.B
+  //   }
+
+  //   for (i <- 0 until n) {
+  //     // val m_ar = io.in(i).ar
+  //     val m_aw = io.in(i).aw
+  //     // val m_r = io.in(i).r
+  //     val m_b = io.in(i).b
+  //     // val a_ar = ar_arb.io.in(i)
+  //     val a_aw = aw_arb.io.in(i)
+  //     val m_w = io.in(i).w
+
+  //     // a_ar <> m_ar
+  //     // a_ar.bits.id := Cat(m_ar.bits.id, i.U(arbIdBits.W))
+
+  //     a_aw <> m_aw
+  //     a_aw.bits.id := Cat(m_aw.bits.id, i.U(arbIdBits.W))
+
+  //     // m_r.valid := io.out.r.valid && out_r_arb_id === i.U
+  //     // m_r.bits := io.out.r.bits
+  //     // m_r.bits.id := io.out.r.bits.id >> arbIdBits.U
+
+  //     m_b.valid := io.out.b.valid && out_b_arb_id === i.U
+  //     m_b.bits := io.out.b.bits
+  //     m_b.bits.id := io.out.b.bits.id >> arbIdBits.U
+
+  //     m_w.ready := io.out.w.ready && w_chosen === i.U && !w_done
+  //   }
+
+  //   // io.out.r.ready := io.in(out_r_arb_id).r.ready
+  //   io.out.b.ready := io.in(out_b_arb_id).b.ready
+
+  //   io.out.w.bits := io.in(w_chosen).w.bits
+  //   io.out.w.valid := io.in(w_chosen).w.valid && !w_done
+
+  //   // io.out.ar <> ar_arb.io.out
+
+  //   io.out.aw.bits <> aw_arb.io.out.bits
+  //   io.out.aw.valid := aw_arb.io.out.valid && w_done
+  //   aw_arb.io.out.ready := io.out.aw.ready && w_done
+
+  //   // printf("out_r_arb_id = %d, out_b_arb_id = %d\n", out_r_arb_id, out_b_arb_id)
+  // } else { io.out <> io.in.head }
+
+  val s_idle :: s_readResp :: s_writeResp :: Nil = Enum(3)
+  val r_state = RegInit(s_idle)
+  val inputArb_r = Module(new Arbiter(new AXI4BundleAR, n))
+  (inputArb_r.io.in zip io.in.map(_.ar)).map { case (arb, in) => arb <> in }
+  val thisReq_r = inputArb_r.io.out
+  val inflightSrc_r = Reg(UInt(log2Ceil(n).W))
+
+  io.out.ar.bits := thisReq_r.bits
+  // bind correct valid and ready signals
+  io.out.ar.valid := thisReq_r.valid && (r_state === s_idle)
+  thisReq_r.ready := io.out.ar.ready && (r_state === s_idle)
+
+  io.in.map(_.r.bits := io.out.r.bits)
+  io.in.map(_.r.valid := false.B)
+  (io.in(inflightSrc_r).r, io.out.r) match {
+    case (l, r) => {
+      l.valid := r.valid
+      r.ready := l.ready
+    }
+  }
+
+  switch(r_state) {
+    is(s_idle) {
+      when(thisReq_r.fire()) {
+        inflightSrc_r := inputArb_r.io.chosen
+        when(thisReq_r.valid) { r_state := s_readResp }
+        // .elsewhen (thisReq_r.bits.isWriteLast() || thisReq_r.bits.isWriteSingle()) { r_state := s_writeResp }
+      }
+    }
+    is(s_readResp) {
+      when(io.out.r.fire() && io.out.r.bits.last) { r_state := s_idle }
+    }
+    // is (s_writeResp) { when (io.out.resp.fire()) { state := s_idle } }
+  }
+
+  val w_state = RegInit(s_idle)
+  val inputArb_w = Module(new Arbiter(new AXI4BundleAW, n))
+  (inputArb_w.io.in zip io.in.map(_.aw)).map { case (arb, in) => arb <> in }
+  val thisReq_w = inputArb_w.io.out
+  val inflightSrc_w = Reg(UInt(log2Ceil(n).W))
+
+  io.out.aw.bits := thisReq_w.bits
+  // bind correct valid and ready signals
+  io.out.aw.valid := thisReq_w.valid && (w_state === s_idle)
+  thisReq_w.ready := io.out.aw.ready && (w_state === s_idle)
+
+  io.out.w.valid := io.in(inflightSrc_w).w.valid
+  io.out.w.bits := io.in(inflightSrc_w).w.bits
+  io.in.map(_.w.ready := false.B)
+  io.in(inflightSrc_w).w.ready := io.out.w.ready
+
+  io.in.map(_.b.bits := io.out.b.bits)
+  io.in.map(_.b.valid := false.B)
+  (io.in(inflightSrc_w).b, io.out.b) match {
+    case (l, r) => {
+      l.valid := r.valid
+      r.ready := l.ready
+    }
+  }
+
+  switch(w_state) {
+    is(s_idle) {
+      when(thisReq_w.fire()) {
+        inflightSrc_w := inputArb_w.io.chosen
+        when(thisReq_w.valid) { w_state := s_writeResp }
+      }
+    }
+    is(s_writeResp) {
+      when(io.out.b.fire()) { w_state := s_idle }
+    }
+  }
 
   printf(p"[${GTimer()}]: XbarNto1 Debug Start-----------\n")
   printf(
-    "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
-    io.out.aw.valid,
-    io.out.w.valid,
-    io.out.b.valid,
-    io.out.ar.valid,
-    io.out.r.valid
+    p"r_state=${r_state},inflightSrc_r=${inflightSrc_r},w_state=${w_state},inflightSrc_w=${inflightSrc_w}\n"
   )
-  printf(
-    "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
-    io.out.aw.ready,
-    io.out.w.ready,
-    io.out.b.ready,
-    io.out.ar.ready,
-    io.out.r.ready
-  )
-  printf(p"out.aw.bits: ${io.out.aw.bits}\n")
-  printf(p"out.w.bits: ${io.out.w.bits}\n")
-  printf(p"out.b.bits: ${io.out.b.bits}\n")
-  printf(p"out.ar.bits: ${io.out.ar.bits}\n")
-  printf(p"out.r.bits: ${io.out.r.bits}\n")
+  printf(p"io.in(0)=\n${io.in(0)}\n")
+  printf(p"io.in(1)=\n${io.in(1)}\n")
+  printf(p"io.out=\n${io.out}\n")
   printf("--------------------------------\n")
 }
 
