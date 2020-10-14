@@ -14,12 +14,14 @@ class MemReq(val dataWidth: Int = 64) extends Bundle with phvntomParams { // wri
   val memtype = Output(UInt(xlen.W))
 
   // override def cloneType: this.type = new MemIO(dataWidth).asInstanceOf[this.type]
+  override def toPrintable: Printable = p"addr = 0x${Hexadecimal(addr)}, wen = ${wen}, memtype = ${memtype}\n\tdata = 0x${Hexadecimal(data)}"
 }
 
 class MemResp(val dataWidth: Int = 64) extends Bundle with phvntomParams { // read
   val data = Output(UInt(dataWidth.W))
 
   // override def cloneType: this.type = new MemIO(dataWidth).asInstanceOf[this.type]
+  override def toPrintable: Printable = p"data = 0x${Hexadecimal(data)}"
 }
 
 class MemIO(val dataWidth: Int = 64) extends Bundle with phvntomParams {
@@ -27,6 +29,7 @@ class MemIO(val dataWidth: Int = 64) extends Bundle with phvntomParams {
   val resp = Decoupled(new MemResp(dataWidth))
 
   // override def cloneType: this.type = new MemIO(dataWidth).asInstanceOf[this.type]
+  override def toPrintable: Printable = p"req: valid=${req.valid}, ready=${req.ready}, ${req.bits}\nresp: valid=${resp.valid}, ready=${resp.ready}, ${resp.bits}\n"
 }
 
 class SimMemIO extends Bundle with phvntomParams {

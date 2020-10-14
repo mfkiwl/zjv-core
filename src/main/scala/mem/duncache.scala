@@ -42,8 +42,8 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
   io.out.aw.bits.id := 0.U
   io.out.ar.bits.id := 0.U
 
-  val readBeatCnt = Counter(burst_length + 1)
-  val writeBeatCnt = Counter(burst_length + 1)
+  val readBeatCnt = Counter(burst_length)
+  val writeBeatCnt = Counter(burst_length)
 
   when(state === s_IDLE) {
     when(io.in.req.valid) {
@@ -138,22 +138,8 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
     p"writeBeatCnt.value=${writeBeatCnt.value}, readBeatCnt.value=${readBeatCnt.value}\n"
   )
   printf(p"data_vec=${data_vec}\n")
-  printf(
-    "req.valid = %d, req.ready = %d, req.addr = %x, req.wen = %d, req.memtype = %d\n",
-    io.in.req.valid,
-    io.in.req.ready,
-    io.in.req.bits.addr,
-    io.in.req.bits.wen,
-    io.in.req.bits.memtype
-  )
-  printf("req.data = %x\n", io.in.req.bits.data)
-  printf(
-    "resp.valid = %d, resp.ready = %d, resp.data = %x\n",
-    io.in.resp.valid,
-    io.in.resp.ready,
-    io.in.resp.bits.data
-  )
-  printf(p"io.out=\n${io.out}\n")
+  printf(p"io.in: \n${io.in}\n")
+  printf(p"io.out: \n${io.out}\n")
   // printf(
   //   "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
   //   io.out.aw.valid,

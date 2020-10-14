@@ -180,8 +180,9 @@ class ICacheSimple extends Module with ICacheParameters {
       new_meta.tag := s1_tag
       metaArray(s1_index) := new_meta
       printf(
-        p"icache read: offset=${offset}, mask=${mask}, realdata=${realdata}\n"
-      )
+          p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
+        )
+      printf(p"\ttarget_data=${target_data}\n")
     }
   }
 
@@ -199,36 +200,8 @@ class ICacheSimple extends Module with ICacheParameters {
     p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
   )
   printf(p"----------${cacheName} io.in----------\n")
-  printf(
-    "req.valid = %d, req.ready = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d\n",
-    io.in.req.valid,
-    io.in.req.ready,
-    io.in.req.bits.addr,
-    io.in.req.bits.data,
-    io.in.req.bits.wen,
-    io.in.req.bits.memtype
-  )
-  printf(
-    "resp.valid = %d, resp.ready = %d, resp.data = %x\n",
-    io.in.resp.valid,
-    io.in.resp.ready,
-    io.in.resp.bits.data
-  )
+  printf(p"${io.in}\n")
   printf(p"----------${cacheName} io.mem----------\n")
-  printf(
-    "req.valid = %d, req.ready = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d\n",
-    io.mem.req.valid,
-    io.mem.req.ready,
-    io.mem.req.bits.addr,
-    io.mem.req.bits.data,
-    io.mem.req.bits.wen,
-    io.mem.req.bits.memtype
-  )
-  printf(
-    "resp.valid = %d, resp.ready = %d, resp.data = %x\n",
-    io.mem.resp.valid,
-    io.mem.resp.ready,
-    io.mem.resp.bits.data
-  )
+  printf(p"${io.mem}\n")
   printf("-----------------------------------------------\n")
 }

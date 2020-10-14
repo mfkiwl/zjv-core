@@ -116,7 +116,7 @@ class DCacheSimple extends Module with CacheParameters {
   io.mem.req.bits.memtype := ControlConst.memOcto
   io.mem.resp.ready := s1_valid && state === s_memReadResp
 
-  io.mmio.req.valid := s1_valid && state === s_mmioReq
+  io.mmio.req.valid := s1_valid && (state === s_mmioReq || state === s_mmioResp)
   io.mmio.req.bits.addr := s1_addr
   io.mmio.req.bits.data := s1_data
   io.mmio.req.bits.wen := s1_wen
@@ -152,7 +152,7 @@ class DCacheSimple extends Module with CacheParameters {
 
   when(!s1_valid) { state := s_idle }
 
-  val fetched_data = Mux(ismmio, io.mmio.resp.bits.data, io.mem.resp.bits.data)
+  val fetched_data = io.mem.resp.bits.data
   val fetched_vec = Wire(new CacheLineData)
   // fetched_vec.data := fetched_data
   for (i <- 0 until nLine) {
@@ -219,43 +219,47 @@ class DCacheSimple extends Module with CacheParameters {
       }
     }.otherwise {
       when(hit || io.mem.resp.valid || io.mmio.resp.valid) {
+        val result_data = Mux(ismmio, io.mmio.resp.bits.data, target_data.data(s1_lineoffset))
         val offset = s1_wordoffset << 3
         val mask = WireInit(UInt(xlen.W), 0.U)
         val realdata = WireInit(UInt(xlen.W), 0.U)
         switch(s1_memtype) {
-          is(memXXX) { result := target_data.data(s1_lineoffset) }
+          is(memXXX) { result := result_data }
           is(memByte) {
             mask := Fill(8, 1.U(1.W)) << offset
-            realdata := (target_data.data(s1_lineoffset) & mask) >> offset
+            realdata := (result_data & mask) >> offset
             result := Cat(Fill(56, realdata(7)), realdata(7, 0))
           }
           is(memHalf) {
             mask := Fill(16, 1.U(1.W)) << offset
-            realdata := (target_data.data(s1_lineoffset) & mask) >> offset
+            realdata := (result_data & mask) >> offset
             result := Cat(Fill(48, realdata(15)), realdata(15, 0))
           }
           is(memWord) {
             mask := Fill(32, 1.U(1.W)) << offset
-            realdata := (target_data.data(s1_lineoffset) & mask) >> offset
+            realdata := (result_data & mask) >> offset
             result := Cat(Fill(32, realdata(31)), realdata(31, 0))
           }
-          is(memDouble) { result := target_data.data(s1_lineoffset) }
+          is(memDouble) { result := result_data }
           is(memByteU) {
             mask := Fill(8, 1.U(1.W)) << offset
-            realdata := (target_data.data(s1_lineoffset) & mask) >> offset
+            realdata := (result_data & mask) >> offset
             result := Cat(Fill(56, 0.U), realdata(7, 0))
           }
           is(memHalfU) {
             mask := Fill(16, 1.U(1.W)) << offset
-            realdata := (target_data.data(s1_lineoffset) & mask) >> offset
+            realdata := (result_data & mask) >> offset
             result := Cat(Fill(48, 0.U), realdata(15, 0))
           }
           is(memWordU) {
             mask := Fill(32, 1.U(1.W)) << offset
-            realdata := (target_data.data(s1_lineoffset) & mask) >> offset
+            realdata := (result_data & mask) >> offset
             result := Cat(Fill(32, 0.U), realdata(31, 0))
           }
         }
+        printf(
+          p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
+        )
         when(!ismmio) {
           dataArray(s1_index) := target_data
           val new_meta = Wire(new MetaData)
@@ -263,9 +267,6 @@ class DCacheSimple extends Module with CacheParameters {
           new_meta.dirty := false.B
           new_meta.tag := s1_tag
           metaArray(s1_index) := new_meta
-          printf(
-            p"dcache read: offset=${offset}, mask=${mask}, realdata=${realdata}\n"
-          )
           printf(
             p"dcache write: s1_index=0x${Hexadecimal(s1_index)}, new_meta=${new_meta}\n"
           )
@@ -298,54 +299,13 @@ class DCacheSimple extends Module with CacheParameters {
   printf(p"cacheline_meta=${cacheline_meta}\n")
   printf(p"dataArray(s1_index)=${dataArray(s1_index)}\n")
   printf(p"metaArray(s1_index)=${metaArray(s1_index)}\n")
+  printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
+  printf(p"fetched_vec=${fetched_vec}\n")
   printf(p"----------${cacheName} io.in----------\n")
-  printf(
-    "req.valid = %d, req.ready = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d\n",
-    io.in.req.valid,
-    io.in.req.ready,
-    io.in.req.bits.addr,
-    io.in.req.bits.data,
-    io.in.req.bits.wen,
-    io.in.req.bits.memtype
-  )
-  printf(
-    "resp.valid = %d, resp.ready = %d, resp.data = %x\n",
-    io.in.resp.valid,
-    io.in.resp.ready,
-    io.in.resp.bits.data
-  )
+  printf(p"${io.in}\n")
   printf(p"----------${cacheName} io.mem----------\n")
-  printf(
-    "req.valid = %d, req.ready = %d, req.addr = %x, req.wen = %d, req.memtype = %d\n",
-    io.mem.req.valid,
-    io.mem.req.ready,
-    io.mem.req.bits.addr,
-    io.mem.req.bits.wen,
-    io.mem.req.bits.memtype
-  )
-  printf("req.data = %x\n", io.mem.req.bits.data)
-  printf(
-    "resp.valid = %d, resp.ready = %d, resp.data = %x\n",
-    io.mem.resp.valid,
-    io.mem.resp.ready,
-    io.mem.resp.bits.data
-  )
-  printf("-----------------------------------------------\n")
+  printf(p"${io.mem}\n")
   printf(p"----------${cacheName} io.mmio----------\n")
-  printf(
-    "req.valid = %d, req.ready = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d\n",
-    io.mmio.req.valid,
-    io.mmio.req.ready,
-    io.mmio.req.bits.addr,
-    io.mmio.req.bits.data,
-    io.mmio.req.bits.wen,
-    io.mmio.req.bits.memtype
-  )
-  printf(
-    "resp.valid = %d, resp.ready = %d, resp.data = %x\n",
-    io.mmio.resp.valid,
-    io.mmio.resp.ready,
-    io.mmio.resp.bits.data
-  )
+  printf(p"${io.mmio}\n")
   printf("-----------------------------------------------\n")
 }
