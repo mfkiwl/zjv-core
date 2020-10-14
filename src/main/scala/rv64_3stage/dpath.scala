@@ -391,12 +391,8 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.memtype := wb_memType
   io.dmem.resp.ready := wb_memType.orR
 
-<<<<<<< HEAD
   regFile.io.wen := ((wen === wenReg &&
     csrFile.io.expt === false.B) ||
-=======
-  regFile.io.wen := ((wen === wenReg && mem_addr_misaligned === false.B && mem_access_fault === false.B && !exe_stall) ||
->>>>>>> [bus/cache] fix some bugs about mmio
     wen === wenCSRW || wen === wenCSRC || wen === wenCSRS)
   regFile.io.rd_addr := rd_addr
   regFile.io.rd_data := wb_data
