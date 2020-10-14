@@ -101,12 +101,14 @@ class ICacheSimple extends Module with ICacheParameters {
 
   io.in.resp.valid := s1_valid && (hit || io.mem.resp.valid)
   io.in.resp.bits.data := result
+  io.in.req.ready := state === s_idle
 
   io.mem.req.valid := s1_valid && state === s_memReadReq
   io.mem.req.bits.addr := read_address
   io.mem.req.bits.data := cacheline_data.data(victim_index).asUInt
   io.mem.req.bits.wen := false.B
   io.mem.req.bits.memtype := ControlConst.memDouble
+  io.mem.resp.ready := s1_valid && state === s_memReadResp
 
   switch(state) {
     is(s_idle) {
@@ -198,24 +200,34 @@ class ICacheSimple extends Module with ICacheParameters {
   )
   printf(p"----------${cacheName} io.in----------\n")
   printf(
-    "req.valid = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d, resp.valid = %d, resp.data = %x\n",
+    "req.valid = %d, req.ready = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d\n",
     io.in.req.valid,
+    io.in.req.ready,
     io.in.req.bits.addr,
     io.in.req.bits.data,
     io.in.req.bits.wen,
-    io.in.req.bits.memtype,
+    io.in.req.bits.memtype
+  )
+  printf(
+    "resp.valid = %d, resp.ready = %d, resp.data = %x\n",
     io.in.resp.valid,
+    io.in.resp.ready,
     io.in.resp.bits.data
   )
   printf(p"----------${cacheName} io.mem----------\n")
   printf(
-    "req.valid = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d, resp.valid = %d, resp.data = %x\n",
+    "req.valid = %d, req.ready = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d\n",
     io.mem.req.valid,
+    io.mem.req.ready,
     io.mem.req.bits.addr,
     io.mem.req.bits.data,
     io.mem.req.bits.wen,
-    io.mem.req.bits.memtype,
+    io.mem.req.bits.memtype
+  )
+  printf(
+    "resp.valid = %d, resp.ready = %d, resp.data = %x\n",
     io.mem.resp.valid,
+    io.mem.resp.ready,
     io.mem.resp.bits.data
   )
   printf("-----------------------------------------------\n")

@@ -54,4 +54,5 @@ class AXI4Bundle extends AXI4BundleBase with AXI4Parameters {
   val b = Flipped(Decoupled(new AXI4BundleB)) // write response
   val ar = Decoupled(new AXI4BundleAR) // address read
   val r = Flipped(Decoupled(new AXI4BundleR)) // data read
+  override def toPrintable: Printable = p"aw: valid=${aw.valid}, ready=${aw.ready}, ${aw.bits}\nw: valid=${w.valid}, ready=${w.ready}, ${w.bits}\nb: valid=${b.valid}, ready=${b.ready}, ${b.bits}\nar: valid=${ar.valid}, ready=${ar.ready}, ${ar.bits}\nr: valid=${r.valid}, ready=${r.ready}, ${r.bits}\n"
 }

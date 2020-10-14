@@ -23,8 +23,8 @@ class MemResp(val dataWidth: Int = 64) extends Bundle with phvntomParams { // re
 }
 
 class MemIO(val dataWidth: Int = 64) extends Bundle with phvntomParams {
-  val req = Flipped(Valid(new MemReq(dataWidth)))
-  val resp = Valid(new MemResp(dataWidth))
+  val req = Flipped(Decoupled(new MemReq(dataWidth)))
+  val resp = Decoupled(new MemResp(dataWidth))
 
   // override def cloneType: this.type = new MemIO(dataWidth).asInstanceOf[this.type]
 }

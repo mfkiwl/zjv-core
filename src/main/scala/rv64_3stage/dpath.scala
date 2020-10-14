@@ -222,6 +222,7 @@ class DataPath extends Module with phvntomParams {
   io.imem.req.valid := !io.ctrl.bubble && !inst_access_fault
   io.imem.req.bits.wen := false.B
   io.imem.req.bits.memtype := memWordU
+  io.imem.resp.ready := true.B
 
   when(!exe_stall) {
     exe_pc := if_pc
@@ -377,6 +378,7 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.valid := wb_memType.orR && mem_addr_misaligned === false.B && mem_access_fault === false.B
   io.dmem.req.bits.wen := wen === wenMem
   io.dmem.req.bits.memtype := wb_memType
+  io.dmem.resp.ready := wb_memType.orR
 
   regFile.io.wen := ((wen === wenReg && mem_addr_misaligned === false.B && mem_access_fault === false.B) ||
     wen === wenCSRW || wen === wenCSRC || wen === wenCSRS)
