@@ -8,6 +8,7 @@ import chisel3.util.experimental.BoringUtils
 import common._
 import mem._
 import device._
+import utils._
 
 class BrCondIO extends Bundle with phvntomParams {
   val rs1 = Input(UInt(xlen.W))
@@ -209,7 +210,7 @@ class DataPath extends Module with phvntomParams {
     if_pc := csrFile.io.evec
   }.elsewhen(csrFile.io.ret) {
     if_pc := csrFile.io.epc
-  }.elsewhen(brCond.io.branch || io.ctrl.pcSelect === pcJump) {
+  }.elsewhen(!exe_stall && (brCond.io.branch || io.ctrl.pcSelect === pcJump)) {
     if_pc := Cat(alu.io.out(xlen - 1, 1), Fill(1, 0.U))
   }.elsewhen(!if_stall) {
     if_pc := if_npc
@@ -295,13 +296,13 @@ class DataPath extends Module with phvntomParams {
   brCond.io.rs1 := rs1
   brCond.io.rs2 := rs2
   brCond.io.brType := io.ctrl.brType
-  // printf(
-  //   "br_rs1 = %x, br_rs2 = %x, br_type = %d, br_branch = %d\n",
-  //   brCond.io.rs1,
-  //   brCond.io.rs2,
-  //   brCond.io.brType,
-  //   brCond.io.branch
-  // )
+  printf(
+    "br_rs1 = %x, br_rs2 = %x, br_type = %d, br_branch = %d\n",
+    brCond.io.rs1,
+    brCond.io.rs2,
+    brCond.io.brType,
+    brCond.io.branch
+  )
 
   alu.io.opType := io.ctrl.aluType
   alu.io.a := Mux(io.ctrl.ASelect === APC, exe_pc, rs1)
@@ -380,10 +381,17 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.memtype := wb_memType
   io.dmem.resp.ready := wb_memType.orR
 
-  regFile.io.wen := ((wen === wenReg && mem_addr_misaligned === false.B && mem_access_fault === false.B) ||
+  regFile.io.wen := ((wen === wenReg && mem_addr_misaligned === false.B && mem_access_fault === false.B && !exe_stall) ||
     wen === wenCSRW || wen === wenCSRC || wen === wenCSRS)
   regFile.io.rd_addr := rd_addr
   regFile.io.rd_data := wb_data
+  printf(p"[${GTimer()}] regFile----------\n")
+  printf(p"rs1_addr=${Hexadecimal(regFile.io.rs1_addr)}, rs1_data=${Hexadecimal(regFile.io.rs1_data)}\n")
+  printf(p"rs1_addr=${Hexadecimal(regFile.io.rs2_addr)}, rs1_data=${Hexadecimal(regFile.io.rs2_data)}\n")
+  printf(
+    p"wen=${regFile.io.wen}, rd_addr=${Hexadecimal(regFile.io.rd_addr)}, rd_data=${Hexadecimal(regFile.io.rd_data)}\n"
+  )
+  printf("------------------------------\n")
 
   // normal csr operations
   csrFile.io.stall := exe_stall
@@ -441,6 +449,7 @@ class DataPath extends Module with phvntomParams {
 
     if (pipeTrace) {
       // when (!stall) {
+      printf(p"[${GTimer()}] Stage Info----------\n")
       printf("      if stage \t\t exe stage \t\t wb stage \t\t debug stage\n")
       printf("pc    %x\t %x\t %x\t %x \n", if_pc, exe_pc, wb_pc, dtest_pc)
       printf(
@@ -456,6 +465,7 @@ class DataPath extends Module with phvntomParams {
         Mux(exe_stall, Str("*"), Str(" ")),
         Mux(dtest_wbvalid, Str("*"), Str(" "))
       )
+      printf("------------------------------\n")
     }
   }
 }

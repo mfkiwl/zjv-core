@@ -83,6 +83,11 @@ class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
       o.b.ready := v
     }
   }
+  for (i <- 0 until addressSpace.length) {
+    when(woutSelIdx === i.U) { // minus base addr
+      io.out(i).aw.bits.addr := io.in.aw.bits.addr - addressSpace(i)._1.U
+    }
+  }
 
   switch(w_state) {
     is(s_idle) {
@@ -100,32 +105,13 @@ class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   io.in.aw.ready := (woutSel.aw.ready && w_state === s_idle) || wreqInvalidAddr
   io.in.w.ready := woutSel.w.ready
 
-  // printf(p"[${GTimer()}]: Xbar1toN Debug Start-----------\n")
-  // printf(p"r_state = ${r_state}, routSelVec = ${routSelVec}, routSelIdx = ${routSelIdx}, rreqInvalidAddr = ${rreqInvalidAddr}\n")
-  // printf(
-  //   "ar.valid = %d, r.valid = %d, ar.ready = %d, r.ready = %d\n",
-  //   routSel.ar.valid,
-  //   routSel.r.valid,
-  //   routSel.ar.ready,
-  //   routSel.r.ready
-  // )
-  // printf(p"routSel.ar.bits: ${routSel.ar.bits}\n")
-  // printf(p"routSel.r.bits: ${routSel.r.bits}\n")
-  // printf("--------------------------------------------------------\n")
-  // printf(p"w_state = ${w_state}, woutSelVec = ${woutSelVec}, woutSelIdx = ${woutSelIdx}, wreqInvalidAddr = ${wreqInvalidAddr}\n")
-  // printf(
-  //   "aw.valid = %d, w.valid = %d, b.valid = %d, aw.ready = %d, w.ready = %d, b.ready = %d\n",
-  //   woutSel.aw.valid,
-  //   woutSel.w.valid,
-  //   woutSel.b.valid,
-  //   woutSel.aw.ready,
-  //   woutSel.w.ready,
-  //   woutSel.b.ready
-  // )
-  // printf(p"woutSel.aw.bits: ${woutSel.aw.bits}\n")
-  // printf(p"woutSel.w.bits: ${woutSel.w.bits}\n")
-  // printf(p"woutSel.b.bits: ${woutSel.b.bits}\n")
-  // printf("-----------Xbar1toN Debug Done-----------\n")
+  printf(p"[${GTimer()}]: Xbar1toN Debug Start-----------\n")
+  printf(p"r_state = ${r_state}, routSelVec = ${routSelVec}, routSelIdx = ${routSelIdx}, rreqInvalidAddr = ${rreqInvalidAddr}\n")
+  printf(p"routSel: \n${woutSel}\n")
+  printf("--------------------------------------------------------\n")
+  printf(p"w_state = ${w_state}, woutSelVec = ${woutSelVec}, woutSelIdx = ${woutSelIdx}, wreqInvalidAddr = ${wreqInvalidAddr}\n")
+  printf(p"woutSel: \n${woutSel}\n")
+  printf("-----------Xbar1toN Debug Done-----------\n")
 
   // // when(!(!io.in.req.valid || routSelVec.asUInt.orR) || !(!(io.in.req.valid && routSelVec.asUInt.andR))){
   // //   Debug(){
@@ -280,9 +266,9 @@ class CrossbarNto1(n: Int) extends Module {
   printf(
     p"r_state=${r_state},inflightSrc_r=${inflightSrc_r},w_state=${w_state},inflightSrc_w=${inflightSrc_w}\n"
   )
-  printf(p"io.in(0)=\n${io.in(0)}\n")
-  printf(p"io.in(1)=\n${io.in(1)}\n")
-  printf(p"io.out=\n${io.out}\n")
+  printf(p"io.in(0): \n${io.in(0)}\n")
+  printf(p"io.in(1): \n${io.in(1)}\n")
+  printf(p"io.out: \n${io.out}\n")
   printf("--------------------------------\n")
 }
 
