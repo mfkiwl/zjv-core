@@ -3,85 +3,60 @@
 #include <stdlib.h>
 #include <string.h>
 #include "uart.h"
+#include <fstream>
+#include <iostream>
 
-#define QUEUE_SIZE 1024
-static char queue[QUEUE_SIZE] = "ps\n";
-static int front = 0, rear = 3;
-static char interrupt_enable;     // b001
-static char interrupt_status = 1; // b010 R
-static char fifo_control;         // b010 W
-static char line_control;         // b011
-static char modem_control;        // b100
-static char line_status = '\x61'; // b101 R
-static char modem_status;         // b110 R
-static char scratch_pad;          // b111
-static char divisor_latch_low = '\x01';  // b000
-static char divisor_latch_high = '\x01'; // b001
-static char prescalar_division;          // b101 W
+std::ifstream file_fifo; 
 
-#define read_uart_reg(name) \
-    char read_##name() {    \
-        return name;        \
-    }
+static char interrupt_enable;               // b001
+static char interrupt_status = 1;           // b010 R
+static char fifo_control;                   // b010 W
+static char line_control;                   // b011
+static char modem_control;                  // b100
+static char line_status = '\x61';           // b101 R
+static char modem_status;                   // b110 R
+static char scratch_pad;                    // b111
+static char divisor_latch_low = '\x01';     // b000
+static char divisor_latch_high = '\x01';    // b001
+static char prescalar_division;             // b101 W
 
-read_uart_reg(interrupt_enable);
-read_uart_reg(interrupt_status);
-read_uart_reg(fifo_control);
-read_uart_reg(line_control);
-read_uart_reg(modem_control);
-read_uart_reg(line_status);
-read_uart_reg(modem_status);
-read_uart_reg(scratch_pad);
-read_uart_reg(divisor_latch_low);
-read_uart_reg(divisor_latch_high);
-read_uart_reg(prescalar_division);
+void init_uart (const std::string file_path) {
 
+    std::ofstream init_cmd;
+    init_cmd.open (file_path, std::ios::out | std::ios::trunc);
+    init_cmd << "ps\n";
+    init_cmd.close();
 
-static void uart_enqueue(char ch)
-{
-    int next = (rear + 1) % QUEUE_SIZE;
-    if (next != front)
-    {
-        queue[rear] = ch;
-        rear = next;
+    file_fifo.open(file_path);
+    if (file_fifo.is_open()) {
+      printf("[UART] open uart file fifo %s\n", file_path.c_str());
     }
 }
 
-static int uart_dequeue(void)
-{
-    int k = 0;
-    if (front != rear)
-    {
-        k = queue[front];
-        front = (front + 1) % QUEUE_SIZE;
+static void uart_dequeue(char* data) {
+    if (file_fifo.is_open()) {
+        if (!file_fifo.eof()) 
+            file_fifo.get(*data);
+        else 
+            file_fifo.close();
     }
-    return k;
 }
 
 extern "C" void uart_getc(char addr, char *data) // read
-// extern "C" void uart_getc(char addr, uint64_t *data) // read
 {
     switch (addr)
     {
     case UART_RHR: // 0
         if (line_control < 0)
-        {
             *data = divisor_latch_low;
-        }
         else
-        {
-            *data = uart_dequeue();
-        }
+            uart_dequeue(data);
         break;
     case UART_IER: // 1
         if (line_control < 0)
-        {
             *data = divisor_latch_high;
-        }
         else
-        {
             *data = interrupt_enable;
-        }
         break;
     case UART_ISR: // 2
         *data = interrupt_status;
@@ -93,7 +68,10 @@ extern "C" void uart_getc(char addr, char *data) // read
         *data = modem_control;
         break;
     case UART_LSR: // 5
-        *data = (0x40 | 0x20 | (front != rear));
+        *data = 0x40 | 0x20;
+        if (file_fifo.is_open()) {
+            *data |= !file_fifo.eof(); 
+        }
         break;
     case UART_MSR: // 6
         *data = modem_status;
@@ -107,23 +85,6 @@ extern "C" void uart_getc(char addr, char *data) // read
     }
     // printf("In uart_getc: addr = %d, data = %d\n", addr, *data);
 
-// #define read(name, offset) ((uint64_t)read_##name << (offset * 8))
-
-//     if (line_control < 0) {
-//         *data = read(prescalar_division, UART_PSD) | 
-//                 read(divisor_latch_high, UART_DLM) |
-//                 read(divisor_latch_low, UART_DLL);
-//     }
-//     else {
-//         *data = read(scratch_pad, UART_SPR) |
-//                 read(modem_status, UART_MSR) |
-//                 read(line_status, UART_LSR) |
-//                 read(modem_control, UART_MCR) |
-//                 read(line_control, UART_LCR) |
-//                 read(interrupt_status, UART_ISR) |
-//                 read(interrupt_enable, UART_IER) |
-//                 ((uint64_t)uart_dequeue() << (UART_RHR * 8));       
-//     }
 }
 
 extern "C" void uart_putc(char addr, char data) // write
@@ -132,25 +93,17 @@ extern "C" void uart_putc(char addr, char data) // write
     {
     case UART_THR: // 0
         if (line_control < 0)
-        {
             divisor_latch_low = data;
-        }
-        else
-        {
+        else {
             fprintf(stderr, "%c", data);
             fflush(stderr);
-            // uart_enqueue(data);
         }
         break;
     case UART_IER: // 1
         if (line_control < 0)
-        {
             divisor_latch_high = data;
-        }
         else
-        {
             interrupt_enable = data;
-        }
         break;
     case UART_FCR: // 2
         fifo_control = data;
@@ -163,9 +116,8 @@ extern "C" void uart_putc(char addr, char data) // write
         break;
     case UART_PSD: // 5
         if (line_control < 0)
-        {
             prescalar_division = data & 0x0f;
-        }
+        break;
     case UART_SPR: // 7
         scratch_pad = data;
         break;

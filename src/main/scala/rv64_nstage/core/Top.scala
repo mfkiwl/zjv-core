@@ -1,11 +1,11 @@
-package rv64_3stage
+package rv64_nstage.core
 
 import chisel3._
 import chisel3.stage._
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
-
 import common._
+import rv64_nstage.control.ControlConst
 
 class DiffTestIO extends Bundle with phvntomParams {
   val regs = Output(Vec(regNum, UInt(xlen.W)))
@@ -15,6 +15,7 @@ class DiffTestIO extends Bundle with phvntomParams {
   val csr_cmd = Output(UInt(ControlConst.wenBits.W))
   val tick = Output(Bool())
   val int = Output(Bool())
+  val mcycler = Output(UInt(xlen.W))
 }
 
 class TopIO extends Bundle with phvntomParams {
@@ -36,6 +37,7 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.valid,   "difftestValid")
   BoringUtils.addSink(difftest.csr_cmd, "difftestCSRCmd")
   BoringUtils.addSink(difftest.int, "difftestInt")
+  BoringUtils.addSink(difftest.mcycler, "difftestmcycler")
 
   val poweroff = WireInit(0.U(xlen.W))
   BoringUtils.addSink(poweroff, "poweroff")
@@ -44,6 +46,8 @@ class Top extends Module with phvntomParams {
   val msip = WireInit(false.B)
   BoringUtils.addSink(mtip, "mtip")
   BoringUtils.addSink(msip, "msip")
+
+  
 
   io.difftest := difftest
   io.poweroff := poweroff
@@ -55,10 +59,10 @@ object elaborate {
 
     if (args.isEmpty)
       (new chisel3.stage.ChiselStage).execute(
-      Array("-td", "build/verilog/"+packageName, "-X", "verilog"),
-      Seq(ChiselGeneratorAnnotation(() => new Top)))
+        Array("-td", "build/verilog/"+packageName, "-X", "verilog"),
+        Seq(ChiselGeneratorAnnotation(() => new Top)))
     else
       (new chisel3.stage.ChiselStage).execute(args,
-      Seq(ChiselGeneratorAnnotation(() => new Top)))    
+        Seq(ChiselGeneratorAnnotation(() => new Top)))
   }
 }

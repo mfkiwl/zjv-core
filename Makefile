@@ -5,13 +5,13 @@
 WORK_DIR	:=	$(CURDIR)/build
 SRC_DIR		:=	$(CURDIR)/src
 
-TARGET_CORE ?= rv64_3stage
+TARGET_CORE ?= rv64_nstage.core
 VSRC_DIR := $(WORK_DIR)/verilog/$(TARGET_CORE)
 
 # Test ELF 
-TEST_SRC_DIR  := $(CURDIR)/test
-TEST_ELF_DIR  := $(WORK_DIR)/test
-TEST_ELF_LIST := $(sort $(wildcard $(TEST_ELF_DIR)/*))
+TEST_SRC_DIR  := $(CURDIR)/zjv-soc-test
+TEST_DST_DIR  := $(WORK_DIR)/test
+TEST_ELF_LIST := $(sort $(wildcard $(TEST_DST_DIR)/*))
 
 
 # DiffTest
@@ -76,8 +76,8 @@ $(VERILATOR_DEST_DIR)/emulator: $(VSRC_DIR)/Top.v $(libspike) $(VERILATOR_SOURCE
 	$(MAKE) -C $(VERILATOR_DEST_DIR)/build -f $(VERILATOR_DEST_DIR)/build/VTop.mk
 
 generate_testcase:
-	mkdir -p $(TEST_ELF_DIR)
-	$(MAKE) -C $(TEST_SRC_DIR)
+	mkdir -p $(TEST_DST_DIR)
+	$(MAKE) -C $(TEST_SRC_DIR) DEST_DIR=$(TEST_DST_DIR)
 
 how_verilator_work:
 	mkdir -p $(VERILATOR_DEST_DIR)/Hello

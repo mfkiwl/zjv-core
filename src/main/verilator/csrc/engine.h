@@ -34,19 +34,11 @@
 #define PROGRAM_PASS 0xc001babe
 #define PROGRAM_FAIL 0xdeadbabe
 
+extern void init_uart(const std::string img);
+extern void init_ram(const std::string img);
+
 class dtengine_t {
 public:
-    sim_t*  spike;
-    emu_t*  zjv;
-
-    difftest_sim_state_t sim_state;
-    difftest_emu_state_t emu_state;
-
-    reg_t trace_count;
-    #if VM_TRACE
-        VerilatedVcdC* tfp;
-    #endif
-
     sim_t* sim_init(std::string elfpath);
     emu_t* emu_init(std::string elfpath);
 
@@ -65,15 +57,31 @@ public:
 
     unsigned long emu_get_pc();
     unsigned long emu_get_inst();
-    unsigned long emu_get_poweroff();
-    bool emu_get_tick();
+    unsigned long emu_get_int();
+    unsigned long emu_get_mcycle();
 
     unsigned long sim_get_pc();
     void sim_sync_cycle();
+    void sim_set_mip();
 
     bool is_finish();
     unsigned long emu_difftest_valid();
+    unsigned long emu_difftest_poweroff();
 
+    difftest_sim_state_t sim_state;
+    difftest_emu_state_t emu_state;
+
+    reg_t trace_count;
+
+private:
+    sim_t*  spike;
+    emu_t*  zjv;
+
+    #if VM_TRACE
+        VerilatedVcdC* tfp;
+    #endif
+
+    std::string file_fifo_path;
 };
 
 

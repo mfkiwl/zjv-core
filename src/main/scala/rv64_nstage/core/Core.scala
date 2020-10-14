@@ -1,9 +1,11 @@
-package rv64_3stage
+package rv64_nstage.core
 
 import chisel3._
 import chisel3.util._
 import common._
-import device._
+import rv64_nstage.control.ControlPath
+import rv64_nstage.fu.MemIO
+import rv64_nstage.register.InterruptIO
 
 trait phvntomParams {
   val xlen       = 64
@@ -11,7 +13,8 @@ trait phvntomParams {
   val regNum     = 32
   val regWidth   = log2Ceil(regNum)
   val diffTest   = true
-  val pipeTrace  = false
+  val pipeTrace  = true
+  val rtThread   = true
 }
 
 

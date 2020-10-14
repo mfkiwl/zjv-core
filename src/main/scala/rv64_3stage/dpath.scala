@@ -144,9 +144,11 @@ class DataPath extends Module with phvntomParams {
   val csrFile = Module(new CSR)
 
   /* Fetch / Execute Register */
+  val if_mtip = RegInit(Bool(), false.B)
   val exe_inst = RegInit(UInt(xlen.W), BUBBLE)
   val exe_pc = RegInit(UInt(xlen.W), 0.U)
   val exe_inst_access_fault = RegInit(Bool(), false.B)
+  val exe_mtip = RegInit(Bool(), false.B)
 
   /* Execute / Write Back Register */
   val inst_addr_misaligned = WireInit(false.B)
@@ -209,25 +211,30 @@ class DataPath extends Module with phvntomParams {
 
   when(csrFile.io.expt) {
     if_pc := csrFile.io.evec
+    if_mtip := io.int.mtip
   }.elsewhen(csrFile.io.ret) {
     if_pc := csrFile.io.epc
+    if_mtip := io.int.mtip
   }.elsewhen(!exe_stall && (brCond.io.branch || io.ctrl.pcSelect === pcJump)) {
     if_pc := Cat(alu.io.out(xlen - 1, 1), Fill(1, 0.U))
+    if_mtip := io.int.mtip
   }.elsewhen(!if_stall) {
     if_pc := if_npc
+    if_mtip := io.int.mtip
   }
 
   io.imem.req.bits.addr := if_pc
   io.imem.req.bits.data := DontCare
   val if_inst = io.imem.resp.bits.data
 
-  io.imem.req.valid := !io.ctrl.bubble && !inst_access_fault
+  io.imem.req.valid := !io.ctrl.bubble && !inst_access_fault && !csrFile.io.stall_req
   io.imem.req.bits.wen := false.B
   io.imem.req.bits.memtype := memWordU
   io.imem.resp.ready := true.B
 
   when(!exe_stall) {
     exe_pc := if_pc
+    exe_mtip := if_mtip
     when(
       io.ctrl.bubble || brCond.io.branch || istall || csrFile.io.expt || csrFile.io.ret
     ) {
@@ -397,8 +404,12 @@ class DataPath extends Module with phvntomParams {
   regFile.io.rd_addr := rd_addr
   regFile.io.rd_data := wb_data
   printf(p"[${GTimer()}] regFile----------\n")
-  printf(p"rs1_addr=${Hexadecimal(regFile.io.rs1_addr)}, rs1_data=${Hexadecimal(regFile.io.rs1_data)}\n")
-  printf(p"rs1_addr=${Hexadecimal(regFile.io.rs2_addr)}, rs1_data=${Hexadecimal(regFile.io.rs2_data)}\n")
+  printf(
+    p"rs1_addr=${Hexadecimal(regFile.io.rs1_addr)}, rs1_data=${Hexadecimal(regFile.io.rs1_data)}\n"
+  )
+  printf(
+    p"rs1_addr=${Hexadecimal(regFile.io.rs2_addr)}, rs1_data=${Hexadecimal(regFile.io.rs2_data)}\n"
+  )
   printf(
     p"wen=${regFile.io.wen}, rd_addr=${Hexadecimal(regFile.io.rd_addr)}, rd_data=${Hexadecimal(regFile.io.rd_data)}\n"
   )
@@ -443,22 +454,29 @@ class DataPath extends Module with phvntomParams {
 
     when(!exe_stall) {
       dtest_pc := wb_pc
-      dtest_inst := wb_inst
+      when(csrFile.io.expt) {
+        dtest_inst := BUBBLE
+      }.otherwise {
+        dtest_inst := wb_inst
+      }
       dtest_expt := csrFile.io.expt
     }
-    dtest_int := io.int.msip | io.int.mtip
+    dtest_int := csrFile.io.int // dtest_expt & (io.int.msip | io.int.mtip)
 
     BoringUtils.addSource(dtest_pc, "difftestPC")
     BoringUtils.addSource(dtest_inst, "difftestInst")
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
+    BoringUtils.addSource(dtest_int, "difftestInt")
 
     when(pipeTrace.B && dtest_expt) {
-      printf(
-        "[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n",
-        dtest_expt,
-        dtest_int
-      );
+      // printf("[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n", dtest_expt, dtest_int);
     }
+
+    // printf("Interrupt if %x exe: %x wb %x [EPC]] %x!\n", if_mtip, exe_mtip, wb_mtip, csrFile.io.epc);
+    when(dtest_int) {
+      // printf("Interrupt mtvec: %x stall_req %x!\n", csrFile.io.evec, csrFile.io.stall_req);
+    }
+//    printf("------->stall_req %x, imenreq_valid %x, imem_pc %x, csr_out %x, dmemaddr %x!\n", csrFile.io.stall_req, io.imem.req.valid, if_pc, csrFile.io.out, io.dmem.req.bits.addr)
 
     if (pipeTrace) {
       // when (!stall) {
@@ -472,6 +490,7 @@ class DataPath extends Module with phvntomParams {
         wb_inst,
         dtest_inst
       )
+      // printf("alu_in %x, alu_out %x, wb_alu %x\n", alu.io.a, alu.io.b, wb_alu)
       printf(
         "      if_stall [%c] \t exe_stall [%c] \t\t\t\t valid [%c]\n\n",
         Mux(if_stall, Str("*"), Str(" ")),

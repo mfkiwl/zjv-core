@@ -47,6 +47,7 @@ class AXI4UART(name: String = "uart") extends AXI4Slave(new UARTIO, name) with A
   // }
 
   // printf("In UART: wen = %d, waddr = %d, wdata = %d; ren = %d, raddr = %d, rdata = %d\n", uart_sim.io.wen, io.extra.get.offset(2, 0), uart_sim.io.wdata, uart_sim.io.ren, io.extra.get.offset(2, 0), rdata)
+
   
 //   val mapping = Map(
 //     RegMap(0x0, rx_tx, putc),
