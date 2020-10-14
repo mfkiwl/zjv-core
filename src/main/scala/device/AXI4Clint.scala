@@ -14,7 +14,7 @@ class ClintIO extends Bundle with phvntomParams {
 }
 
 class Clint extends AXI4Slave(new ClintIO) with AXI4Parameters {
-  val mtime = RegInit(-1.S(xlen.W).asUInt) // unit: us
+  val mtime = RegInit(0.S(xlen.W).asUInt) // unit: us
   val mtimecmp = RegInit(1024.U(xlen.W))
   val msip = RegInit(0.U(xlen.W))
   val sim = true
@@ -26,7 +26,7 @@ class Clint extends AXI4Slave(new ClintIO) with AXI4Parameters {
   val freq = RegInit(clk.U(16.W))
   val inc = RegInit(1.U(16.W))
 
-  val cnt = RegInit(94.U(16.W))
+  val cnt = RegInit(0.U(16.W))
   val nextCnt = cnt + 1.U
   cnt := Mux(nextCnt < freq, nextCnt, 0.U)
   val tick = (nextCnt === freq)
@@ -39,9 +39,6 @@ class Clint extends AXI4Slave(new ClintIO) with AXI4Parameters {
       mtime := mtime + inc
     }
   }
-
-  val ppcnt = RegInit(0.U(xlen.W))
-  ppcnt := ppcnt + 1.U
 
   val mapping = Map(
     RegMap(0x0, msip),
@@ -63,7 +60,7 @@ class Clint extends AXI4Slave(new ClintIO) with AXI4Parameters {
     MaskExpand(io.in.w.bits.strb)
   )
 
-//  printf("MY CLINT %x, cnt %x\n", mtime, ppcnt)
+//  printf("MY CLINT %x, cnt %x\n", mtime, cnt)
 
   io.extra.get.mtip := RegNext(mtime >= mtimecmp)
   io.extra.get.msip := RegNext(msip =/= 0.U)
