@@ -132,34 +132,13 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
     io.in.resp.bits.data := data_vec.asUInt
   }
 
-  printf(p"[${GTimer()}]: ${mname} Debug Start-----------\n")
-  printf("state = %d\n", state);
-  printf(
-    p"writeBeatCnt.value=${writeBeatCnt.value}, readBeatCnt.value=${readBeatCnt.value}\n"
-  )
-  printf(p"data_vec=${data_vec}\n")
-  printf(p"io.in: \n${io.in}\n")
-  printf(p"io.out: \n${io.out}\n")
+  // printf(p"[${GTimer()}]: ${mname} Debug Start-----------\n")
+  // printf("state = %d\n", state);
   // printf(
-  //   "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
-  //   io.out.aw.valid,
-  //   io.out.w.valid,
-  //   io.out.b.valid,
-  //   io.out.ar.valid,
-  //   io.out.r.valid
+  //   p"writeBeatCnt.value=${writeBeatCnt.value}, readBeatCnt.value=${readBeatCnt.value}\n"
   // )
-  // printf(
-  //   "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
-  //   io.out.aw.ready,
-  //   io.out.w.ready,
-  //   io.out.b.ready,
-  //   io.out.ar.ready,
-  //   io.out.r.ready
-  // )
-  // printf(p"aw.bits: ${io.out.aw.bits}\n")
-  // printf(p"w.bits: ${io.out.w.bits}\n")
-  // printf(p"b.bits: ${io.out.b.bits}\n")
-  // printf(p"ar.bits: ${io.out.ar.bits}\n")
-  // printf(p"r.bits: ${io.out.r.bits}\n")
-  printf("-----------DUncache Debug Done-----------\n")
+  // printf(p"data_vec=${data_vec}\n")
+  // printf(p"io.in: \n${io.in}\n")
+  // printf(p"io.out: \n${io.out}\n")
+  // printf("-----------DUncache Debug Done-----------\n")
 }

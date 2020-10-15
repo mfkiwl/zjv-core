@@ -27,22 +27,22 @@ class AXI4RAM(memByte: Int, name: String = "ram")
   val rdata = mem.io.rdata
   io.in.r.bits.data := RegEnable(rdata, ren)
 
-  printf(p"[${GTimer()}]: AXI4RAM Debug Start----------\n")
-  printf(
-    "waddr = %x, wIdx = %x, wdata = %x, wmask = %x, wen = %d, writeBeatCnt = %d\n",
-    waddr,
-    wIdx,
-    io.in.w.bits.data,
-    fullMask,
-    wen,
-    writeBeatCnt
-  )
-  printf(
-    "raddr = %x, rIdx = %x, rdata = %x, readBeatCnt = %d\n",
-    raddr,
-    rIdx,
-    rdata,
-    readBeatCnt
-  )
-  printf("----------AXI4RAM Debug Done----------\n")
+  // printf(p"[${GTimer()}]: AXI4RAM Debug Start----------\n")
+  // printf(
+  //   "waddr = %x, wIdx = %x, wdata = %x, wmask = %x, wen = %d, writeBeatCnt = %d\n",
+  //   waddr,
+  //   wIdx,
+  //   io.in.w.bits.data,
+  //   fullMask,
+  //   wen,
+  //   writeBeatCnt
+  // )
+  // printf(
+  //   "raddr = %x, rIdx = %x, rdata = %x, readBeatCnt = %d\n",
+  //   raddr,
+  //   rIdx,
+  //   rdata,
+  //   readBeatCnt
+  // )
+  // printf("----------AXI4RAM Debug Done----------\n")
 }

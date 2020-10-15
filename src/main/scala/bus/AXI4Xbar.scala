@@ -105,13 +105,13 @@ class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   io.in.aw.ready := (woutSel.aw.ready && w_state === s_idle) || wreqInvalidAddr
   io.in.w.ready := woutSel.w.ready
 
-  printf(p"[${GTimer()}]: Xbar1toN Debug Start-----------\n")
-  printf(p"r_state = ${r_state}, routSelVec = ${routSelVec}, routSelIdx = ${routSelIdx}, rreqInvalidAddr = ${rreqInvalidAddr}\n")
-  printf(p"routSel: \n${woutSel}\n")
-  printf("--------------------------------------------------------\n")
-  printf(p"w_state = ${w_state}, woutSelVec = ${woutSelVec}, woutSelIdx = ${woutSelIdx}, wreqInvalidAddr = ${wreqInvalidAddr}\n")
-  printf(p"woutSel: \n${woutSel}\n")
-  printf("-----------Xbar1toN Debug Done-----------\n")
+  // printf(p"[${GTimer()}]: Xbar1toN Debug Start-----------\n")
+  // printf(p"r_state = ${r_state}, routSelVec = ${routSelVec}, routSelIdx = ${routSelIdx}, rreqInvalidAddr = ${rreqInvalidAddr}\n")
+  // printf(p"routSel: \n${woutSel}\n")
+  // printf("--------------------------------------------------------\n")
+  // printf(p"w_state = ${w_state}, woutSelVec = ${woutSelVec}, woutSelIdx = ${woutSelIdx}, wreqInvalidAddr = ${wreqInvalidAddr}\n")
+  // printf(p"woutSel: \n${woutSel}\n")
+  // printf("-----------Xbar1toN Debug Done-----------\n")
 
   // // when(!(!io.in.req.valid || routSelVec.asUInt.orR) || !(!(io.in.req.valid && routSelVec.asUInt.andR))){
   // //   Debug(){
@@ -262,14 +262,14 @@ class CrossbarNto1(n: Int) extends Module {
     }
   }
 
-  printf(p"[${GTimer()}]: XbarNto1 Debug Start-----------\n")
-  printf(
-    p"r_state=${r_state},inflightSrc_r=${inflightSrc_r},w_state=${w_state},inflightSrc_w=${inflightSrc_w}\n"
-  )
-  printf(p"io.in(0): \n${io.in(0)}\n")
-  printf(p"io.in(1): \n${io.in(1)}\n")
-  printf(p"io.out: \n${io.out}\n")
-  printf("--------------------------------\n")
+  // printf(p"[${GTimer()}]: XbarNto1 Debug Start-----------\n")
+  // printf(
+  //   p"r_state=${r_state},inflightSrc_r=${inflightSrc_r},w_state=${w_state},inflightSrc_w=${inflightSrc_w}\n"
+  // )
+  // printf(p"io.in(0): \n${io.in(0)}\n")
+  // printf(p"io.in(1): \n${io.in(1)}\n")
+  // printf(p"io.out: \n${io.out}\n")
+  // printf("--------------------------------\n")
 }
 
 class AXI4Xbar(n: Int, addressSpace: List[(Long, Long)]) extends Module {

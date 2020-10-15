@@ -48,7 +48,7 @@ class PcGen extends Module with phvntomParams {
       pc := Cat(io.epc(xlen - 1, 1), Fill(1, 0.U))
     }.elsewhen(io.branch_jump && !io.inst_addr_misaligned) {
       pc := Cat(io.branch_pc(xlen - 1, 1), Fill(1, 0.U))
-    } elsewhen (last_stall) {
+    }.elsewhen (last_stall) {
       pc := Cat(pc_for_restore(xlen - 1, 1), Fill(1, 0.U))
     }.otherwise {
       pc := pc + 4.U

@@ -305,13 +305,13 @@ class DataPath extends Module with phvntomParams {
   brCond.io.rs1 := rs1
   brCond.io.rs2 := rs2
   brCond.io.brType := io.ctrl.brType
-  printf(
-    "br_rs1 = %x, br_rs2 = %x, br_type = %d, br_branch = %d\n",
-    brCond.io.rs1,
-    brCond.io.rs2,
-    brCond.io.brType,
-    brCond.io.branch
-  )
+  // printf(
+  //   "br_rs1 = %x, br_rs2 = %x, br_type = %d, br_branch = %d\n",
+  //   brCond.io.rs1,
+  //   brCond.io.rs2,
+  //   brCond.io.brType,
+  //   brCond.io.branch
+  // )
 
   alu.io.opType := io.ctrl.aluType
   alu.io.a := Mux(io.ctrl.ASelect === APC, exe_pc, rs1)
@@ -404,13 +404,13 @@ class DataPath extends Module with phvntomParams {
     wen === wenCSRW || wen === wenCSRC || wen === wenCSRS)
   regFile.io.rd_addr := rd_addr
   regFile.io.rd_data := wb_data
-  printf(p"[${GTimer()}] regFile----------\n")
-  printf(p"rs1_addr=${Hexadecimal(regFile.io.rs1_addr)}, rs1_data=${Hexadecimal(regFile.io.rs1_data)}\n")
-  printf(p"rs1_addr=${Hexadecimal(regFile.io.rs2_addr)}, rs1_data=${Hexadecimal(regFile.io.rs2_data)}\n")
-  printf(
-    p"wen=${regFile.io.wen}, rd_addr=${Hexadecimal(regFile.io.rd_addr)}, rd_data=${Hexadecimal(regFile.io.rd_data)}\n"
-  )
-  printf("------------------------------\n")
+  // printf(p"[${GTimer()}] regFile----------\n")
+  // printf(p"rs1_addr=${Hexadecimal(regFile.io.rs1_addr)}, rs1_data=${Hexadecimal(regFile.io.rs1_data)}\n")
+  // printf(p"rs1_addr=${Hexadecimal(regFile.io.rs2_addr)}, rs1_data=${Hexadecimal(regFile.io.rs2_data)}\n")
+  // printf(
+  //   p"wen=${regFile.io.wen}, rd_addr=${Hexadecimal(regFile.io.rd_addr)}, rd_data=${Hexadecimal(regFile.io.rd_data)}\n"
+  // )
+  // printf("------------------------------\n")
 
   // normal csr operations
   csrFile.io.stall := exe_stall
@@ -466,11 +466,11 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_int, "difftestInt")
 
     when(pipeTrace.B && dtest_expt) {
-      printf(
-        "[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n",
-        dtest_expt,
-        dtest_int
-      );
+      // printf(
+      //   "[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n",
+      //   dtest_expt,
+      //   dtest_int
+      // );
     }
 
     if (pipeTrace) {

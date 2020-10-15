@@ -212,10 +212,10 @@ class DCacheSimple extends Module with CacheParameters {
         new_meta.dirty := true.B
         new_meta.tag := s1_tag
         metaArray(s1_index) := new_meta
-        printf(
-          p"dcache write: s1_index=0x${Hexadecimal(s1_index)}, new_meta=${new_meta}\n"
-        )
-        printf(p"\ttarget_data=${target_data}\n")
+        // printf(
+        //   p"dcache write: s1_index=0x${Hexadecimal(s1_index)}, new_meta=${new_meta}\n"
+        // )
+        // printf(p"\ttarget_data=${target_data}\n")
       }
     }.otherwise {
       when(hit || io.mem.resp.valid || io.mmio.resp.valid) {
@@ -257,9 +257,9 @@ class DCacheSimple extends Module with CacheParameters {
             result := Cat(Fill(32, 0.U), realdata(31, 0))
           }
         }
-        printf(
-          p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
-        )
+        // printf(
+        //   p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
+        // )
         when(!ismmio) {
           dataArray(s1_index) := target_data
           val new_meta = Wire(new MetaData)
@@ -267,45 +267,45 @@ class DCacheSimple extends Module with CacheParameters {
           new_meta.dirty := false.B
           new_meta.tag := s1_tag
           metaArray(s1_index) := new_meta
-          printf(
-            p"dcache write: s1_index=0x${Hexadecimal(s1_index)}, new_meta=${new_meta}\n"
-          )
-          printf(p"\ttarget_data=${target_data}\n")
+          // printf(
+          //   p"dcache write: s1_index=0x${Hexadecimal(s1_index)}, new_meta=${new_meta}\n"
+          // )
+          // printf(p"\ttarget_data=${target_data}\n")
         }
       }
     }
   }
 
-  printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  printf(
-    "state=%d, ismmio=%d, hit=%d, result=%x\n",
-    state,
-    ismmio,
-    hit,
-    result
-  )
-  printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-  printf(
-    "s1_tag=%x, s1_lineoffset=%x, s1_wordoffset=%x\n",
-    s1_tag,
-    s1_lineoffset,
-    s1_wordoffset
-  )
-  printf(p"hitVec=${hitVec}, invalidVec=${invalidVec}\n")
-  printf(p"s1_cacheline=${s1_cacheline}\n")
-  printf(p"s1_meta=${s1_meta}\n")
-  printf(p"cacheline_data=${cacheline_data}\n")
-  printf(p"cacheline_meta=${cacheline_meta}\n")
-  printf(p"dataArray(s1_index)=${dataArray(s1_index)}\n")
-  printf(p"metaArray(s1_index)=${metaArray(s1_index)}\n")
-  printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
-  printf(p"fetched_vec=${fetched_vec}\n")
-  printf(p"----------${cacheName} io.in----------\n")
-  printf(p"${io.in}\n")
-  printf(p"----------${cacheName} io.mem----------\n")
-  printf(p"${io.mem}\n")
-  printf(p"----------${cacheName} io.mmio----------\n")
-  printf(p"${io.mmio}\n")
-  printf("-----------------------------------------------\n")
+  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  // printf(
+  //   "state=%d, ismmio=%d, hit=%d, result=%x\n",
+  //   state,
+  //   ismmio,
+  //   hit,
+  //   result
+  // )
+  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+  // printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
+  // // printf(
+  // //   "s1_tag=%x, s1_lineoffset=%x, s1_wordoffset=%x\n",
+  // //   s1_tag,
+  // //   s1_lineoffset,
+  // //   s1_wordoffset
+  // // )
+  // printf(p"hitVec=${hitVec}, invalidVec=${invalidVec}\n")
+  // // printf(p"s1_cacheline=${s1_cacheline}\n")
+  // // printf(p"s1_meta=${s1_meta}\n")
+  // // printf(p"cacheline_data=${cacheline_data}\n")
+  // // printf(p"cacheline_meta=${cacheline_meta}\n")
+  // // printf(p"dataArray(s1_index)=${dataArray(s1_index)}\n")
+  // // printf(p"metaArray(s1_index)=${metaArray(s1_index)}\n")
+  // printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
+  // printf(p"fetched_vec=${fetched_vec}\n")
+  // printf(p"----------${cacheName} io.in----------\n")
+  // printf(p"${io.in}\n")
+  // // printf(p"----------${cacheName} io.mem----------\n")
+  // // printf(p"${io.mem}\n")
+  // printf(p"----------${cacheName} io.mmio----------\n")
+  // printf(p"${io.mmio}\n")
+  // printf("-----------------------------------------------\n")
 }
