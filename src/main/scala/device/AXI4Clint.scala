@@ -28,7 +28,7 @@ class Clint(name: String = "clint")
   val freq = RegInit(clk.U(16.W))
   val inc = RegInit(1.U(16.W))
 
-  val cnt = RegInit(0.U(16.W))
+  val cnt = RegInit(3.U(16.W))
   val nextCnt = cnt + 1.U
   cnt := Mux(nextCnt < freq, nextCnt, 0.U)
   val tick = (nextCnt === freq)
