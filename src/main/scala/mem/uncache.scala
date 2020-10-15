@@ -51,7 +51,7 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
     io.out.aw.valid := false.B
     io.out.w.valid := false.B
     io.out.b.ready := true.B
-    io.out.aw.bits.addr := io.in.req.bits.addr(xlen - 1, blen) << blen.U
+    io.out.aw.bits.addr := io.in.req.bits.addr
     io.out.aw.bits.len := 0.U // 1 word
     io.out.aw.bits.size := "b011".U // 8 bytes
     io.out.aw.bits.burst := BURST_INCR
@@ -188,10 +188,10 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
   }
   io.in.resp.bits.data := RegNext(resp_data)
 
-  // printf(p"[${GTimer()}]: ${mname} Debug Start-----------\n")
-  // printf("state = %d\n", state);
-  // printf("offset = %x, mask = %x, realdata = %x\n", offset, mask, realdata)
-  // printf(p"io.in: \n${io.in}\n")
-  // printf(p"io.out: \n${io.out}\n")
-  // printf("--------------------------------\n")
+//   printf(p"[${GTimer()}]: ${mname} Debug Start-----------\n")
+//   printf("state = %d\n", state);
+//   printf("offset = %x, mask = %x, realdata = %x\n", offset, mask, realdata)
+//   printf(p"io.in: \n${io.in}\n")
+//   printf(p"io.out: \n${io.out}\n")
+//   printf("--------------------------------\n")
 }

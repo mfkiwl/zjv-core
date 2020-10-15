@@ -219,47 +219,49 @@ class DCacheSimple extends Module with CacheParameters {
       }
     }.otherwise {
       when(hit || io.mem.resp.valid || io.mmio.resp.valid) {
-        val result_data = Mux(ismmio, io.mmio.resp.bits.data, target_data.data(s1_lineoffset))
+        val result_data = target_data.data(s1_lineoffset)
         val offset = s1_wordoffset << 3
         val mask = WireInit(UInt(xlen.W), 0.U)
         val realdata = WireInit(UInt(xlen.W), 0.U)
+        val mem_result = WireInit(UInt(xlen.W), 0.U)
         switch(s1_memtype) {
-          is(memXXX) { result := result_data }
+          is(memXXX) { mem_result := result_data }
           is(memByte) {
             mask := Fill(8, 1.U(1.W)) << offset
             realdata := (result_data & mask) >> offset
-            result := Cat(Fill(56, realdata(7)), realdata(7, 0))
+            mem_result := Cat(Fill(56, realdata(7)), realdata(7, 0))
           }
           is(memHalf) {
             mask := Fill(16, 1.U(1.W)) << offset
             realdata := (result_data & mask) >> offset
-            result := Cat(Fill(48, realdata(15)), realdata(15, 0))
+            mem_result := Cat(Fill(48, realdata(15)), realdata(15, 0))
           }
           is(memWord) {
             mask := Fill(32, 1.U(1.W)) << offset
             realdata := (result_data & mask) >> offset
-            result := Cat(Fill(32, realdata(31)), realdata(31, 0))
+            mem_result := Cat(Fill(32, realdata(31)), realdata(31, 0))
           }
-          is(memDouble) { result := result_data }
+          is(memDouble) { mem_result := result_data }
           is(memByteU) {
             mask := Fill(8, 1.U(1.W)) << offset
             realdata := (result_data & mask) >> offset
-            result := Cat(Fill(56, 0.U), realdata(7, 0))
+            mem_result := Cat(Fill(56, 0.U), realdata(7, 0))
           }
           is(memHalfU) {
             mask := Fill(16, 1.U(1.W)) << offset
             realdata := (result_data & mask) >> offset
-            result := Cat(Fill(48, 0.U), realdata(15, 0))
+            mem_result := Cat(Fill(48, 0.U), realdata(15, 0))
           }
           is(memWordU) {
             mask := Fill(32, 1.U(1.W)) << offset
             realdata := (result_data & mask) >> offset
-            result := Cat(Fill(32, 0.U), realdata(31, 0))
+            mem_result := Cat(Fill(32, 0.U), realdata(31, 0))
           }
         }
-        // printf(
-        //   p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
-        // )
+        result := Mux(ismmio, io.mmio.resp.bits.data, mem_result)
+//         printf(
+//           p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
+//         )
         when(!ismmio) {
           dataArray(s1_index) := target_data
           val new_meta = Wire(new MetaData)
@@ -276,36 +278,36 @@ class DCacheSimple extends Module with CacheParameters {
     }
   }
 
-  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  // printf(
-  //   "state=%d, ismmio=%d, hit=%d, result=%x\n",
-  //   state,
-  //   ismmio,
-  //   hit,
-  //   result
-  // )
-  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  // printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-  // // printf(
-  // //   "s1_tag=%x, s1_lineoffset=%x, s1_wordoffset=%x\n",
-  // //   s1_tag,
-  // //   s1_lineoffset,
-  // //   s1_wordoffset
-  // // )
-  // printf(p"hitVec=${hitVec}, invalidVec=${invalidVec}\n")
-  // // printf(p"s1_cacheline=${s1_cacheline}\n")
-  // // printf(p"s1_meta=${s1_meta}\n")
-  // // printf(p"cacheline_data=${cacheline_data}\n")
-  // // printf(p"cacheline_meta=${cacheline_meta}\n")
-  // // printf(p"dataArray(s1_index)=${dataArray(s1_index)}\n")
-  // // printf(p"metaArray(s1_index)=${metaArray(s1_index)}\n")
-  // printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
-  // printf(p"fetched_vec=${fetched_vec}\n")
-  // printf(p"----------${cacheName} io.in----------\n")
-  // printf(p"${io.in}\n")
-  // // printf(p"----------${cacheName} io.mem----------\n")
-  // // printf(p"${io.mem}\n")
-  // printf(p"----------${cacheName} io.mmio----------\n")
-  // printf(p"${io.mmio}\n")
-  // printf("-----------------------------------------------\n")
+//   printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+//   printf(
+//     "state=%d, ismmio=%d, hit=%d, result=%x\n",
+//     state,
+//     ismmio,
+//     hit,
+//     result
+//   )
+//   printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+//   printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
+//    printf(
+//      "s1_tag=%x, s1_lineoffset=%x, s1_wordoffset=%x\n",
+//      s1_tag,
+//      s1_lineoffset,
+//      s1_wordoffset
+//    )
+//   printf(p"hitVec=${hitVec}, invalidVec=${invalidVec}\n")
+//    printf(p"s1_cacheline=${s1_cacheline}\n")
+//    printf(p"s1_meta=${s1_meta}\n")
+//    printf(p"cacheline_data=${cacheline_data}\n")
+//    printf(p"cacheline_meta=${cacheline_meta}\n")
+//    printf(p"dataArray(s1_index)=${dataArray(s1_index)}\n")
+//    printf(p"metaArray(s1_index)=${metaArray(s1_index)}\n")
+//   printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
+//   printf(p"fetched_vec=${fetched_vec}\n")
+//   printf(p"----------${cacheName} io.in----------\n")
+//   printf(p"${io.in}\n")
+//    printf(p"----------${cacheName} io.mem----------\n")
+//    printf(p"${io.mem}\n")
+//   printf(p"----------${cacheName} io.mmio----------\n")
+//   printf(p"${io.mmio}\n")
+//   printf("-----------------------------------------------\n")
 }

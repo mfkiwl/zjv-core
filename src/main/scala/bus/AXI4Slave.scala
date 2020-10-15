@@ -114,14 +114,14 @@ abstract class AXI4Slave[B <: Data](
   io.in.r.bits.id := RegEnable(io.in.ar.bits.id, io.in.ar.fire())
   io.in.r.bits.user := RegEnable(io.in.ar.bits.user, io.in.ar.fire())
 
-  // printf(p"[${GTimer()}] ${name} Debug Start-----------\n")
-  // printf(
-  //   p"ren=${ren}, wrapAddr=${Hexadecimal(wrapAddr)}, r_busy=${r_busy}, w_busy=${w_busy}\n"
-  // )
-  // printf(p"c_r=${c_r.value}, beatCnt=${beatCnt.value}, c_w=${c_w.value}\n")
-  // printf(
-  //   p"readBeatCnt=${readBeatCnt}, writeBeatCnt=${writeBeatCnt}, rLast=${rLast}, wLast=${wLast}\n"
-  // )
-  // printf(p"io.in: \n${io.in}\n")
-  // printf("-----------AXI4Slave Debug Done-----------\n")
+//   printf(p"[${GTimer()}] ${name} Debug Start-----------\n")
+//   printf(
+//     p"ren=${ren}, wrapAddr=${Hexadecimal(wrapAddr)}, r_busy=${r_busy}, w_busy=${w_busy}\n"
+//   )
+//   printf(p"c_r=${c_r.value}, beatCnt=${beatCnt.value}, c_w=${c_w.value}\n")
+//   printf(
+//     p"readBeatCnt=${readBeatCnt}, writeBeatCnt=${writeBeatCnt}, rLast=${rLast}, wLast=${wLast}\n"
+//   )
+//   printf(p"io.in: \n${io.in}\n")
+//   printf("-----------AXI4Slave Debug Done-----------\n")
 }

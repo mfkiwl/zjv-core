@@ -110,10 +110,10 @@ int main(int argc, char** argv)
          engine.sim_set_mip();     // TODO only mtip for now
          engine.sim_step(1);
          int_total_cnt++;
-         // if (int_total_cnt > 20) {
-         //    printf("Total Int Cnt is %d!\n", int_total_cnt);
-         //    exit(0);
-         // }
+//          if (int_total_cnt > 30) {
+//             printf("Total Int Cnt is %d!\n", int_total_cnt);
+//             exit(0);
+//          }
       }
       if (startTest && engine.emu_difftest_valid()) {
          bubble_cnt = 0;
