@@ -14,62 +14,87 @@ class InterruptIO extends Bundle with phvntomParams {
 }
 
 object CSR {
-  val N = 0.U(3.W)
-  val W = 1.U(3.W)
-  val S = 2.U(3.W)
-  val C = 3.U(3.W)
-  val P = 4.U(3.W)
+  val N =           0.U(3.W)
+  val W =           1.U(3.W)
+  val S =           2.U(3.W)
+  val C =           3.U(3.W)
+  val P =           4.U(3.W)
 
-  val PRV_U = 0x0.U(2.W)
-  val PRV_S = 0x1.U(2.W)
-  val PRV_H = 0x2.U(2.W)
-  val PRV_M = 0x3.U(2.W)
+  val PRV_U =       0x0.U(2.W)
+  val PRV_S =       0x1.U(2.W)
+  val PRV_H =       0x2.U(2.W)
+  val PRV_M =       0x3.U(2.W)
 
-  val cycle = 0xc00.U(12.W)
-  val time = 0xc01.U(12.W)
-  val instret = 0xc02.U(12.W)
-  val cycleh = 0xc80.U(12.W)
-  val timeh = 0xc81.U(12.W)
-  val instreth = 0xc82.U(12.W)
+  val cycle =       0xc00.U(12.W)
+  val time =        0xc01.U(12.W)
+  val instret =     0xc02.U(12.W)
+  val cycleh =      0xc80.U(12.W)
+  val timeh =       0xc81.U(12.W)
+  val instreth =    0xc82.U(12.W)
 
-  val cyclew = 0x900.U(12.W)
-  val timew = 0x901.U(12.W)
-  val instretw = 0x902.U(12.W)
-  val cyclehw = 0x980.U(12.W)
-  val timehw = 0x981.U(12.W)
-  val instrethw = 0x982.U(12.W)
+  val cyclew =      0x900.U(12.W)
+  val timew =       0x901.U(12.W)
+  val instretw =    0x902.U(12.W)
+  val cyclehw =     0x980.U(12.W)
+  val timehw =      0x981.U(12.W)
+  val instrethw =   0x982.U(12.W)
 
-  val mvendorid = 0xf11.U(12.W)
-  val marchid = 0xf12.U(12.W)
-  val mimpid = 0xf13.U(12.W)
-  val mhartid = 0xf14.U(12.W)
-  val mstatus = 0x300.U(12.W)
-  val misa = 0x301.U(12.W)
-  val medeleg = 0x302.U(12.W)
-  val mideleg = 0x303.U(12.W)
-  val mie = 0x304.U(12.W)
-  val mtvec = 0x305.U(12.W)
+  // MACHINE MODE
+  val mvendorid =   0xf11.U(12.W)
+  val marchid =     0xf12.U(12.W)
+  val mimpid =      0xf13.U(12.W)
+  val mhartid =     0xf14.U(12.W)
+  val mstatus =     0x300.U(12.W)
+  val misa =        0x301.U(12.W)
+  val medeleg =     0x302.U(12.W)
+  val mideleg =     0x303.U(12.W)
+  val mie =         0x304.U(12.W)
+  val mtvec =       0x305.U(12.W)
   val mtcounteren = 0x306.U(12.W)
-  val mstatush = 0x310.U(12.W)
-  val mtime = 0x701.U(12.W)
-  val mtimeh = 0x741.U(12.W)
-  val mscratch = 0x340.U(12.W)
-  val mepc = 0x341.U(12.W)
-  val mcause = 0x342.U(12.W)
-  val mtval = 0x343.U(12.W)
-  val mip = 0x344.U(12.W)
-  val mtinst = 0x34a.U(12.W)
-  val mtval2 = 0x34b.U(12.W)
-  val pmpcfg0 = 0x3a0.U(12.W)
-  val pmpaddr0 = 0x3b0.U(12.W)
+  val mstatush =    0x310.U(12.W)
+  val mtime =       0x701.U(12.W)
+  val mtimeh =      0x741.U(12.W)
+  val mscratch =    0x340.U(12.W)
+  val mepc =        0x341.U(12.W)
+  val mcause =      0x342.U(12.W)
+  val mtval =       0x343.U(12.W)
+  val mip =         0x344.U(12.W)
+  val mtinst =      0x34a.U(12.W)
+  val mtval2 =      0x34b.U(12.W)
+
+  // SUPERVISOR MODE
+  val sstatus =     0x100.U(12.W)
+  val sedeleg =     0x102.U(12.W)
+  val sideleg =     0x103.U(12.W)
+  val sie =         0x104.U(12.W)
+  val stvec =       0x105.U(12.W)
+  val scounteren =  0x106.U(12.W)
+  val sscratch =    0x140.U(12.W)
+  val sepc =        0x141.U(12.W)
+  val scause =      0x142.U(12.W)
+  val stval =       0x143.U(12.W)
+  val sip =         0x144.U(12.W)
+  val satp =        0x180.U(12.W)
+
+  // PHYSICAL MEM PROTECTION
+  val pmpcfg0 =     0x3a0.U(12.W)
+  val pmpcfg1 =     0x3a1.U(12.W)
+  val pmpcfg2 =     0x3a2.U(12.W)
+  val pmpcfg3 =     0x3a3.U(12.W)
+  val pmpaddr0 =    0x3b0.U(12.W)
+  val pmpaddr1 =    0x3b1.U(12.W)
+  val pmpaddr2 =    0x3b2.U(12.W)
+  val pmpaddr3 =    0x3b3.U(12.W)
+
   // DEBUG
-  val tselect = 0x7a0.U(12.W)
-  val tdata1 = 0x7a1.U(12.W)
-  val tdata2 = 0x7a2.U(12.W)
-  val tdata3 = 0x7a3.U(12.W)
+  val tselect =     0x7a0.U(12.W)
+  val tdata1 =      0x7a1.U(12.W)
+  val tdata2 =      0x7a2.U(12.W)
+  val tdata3 =      0x7a3.U(12.W)
+
   // PERFORMANCE
-  val mcycle = 0xb00.U(12.W)
-  val minstret = 0xb02.U(12.W)
+  val mcycle =      0xb00.U(12.W)
+  val minstret =    0xb02.U(12.W)
 }
 
 object Exception {
@@ -114,7 +139,9 @@ class CSRFileIO extends Bundle with phvntomParams {
   val except_type = Input(UInt(4.W))
   val stall = Input(Bool())
   val bubble = Input(Bool())
-  val is_eret = Input(Bool())
+  val is_mret = Input(Bool())
+  val is_sret = Input(Bool())
+  val is_uret = Input(Bool())
   val rdata = Output(UInt(xlen.W))
   val evec_out = Output(UInt(xlen.W))
   val epc_out = Output(UInt(xlen.W))
@@ -126,9 +153,11 @@ class CSRFile extends Module with phvntomParams {
   val io = IO(new CSRFileIO)
 
   // Special CSR Register Bit
-  // MCAUSE
+  // MCAUSE and SCAUSE
   val mcauser_int = RegInit(0.U(1.W))
   val mcauser_cause = RegInit(0.U(4.W))
+  val scauser_int = RegInit(0.U(1.W))
+  val scauser_cause = RegInit(0.U(4.W))
   // MSTATUS
   val mstatusr_sd = RegInit(false.B)
   val mstatusr_mbe = RegInit(false.B)
@@ -143,8 +172,8 @@ class CSRFile extends Module with phvntomParams {
   val mstatusr_mprv = RegInit(false.B)
   val mstatusr_xs = RegInit(0.U(2.W))
   val mstatusr_fs = RegInit(0.U(2.W))
-  val mstatusr_mpp = RegInit(3.U(2.W)) // When a trap is taken from privilege mode y into privilege mode x, x PIE is set to the value of x IE;
-  val mstatusr_spp = RegInit(false.B) //  x IE is set to 0; and x PP is set to y. MPP is always 3, because M-Mode only
+  val mstatusr_mpp = RegInit(3.U(2.W))
+  val mstatusr_spp = RegInit(false.B)
   val mstatusr_mpie = RegInit(false.B)
   val mstatusr_ube = RegInit(false.B)
   val mstatusr_spie = RegInit(false.B)
@@ -157,23 +186,34 @@ class CSRFile extends Module with phvntomParams {
   val mier_stie = RegInit(false.B)
   val mier_msie = RegInit(false.B)
   val mier_ssie = RegInit(false.B)
+  // MIP
+  val mipr_seip = RegInit(false.B)
+  val mipr_stip = RegInit(false.B)
+  val mipr_ssip = RegInit(false.B)
 
-  // normal registers in CSR
+  // [--------- Machine Mode Registers in CSR --------]
   val mepcr = RegInit(0.U(xlen.W))
   val mcauser = Cat(mcauser_int, 0.U((xlen - 5).W), mcauser_cause)
   val mtvecr = RegInit(0.U(xlen.W))
   val mhartidr = 0.U(xlen.W)
   val mier = Cat(0.U((xlen - 12).W), mier_meie, false.B, mier_seie, false.B,
     mier_mtie, false.B, mier_stie, false.B,
-    mier_msie, false.B, mier_ssie, false.B) // interrupt[i] => mi(e/p)r[i], no s-mode, hardwired to zero
+    mier_msie, false.B, mier_ssie, false.B
+  )
+  val mipr = Cat(0.U((xlen - 12).W), io.has_int && io.int_type === Interrupt.MExternalInterrupt, false.B,
+    mipr_seip, false.B, io.has_int && io.int_type === Interrupt.MTimerInterrupt, false.B,
+    mipr_stip, false.B, io.has_int && io.int_type === Interrupt.MSoftwareInterrupt, false.B,
+    mipr_ssip, false.B
+  )
   val mstatusr = Cat(mstatusr_sd, 0.U((xlen - 39).W), mstatusr_mbe, mstatusr_sbe, mstatusr_sxl, mstatusr_uxl,
     "b000000000".U(9.W), mstatusr_tsr, mstatusr_tw, mstatusr_tvm, mstatusr_mxr, mstatusr_sum,
     mstatusr_mprv, mstatusr_xs, mstatusr_fs, mstatusr_mpp, false.B, false.B,
     mstatusr_spp, mstatusr_mpie, mstatusr_ube, mstatusr_spie, false.B,
-    mstatusr_mie, false.B, mstatusr_sie, false.B)
-  val medelegr = RegInit(0.U(xlen.W)) // never delegate the handler to other lower modes currently
-  val midelegr = RegInit(0.U(xlen.W)) // so their values are 0
-  val misar = Cat(2.U(2.W), 0.U((xlen - 2 - 13).W), true.B, 0.U(3.W), true.B, 1.U(8.W)) // rv64+ima
+    mstatusr_mie, false.B, mstatusr_sie, false.B
+  )
+  val medelegr = RegInit(0.U(xlen.W))
+  val midelegr = RegInit(0.U(xlen.W))
+  val misar = Cat(2.U(2.W), 0.U((xlen - 2 - 13).W), true.B, 0.U(3.W), true.B, 1.U(8.W))
   val mvendoridr = 0.U(xlen.W)
   val marchidr = 5.U(xlen.W)
   val mscratchr = RegInit(0.U(xlen.W))
@@ -182,38 +222,63 @@ class CSRFile extends Module with phvntomParams {
   val mcycler = RegInit(UInt(64.W), 0.U)
   val minstretr = RegInit(0.U(64.W))
 
-  // debug registers
+  // [--------- Physical Memory Protection Registers in CSR --------]
+  val pmpcfg0r = RegInit(0.U(xlen.W))
+  val pmpcfg1r = RegInit(0.U(xlen.W))
+  val pmpcfg2r = RegInit(0.U(xlen.W))
+  val pmpcfg3r = RegInit(0.U(xlen.W))
+  val pmpaddr0r = RegInit(0.U(xlen.W))
+  val pmpaddr1r = RegInit(0.U(xlen.W))
+  val pmpaddr2r = RegInit(0.U(xlen.W))
+  val pmpaddr3r = RegInit(0.U(xlen.W))
+
+  // [--------- Supervisor Mode Registers in CSR --------]
+  val sstatusr = Cat(mstatusr_sd, Fill(xlen - 2 - 33, 0.U), mstatusr_uxl, Fill(12, 0.U),
+    mstatusr_mxr, mstatusr_sum, Fill(1, 0.U), mstatusr_xs, mstatusr_fs, Fill(4, 0.U),
+    mstatusr_spp, Fill(1, 0.U), mstatusr_ube, mstatusr_spie, Fill(3, 0.U), mstatusr_sie, Fill(1, 0.U)
+  )
+  val sier = Cat(0.U((xlen - 10).W), mier_seie,
+    Fill(3, 0.U), mier_stie,
+    Fill(3, 0.U), mier_ssie, false.B
+  )
+  val sipr = Cat(0.U((xlen - 10).W), mipr_seip, Fill(3, 0.U),
+    mipr_stip, Fill(3, 0.U), mipr_ssip, false.B
+  )
+  val stvecr = RegInit(0.U(xlen.W))
+  val satpr = RegInit(0.U(xlen.W))
+  val sepcr = RegInit(0.U(xlen.W))
+  val scauser = Cat(scauser_int, 0.U((xlen - 5).W), scauser_cause)
+  val stvalr = RegInit(0.U(xlen.W))
+  val sscratchr = RegInit(0.U(xlen.W))
+  val scounterenr = RegInit(0.U(xlen.W))
+
+  //  [--------- User Mode Registers in CSR --------]
+  val uepc = RegInit(0.U(xlen.W))
+
+  // [--------- Debug Registers in CSR --------]
   val tselectr = RegInit(0.U(xlen.W))
   val tdata1r = RegInit(0.U(xlen.W))
   val tdata2r = RegInit(0.U(xlen.W))
   val tdata3r = RegInit(0.U(xlen.W))
 
-  // fwd
-  val mier_fwd = Mux(io.which_reg === CSR.mie,
-    Mux(io.wen, io.wdata,
-      Mux(io.sen, mier | io.wdata,
-        Mux(io.cen, mier & ~io.wdata, 0.U(xlen.W)))
-    ),
-    0.U(xlen.W)
-  )
-  val mstatusr_mie_fwd = Mux(io.which_reg === CSR.mstatus,
-    Mux(io.wen, io.wdata(3),
-      Mux(io.sen, mstatusr_mie | io.wdata(3),
-        Mux(io.cen, mstatusr_mie & ~io.wdata(3), 0.U(1.W)))
-    ),
-    0.U(1.W)
-  )
+  // Interrupt Pending For Read Signals
+  val seip_for_read = (io.has_int && io.int_type === Interrupt.SExternalInterrupt) || mipr_seip
 
-  // combo-logic for int control, machine mode only now
-  val current_prv = CSR.PRV_M // support Machine mode only
-  val machine_int_global_enable = current_prv =/= CSR.PRV_M || (mstatusr_mie)
-  val machine_int_enable = (mier(io.int_type)) & machine_int_global_enable
+  // Current Privilege Mode and Delegation Information
+  val current_p = RegInit(UInt(2.W), CSR.PRV_M)
+  val ideleg = midelegr & mipr
+
+  //  // Interrupt and Exception
+  //  val machine_int_global_enable = Mux(midelegr(io.int_type),
+  //    current_p < mdelegate_p || (current_p === mdelegate_p && Mux(mdelegate_p === CSR.PRV_S, mstatusr_sie, mstatusr_mie)),
+  //    current_p < CSR.PRV_M || (current_p === CSR.PRV_M && mstatusr_mie))
+  val machine_int_global_enable = current_p < CSR.PRV_M || (current_p === CSR.PRV_M && mstatusr_mie)
+  val machine_int_enable = io.has_int && (mier(io.int_type)) && machine_int_global_enable
   val csr_not_exists = WireInit(false.B)
   io.global_int_enable := machine_int_enable
 
-  // mcycle and minstret increment
+  // MCYCLE and MINSTRET
   BoringUtils.addSource(mcycler, "difftestmcycler")
-  // printf("mcycle %x\n", mcycler);
   when(!io.stall && io.which_reg === CSR.mcycle) {
     when(io.wen) {
       mcycler := io.wdata
@@ -241,9 +306,12 @@ class CSRFile extends Module with phvntomParams {
     minstretr := minstretr + 1.U(1.W)
   }
 
-  // combo-logic for output
+  // CSR Read
   when(io.which_reg === CSR.mepc) {
     io.rdata := mepcr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.mip) {
+    io.rdata := Cat(mipr(xlen - 1, 10), seip_for_read, mipr(7, 0))
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.mcause) {
     io.rdata := mcauser
@@ -259,10 +327,10 @@ class CSRFile extends Module with phvntomParams {
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.medeleg) {
     io.rdata := medelegr
-    csr_not_exists := true.B // TODO no register in M
+    csr_not_exists := true.B
   }.elsewhen(io.which_reg === CSR.mideleg) {
     io.rdata := midelegr
-    csr_not_exists := true.B // TODO no register in M
+    csr_not_exists := true.B
   }.elsewhen(io.which_reg === CSR.misa) {
     io.rdata := misar
     csr_not_exists := false.B
@@ -275,8 +343,29 @@ class CSRFile extends Module with phvntomParams {
   }.elsewhen(io.which_reg === CSR.mscratch) {
     io.rdata := mscratchr
     csr_not_exists := false.B
-  }.elsewhen(io.which_reg === CSR.pmpaddr0 || io.which_reg === CSR.pmpcfg0) { // TODO implementation
-    io.rdata := mhartidr
+  }.elsewhen(io.which_reg === CSR.pmpaddr0) {
+    io.rdata := pmpaddr0r
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.pmpaddr1) {
+    io.rdata := pmpaddr1r
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.pmpaddr2) {
+    io.rdata := pmpaddr2r
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.pmpaddr3) {
+    io.rdata := pmpaddr3r
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.pmpcfg0) {
+    io.rdata := pmpcfg0r
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.pmpcfg1) {
+    io.rdata := pmpcfg1r
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.pmpcfg2) {
+    io.rdata := pmpcfg2r
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.pmpcfg3) {
+    io.rdata := pmpcfg3r
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.mtval) {
     io.rdata := mtvalr
@@ -286,6 +375,33 @@ class CSRFile extends Module with phvntomParams {
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.mimpid) {
     io.rdata := mimpidr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.sstatus) {
+    io.rdata := sstatusr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.stvec) {
+    io.rdata := stvecr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.sie) {
+    io.rdata := sier
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.scounteren) {
+    io.rdata := scounterenr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.sscratch) {
+    io.rdata := sscratchr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.sepc) {
+    io.rdata := sepcr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.scause) {
+    io.rdata := scauser
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.stval) {
+    io.rdata := stvalr
+    csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.satp) {
+    io.rdata := satpr
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.tselect) {
     io.rdata := tselectr
@@ -306,15 +422,16 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := minstretr
     csr_not_exists := false.B
   }.otherwise {
-    io.rdata := mhartidr
+    io.rdata := "hdeadbeef".U
     csr_not_exists := true.B
   }
   io.epc_out := mepcr
   io.evec_out := mtvecr
 
-  // seq-logic to write csr file
+  // Write CSR File
+  // TODO Write newly added registers
   when(!io.stall && !io.bubble) {
-    when((io.has_int & machine_int_enable) | io.has_except | io.illegal_csr) { // handle interrupt and exception
+    when((io.has_int & machine_int_enable) || io.has_except || io.illegal_csr) {
       when(io.has_int) {
         mepcr := io.current_pc
         mcauser_int := 1.U(1.W)
@@ -331,14 +448,17 @@ class CSRFile extends Module with phvntomParams {
           mtvalr := Cat(io.illegal_addr(xlen - 1, 1), Fill(1, 0.U))
         }
       }
-      // disable int enable, machine mode only for now
       mstatusr_mpie := mstatusr_mie
       mstatusr_mie := false.B
       mstatusr_mpp := CSR.PRV_M
-    }.elsewhen(io.is_eret) { // enable interrupt signal again
+    }.elsewhen(io.is_mret) {
       mstatusr_mie := mstatusr_mpie
       mstatusr_mpie := true.B
       mstatusr_mpp := CSR.PRV_M
+    }.elsewhen(io.is_sret) {
+      // TODO
+    }.elsewhen(io.is_uret) {
+      // TODO
     }.otherwise { // handle CSRXX instructions
       when(io.which_reg === CSR.mepc) {
         when(io.wen) {
@@ -411,6 +531,20 @@ class CSRFile extends Module with phvntomParams {
           mier_msie := mier_msie & ~io.wdata(3)
           mier_ssie := mier_ssie & ~io.wdata(1)
         }
+      }.elsewhen(io.which_reg === CSR.mip) {
+        when(io.wen) {
+          mipr_seip := io.wdata(9)
+          mipr_stip := io.wdata(5)
+          mipr_ssip := io.wdata(1)
+        }.elsewhen(io.sen) {
+          mipr_seip := mipr_seip | io.wdata(9)
+          mipr_stip := mipr_stip | io.wdata(5)
+          mipr_ssip := mipr_ssip | io.wdata(1)
+        }.elsewhen(io.cen) {
+          mipr_seip := mipr_seip & ~io.wdata(9)
+          mipr_stip := mipr_stip & ~io.wdata(5)
+          mipr_ssip := mipr_ssip & ~io.wdata(1)
+        }
       }.elsewhen(io.which_reg === CSR.mstatus) {
         when(io.wen) {
           mstatusr_sd := io.wdata(xlen - 1)
@@ -475,6 +609,14 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_spie := mstatusr(5) & ~io.wdata(5)
           mstatusr_mie := mstatusr(3) & ~io.wdata(3)
           mstatusr_sie := mstatusr(1) & ~io.wdata(1)
+        }
+      }.elsewhen(io.which_reg === CSR.stvec) {
+        when(io.wen) {
+          stvecr := io.wdata
+        }.elsewhen(io.sen) {
+          stvecr := stvecr | io.wdata
+        }.elsewhen(io.cen) {
+          stvecr := stvecr & (~io.wdata)
         }
       }.elsewhen(io.which_reg === CSR.tselect) {
         when(io.wen) {
@@ -576,7 +718,7 @@ class ExceptionJudger extends Module with phvntomParams {
       io.has_except := false.B
       io.except_out := Exception.InstAddrMisaligned
     }
-  }.elsewhen(io.wb_inst === "b00000000000000000000000001110011".U) { // only supports Machine Mode
+  }.elsewhen(io.wb_inst === "b00000000000000000000000001110011".U) {
     io.has_except := true.B
     io.except_out := Exception.EcallM
   }.elsewhen(io.wb_inst === "b00000000000100000000000001110011".U) {
@@ -702,7 +844,9 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.has_int := interrupt_judger.io.has_int
   csr_regfile.io.int_type := interrupt_judger.io.int_out
   csr_regfile.io.current_pc := Cat(io.pc(31, 2), 0.U(2.W))
-  csr_regfile.io.is_eret := io.inst === "b00110000001000000000000001110011".U
+  csr_regfile.io.is_mret := io.inst === "b00110000001000000000000001110011".U
+  csr_regfile.io.is_sret := io.inst === "b00010000001000000000000001110011".U
+  csr_regfile.io.is_uret := io.inst === "b00000000001000000000000001110011".U
   csr_regfile.io.illegal_addr := io.in
   csr_regfile.io.bubble := io.bubble
 
@@ -713,7 +857,7 @@ class CSR extends Module with phvntomParams {
     exception_judger.io.has_except | csr_regfile.io.illegal_csr) // here we temporarily do not consider if the CSR file is valid
   io.evec := csr_regfile.io.evec_out
   io.epc := csr_regfile.io.epc_out
-  io.ret := csr_regfile.io.is_eret
+  io.ret := csr_regfile.io.is_mret
 
   io.stall_req := false.B
   //  io.stall_req := !last_stall_req && (csr_regfile.io.cen || csr_regfile.io.wen ||
