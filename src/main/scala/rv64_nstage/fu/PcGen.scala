@@ -42,18 +42,16 @@ class PcGen extends Module with phvntomParams {
   }
 
   when(!io.stall) {
-    when(last_stall) {
+    when(io.expt_int) {
+      pc := Cat(io.tvec(xlen - 1, 1), Fill(1, 0.U))
+    }.elsewhen(io.error_ret) {
+      pc := Cat(io.epc(xlen - 1, 1), Fill(1, 0.U))
+    }.elsewhen(io.branch_jump && !io.inst_addr_misaligned) {
+      pc := Cat(io.branch_pc(xlen - 1, 1), Fill(1, 0.U))
+    } elsewhen (last_stall) {
       pc := Cat(pc_for_restore(xlen - 1, 1), Fill(1, 0.U))
     }.otherwise {
-      when(io.expt_int) {
-        pc := Cat(io.tvec(xlen - 1, 1), Fill(1, 0.U))
-      }.elsewhen(io.error_ret) {
-        pc := Cat(io.epc(xlen - 1, 1), Fill(1, 0.U))
-      }.elsewhen(io.branch_jump && !io.inst_addr_misaligned) {
-        pc := Cat(io.branch_pc(xlen - 1, 1), Fill(1, 0.U))
-      }.otherwise {
-        pc := pc + 4.U
-      }
+      pc := pc + 4.U
     }
   }
 
