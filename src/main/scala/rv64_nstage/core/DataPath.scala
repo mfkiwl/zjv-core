@@ -176,7 +176,8 @@ class DataPath extends Module with phvntomParams {
   scheduler.io.rs1_addr_exe := reg_id_exe.io.inst_out(19, 15)
   scheduler.io.rs2_used_exe := (reg_id_exe.io.inst_info_out.BSelect === BXXX ||
     reg_id_exe.io.inst_info_out.amoSelect =/= amoXXX ||
-    reg_id_exe.io.inst_info_out.pcSelect === pcBranch)
+    reg_id_exe.io.inst_info_out.pcSelect === pcBranch ||
+    reg_id_exe.io.inst_info_out.wbEnable === wenMem)
   scheduler.io.rs2_addr_exe := reg_id_exe.io.inst_out(24, 20)
   scheduler.io.rd_used_mem1 := (reg_exe_mem1.io.inst_info_out.wbEnable === wenReg ||
     reg_exe_mem1.io.inst_info_out.wbEnable === wenCSRC ||
