@@ -7,6 +7,7 @@ import rv64_nstage.core.phvntomParams
 // TODO only support 'STALL' without 'FORWARDING'
 
 class ALUSchedulerIO extends Bundle with phvntomParams {
+  val is_bubble = Input(Bool())
   val rs1_used_exe = Input(Bool())
   val rs1_addr_exe = Input(UInt(regWidth.W))
   val rs2_used_exe = Input(Bool())
@@ -44,5 +45,5 @@ class ALUScheduler extends Module with phvntomParams {
   io.rs1_val := io.rs1_from_reg
   io.rs2_val := io.rs2_from_reg
 
-  io.stall_req := rs1_hazard || rs2_hazard
+  io.stall_req := (rs1_hazard || rs2_hazard) && !io.is_bubble
 }

@@ -170,7 +170,8 @@ class RegIdExe extends Module with phvntomParams {
   }.elsewhen((inst_info.asTypeOf(new InstInfo).pcSelect === pcBranch ||
     inst_info.asTypeOf(new InstInfo).pcSelect === pcJump) &&
     io.flush_one) {
-      inst_info := default_inst_info
+    inst_info.asTypeOf(new InstInfo).brType := brXXX
+    inst_info.asTypeOf(new InstInfo).pcSelect := pcPlus4
   }
 
   io.inst_info_out := inst_info.asTypeOf(new InstInfo)
