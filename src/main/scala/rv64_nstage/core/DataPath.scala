@@ -4,11 +4,11 @@ import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
 import common.Str
+import device.MemIO
 import rv64_nstage.control._
 import rv64_nstage.control.ControlConst._
 import rv64_nstage.fu._
 import rv64_nstage.register._
-import device.MemIO
 
 class DataPathIO extends Bundle with phvntomParams {
   val ctrl = Flipped(new ControlPathIO)
@@ -168,28 +168,36 @@ class DataPath extends Module with phvntomParams {
   branch_cond.io.rs2 := rs2
   branch_cond.io.brType := reg_id_exe.io.inst_info_out.brType
 
-  br_jump_flush := branch_cond.io.branch || reg_id_exe.io.inst_info_out.pcSelect === pcJump
+  br_jump_flush := (branch_cond.io.branch || reg_id_exe.io.inst_info_out.pcSelect === pcJump) && !scheduler.io.stall_req
   inst_addr_misaligned := alu.io.out(1) && (reg_id_exe.io.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
 
-  scheduler.io.rs1_used_exe := reg_id_exe.io.inst_info_out.ASelect === ARS1
+  scheduler.io.rs1_used_exe := (reg_id_exe.io.inst_info_out.ASelect === ARS1 ||
+    reg_id_exe.io.inst_info_out.pcSelect === pcBranch)
   scheduler.io.rs1_addr_exe := reg_id_exe.io.inst_out(19, 15)
-  scheduler.io.rs2_used_exe := (reg_id_exe.io.inst_info_out.BSelect === BRS2 ||
-    reg_id_exe.io.inst_info_out.amoSelect =/= amoXXX)
+  scheduler.io.rs2_used_exe := (reg_id_exe.io.inst_info_out.BSelect === BXXX ||
+    reg_id_exe.io.inst_info_out.amoSelect =/= amoXXX ||
+    reg_id_exe.io.inst_info_out.pcSelect === pcBranch)
   scheduler.io.rs2_addr_exe := reg_id_exe.io.inst_out(24, 20)
   scheduler.io.rd_used_mem1 := (reg_exe_mem1.io.inst_info_out.wbEnable === wenReg ||
     reg_exe_mem1.io.inst_info_out.wbEnable === wenCSRC ||
     reg_exe_mem1.io.inst_info_out.wbEnable === wenCSRS ||
-    reg_exe_mem1.io.inst_info_out.wbEnable === wenCSRW)
+    reg_exe_mem1.io.inst_info_out.wbEnable === wenCSRW ||
+    reg_exe_mem1.io.inst_info_out.wbEnable === wenRes ||
+    reg_exe_mem1.io.inst_info_out.wbSelect === wbCond)
   scheduler.io.rd_addr_mem1 := reg_exe_mem1.io.inst_out(11, 7)
   scheduler.io.rd_used_mem2 := (reg_mem1_mem2.io.inst_info_out.wbEnable === wenReg ||
     reg_mem1_mem2.io.inst_info_out.wbEnable === wenCSRC ||
     reg_mem1_mem2.io.inst_info_out.wbEnable === wenCSRS ||
-    reg_mem1_mem2.io.inst_info_out.wbEnable === wenCSRW)
+    reg_mem1_mem2.io.inst_info_out.wbEnable === wenCSRW ||
+    reg_mem1_mem2.io.inst_info_out.wbEnable === wenRes ||
+    reg_mem1_mem2.io.inst_info_out.wbSelect === wbCond)
   scheduler.io.rd_addr_mem2 := reg_mem1_mem2.io.inst_out(11, 7)
   scheduler.io.rd_used_wb := (reg_mem2_wb.io.inst_info_out.wbEnable === wenReg ||
     reg_mem2_wb.io.inst_info_out.wbEnable === wenCSRC ||
     reg_mem2_wb.io.inst_info_out.wbEnable === wenCSRS ||
-    reg_mem2_wb.io.inst_info_out.wbEnable === wenCSRW)
+    reg_mem2_wb.io.inst_info_out.wbEnable === wenCSRW ||
+    reg_mem2_wb.io.inst_info_out.wbEnable === wenRes ||
+    reg_mem2_wb.io.inst_info_out.wbSelect === wbCond)
   scheduler.io.rd_addr_wb := reg_mem2_wb.io.inst_out(11, 7)
   scheduler.io.rs1_from_reg := reg_file.io.rs1_data
   scheduler.io.rs2_from_reg := reg_file.io.rs2_data

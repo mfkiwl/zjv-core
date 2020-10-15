@@ -182,40 +182,40 @@
 //     }
 //   }
 
-//   // printf("-----------Uncache Debug Start-----------\n")
-//   // printf("state = %d\n", state);
-//   // printf("offset = %x, mask = %x, realdata = %x\n", offset, mask, realdata)
-//   // printf(
-//   //   "req.valid = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d, resp.valid = %d, resp.data = %x\n",
-//   //   io.in.req.valid,
-//   //   io.in.req.bits.addr,
-//   //   io.in.req.bits.data,
-//   //   io.in.req.bits.wen,
-//   //   io.in.req.bits.memtype,
-//   //   io.in.resp.valid,
-//   //   io.in.resp.bits.data
-//   // )
+//   printf("-----------Uncache Debug Start-----------\n")
+//   printf("state = %d\n", state);
+//   printf("offset = %x, mask = %x, realdata = %x\n", offset, mask, realdata)
+//   printf(
+//     "req.valid = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d, resp.valid = %d, resp.data = %x\n",
+//     io.in.req.valid,
+//     io.in.req.bits.addr,
+//     io.in.req.bits.data,
+//     io.in.req.bits.wen,
+//     io.in.req.bits.memtype,
+//     io.in.resp.valid,
+//     io.in.resp.bits.data
+//   )
 
-//   // printf(
-//   //   "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
-//   //   io.out.aw.valid,
-//   //   io.out.w.valid,
-//   //   io.out.b.valid,
-//   //   io.out.ar.valid,
-//   //   io.out.r.valid
-//   // )
-//   // printf(
-//   //   "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
-//   //   io.out.aw.ready,
-//   //   io.out.w.ready,
-//   //   io.out.b.ready,
-//   //   io.out.ar.ready,
-//   //   io.out.r.ready
-//   // )
-//   // printf(p"aw.bits: ${io.out.aw.bits}\n")
-//   // printf(p"w.bits: ${io.out.w.bits}\n")
-//   // printf(p"b.bits: ${io.out.b.bits}\n")
-//   // printf(p"ar.bits: ${io.out.ar.bits}\n")
-//   // printf(p"r.bits: ${io.out.r.bits}\n")
-//   // printf("-----------Uncache Debug Done-----------\n")
+//   printf(
+//     "aw.valid = %d, w.valid = %d, b.valid = %d, ar.valid = %d, r.valid = %d\n",
+//     io.out.aw.valid,
+//     io.out.w.valid,
+//     io.out.b.valid,
+//     io.out.ar.valid,
+//     io.out.r.valid
+//   )
+//   printf(
+//     "aw.ready = %d, w.ready = %d, b.ready = %d, ar.ready = %d, r.ready = %d\n",
+//     io.out.aw.ready,
+//     io.out.w.ready,
+//     io.out.b.ready,
+//     io.out.ar.ready,
+//     io.out.r.ready
+//   )
+//   printf(p"aw.bits: ${io.out.aw.bits}\n")
+//   printf(p"w.bits: ${io.out.w.bits}\n")
+//   printf(p"b.bits: ${io.out.b.bits}\n")
+//   printf(p"ar.bits: ${io.out.ar.bits}\n")
+//   printf(p"r.bits: ${io.out.r.bits}\n")
+//   printf("-----------Uncache Debug Done-----------\n")
 // }

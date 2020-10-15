@@ -9,6 +9,7 @@ import common._
 import mem._
 import device._
 import utils._
+import device.MemIO
 
 class BrCondIO extends Bundle with phvntomParams {
   val rs1 = Input(UInt(xlen.W))
@@ -404,12 +405,8 @@ class DataPath extends Module with phvntomParams {
   regFile.io.rd_addr := rd_addr
   regFile.io.rd_data := wb_data
   printf(p"[${GTimer()}] regFile----------\n")
-  printf(
-    p"rs1_addr=${Hexadecimal(regFile.io.rs1_addr)}, rs1_data=${Hexadecimal(regFile.io.rs1_data)}\n"
-  )
-  printf(
-    p"rs1_addr=${Hexadecimal(regFile.io.rs2_addr)}, rs1_data=${Hexadecimal(regFile.io.rs2_data)}\n"
-  )
+  printf(p"rs1_addr=${Hexadecimal(regFile.io.rs1_addr)}, rs1_data=${Hexadecimal(regFile.io.rs1_data)}\n")
+  printf(p"rs1_addr=${Hexadecimal(regFile.io.rs2_addr)}, rs1_data=${Hexadecimal(regFile.io.rs2_data)}\n")
   printf(
     p"wen=${regFile.io.wen}, rd_addr=${Hexadecimal(regFile.io.rd_addr)}, rd_data=${Hexadecimal(regFile.io.rd_data)}\n"
   )
@@ -469,14 +466,12 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_int, "difftestInt")
 
     when(pipeTrace.B && dtest_expt) {
-      // printf("[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n", dtest_expt, dtest_int);
+      printf(
+        "[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n",
+        dtest_expt,
+        dtest_int
+      );
     }
-
-    // printf("Interrupt if %x exe: %x wb %x [EPC]] %x!\n", if_mtip, exe_mtip, wb_mtip, csrFile.io.epc);
-    when(dtest_int) {
-      // printf("Interrupt mtvec: %x stall_req %x!\n", csrFile.io.evec, csrFile.io.stall_req);
-    }
-//    printf("------->stall_req %x, imenreq_valid %x, imem_pc %x, csr_out %x, dmemaddr %x!\n", csrFile.io.stall_req, io.imem.req.valid, if_pc, csrFile.io.out, io.dmem.req.bits.addr)
 
     if (pipeTrace) {
       // when (!stall) {

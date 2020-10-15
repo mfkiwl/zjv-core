@@ -57,7 +57,7 @@ htif_simmem_t::htif_simmem_t(size_t width, size_t base)
   : base(base), width(width)
 {
   #ifdef ZJV_DEBUG
-  fprintf(stderr, "[SimMem] create : width: %lu base 0x%lx\n", width * 8, base);
+  printf("[SimMem] create : width %lu base 0x%lx\n", width * 8, base);
   #endif
 }
 

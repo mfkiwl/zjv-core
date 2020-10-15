@@ -8,7 +8,8 @@ import bus._
 import device._
 import mem._
 import rv64_nstage.core
-// import rv64_nstage.fu.Uncache
+import mem.Uncache
+import mem.DUncache
 
 class TileIO extends Bundle with phvntomParams {
   // TODO
