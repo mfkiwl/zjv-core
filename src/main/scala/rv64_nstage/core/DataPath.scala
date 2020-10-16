@@ -25,6 +25,10 @@ class DataPath extends Module with phvntomParams {
   val io = IO(new DataPathIO)
 
   // TODO forwarding machanism
+  // TODO flush eariler, eg flush & stall_id_exe, but stall_req_exe === false, then just flush (like br_jump in ID_EXE)
+  // TODO the original michanism should be reserved,
+  // TODO furthermore, if the last stage's BUBBLE signal is high, just cut off the stall-chain, thus
+  // TODO the total stalling time might be reduced
 
   val pc_gen = Module(new PcGen)
   val reg_if1_if2 = Module(new RegIf1If2)
@@ -239,7 +243,7 @@ class DataPath extends Module with phvntomParams {
   reg_exe_mem1.io.mem_wdata_in := rs2
   reg_exe_mem1.io.timer_int_in := io.int.mtip
   reg_exe_mem1.io.software_int_in := io.int.msip
-  reg_exe_mem1.io.external_int_in := false.B
+  reg_exe_mem1.io.external_int_in := io.int.meip
   reg_exe_mem1.io.inst_af_in := reg_id_exe.io.inst_af_out
 
   amo_bubble_inserter := reg_exe_mem1.io.inst_info_out.amoSelect.orR
@@ -270,8 +274,6 @@ class DataPath extends Module with phvntomParams {
     reg_exe_mem1.io.inst_info_out.wbEnable =/= wenMem)
   csr.io.is_store := (reg_exe_mem1.io.inst_info_out.memType.orR &&
     reg_exe_mem1.io.inst_info_out.wbEnable === wenMem)
-  csr.io.mem_type := reg_exe_mem1.io.inst_info_out.memType
-  csr.io.pc_check := true.B
   csr.io.inst_access_fault := reg_exe_mem1.io.inst_af_out
   csr.io.mem_access_fault := mem_af
   csr.io.tim_int := reg_exe_mem1.io.timer_int_out
@@ -397,13 +399,15 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_int, "difftestInt")
 
-    printf("\t\tIF1\tIF2\tID\tEXE\tMEM1\tMEM2\tWB\t\n")
-    printf("Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, stall_req_if2, 0.U, stall_req_exe, 0.U, stall_req_mem2, 0.U)
-    printf("Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", stall_pc, stall_if1_if2, stall_if2_id, stall_id_exe, stall_exe_mem1, stall_mem1_mem2, stall_mem2_wb)
-    printf("PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", pc_gen.io.pc_out(15, 0), reg_if1_if2.io.pc_out(15, 0), reg_if2_id.io.pc_out(15, 0), reg_id_exe.io.pc_out(15, 0), reg_exe_mem1.io.pc_out(15, 0), reg_mem1_mem2.io.pc_out(15, 0), reg_mem2_wb.io.pc_out(15, 0))
-    printf("Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", BUBBLE(15, 0), BUBBLE(15, 0), reg_if2_id.io.inst_out(15, 0), reg_id_exe.io.inst_out(15, 0), reg_exe_mem1.io.inst_out(15, 0), reg_mem1_mem2.io.inst_out(15, 0), reg_mem2_wb.io.inst_out(15, 0))
-    printf("Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, reg_if1_if2.io.bubble_out, reg_if2_id.io.bubble_out, reg_id_exe.io.bubble_out, reg_exe_mem1.io.bubble_out, reg_mem1_mem2.io.bubble_out, reg_mem2_wb.io.bubble_out)
-    //    printf("------> compare %x, succeed %x, push %x\n", reservation.io.compare, reservation.io.succeed, reservation.io.push)
+    if(pipeTrace) {
+      printf("\t\tIF1\tIF2\tID\tEXE\tMEM1\tMEM2\tWB\t\n")
+      printf("Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, stall_req_if2, 0.U, stall_req_exe, 0.U, stall_req_mem2, 0.U)
+      printf("Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", stall_pc, stall_if1_if2, stall_if2_id, stall_id_exe, stall_exe_mem1, stall_mem1_mem2, stall_mem2_wb)
+      printf("PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", pc_gen.io.pc_out(15, 0), reg_if1_if2.io.pc_out(15, 0), reg_if2_id.io.pc_out(15, 0), reg_id_exe.io.pc_out(15, 0), reg_exe_mem1.io.pc_out(15, 0), reg_mem1_mem2.io.pc_out(15, 0), reg_mem2_wb.io.pc_out(15, 0))
+      printf("Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", BUBBLE(15, 0), BUBBLE(15, 0), reg_if2_id.io.inst_out(15, 0), reg_id_exe.io.inst_out(15, 0), reg_exe_mem1.io.inst_out(15, 0), reg_mem1_mem2.io.inst_out(15, 0), reg_mem2_wb.io.inst_out(15, 0))
+      printf("Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, reg_if1_if2.io.bubble_out, reg_if2_id.io.bubble_out, reg_id_exe.io.bubble_out, reg_exe_mem1.io.bubble_out, reg_mem1_mem2.io.bubble_out, reg_mem2_wb.io.bubble_out)
+    }
+      //    printf("------> compare %x, succeed %x, push %x\n", reservation.io.compare, reservation.io.succeed, reservation.io.push)
 
 //    printf("-------> exit flush %x, br_flush %x, pco %x, if_pco %x, \n", expt_int_flush, br_jump_flush, pc_gen.io.pc_out, reg_if2_id.io.pc_out)
 //    printf("-----> Mem req valid %x addr %x, resp valid %x data %x\n", io.dmem.req.valid, io.dmem.req.bits.addr, io.dmem.resp.valid, io.dmem.resp.bits.data)

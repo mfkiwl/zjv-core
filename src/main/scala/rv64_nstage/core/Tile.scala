@@ -52,6 +52,8 @@ class Tile extends Module with phvntomParams with projectConfig {
   val msipSync = clint.io.extra.get.msip
   core.io.int.msip := msipSync
   core.io.int.mtip := mtipSync
+  core.io.int.meip := false.B
+  core.io.int.seip := false.B
   BoringUtils.addSource(mtipSync, "mtip")
   BoringUtils.addSource(msipSync, "msip")
 
