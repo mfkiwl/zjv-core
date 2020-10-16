@@ -187,22 +187,22 @@ class ICacheSimple extends Module with ICacheParameters {
     }
   }
 
-  printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  printf("state=%d, hit=%d, result=%x\n", state, hit, result)
-  printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-  printf("s1_tag=%x, s1_wordoffset=%x\n", s1_tag, s1_wordoffset)
-  printf(p"hitVec=${hitVec}, invalidVec=${invalidVec}\n")
-  printf(p"s1_cacheline=${s1_cacheline}, s1_meta=${s1_meta}\n")
-  printf(
-    p"cacheline_data=${cacheline_data}, cacheline_meta=${cacheline_meta}\n"
-  )
-  printf(
-    p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
-  )
-  printf(p"----------${cacheName} io.in----------\n")
-  printf(p"${io.in}\n")
-  printf(p"----------${cacheName} io.mem----------\n")
-  printf(p"${io.mem}\n")
-  printf("-----------------------------------------------\n")
+  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  // printf("state=%d, hit=%d, result=%x\n", state, hit, result)
+  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+  // printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
+  // printf("s1_tag=%x, s1_wordoffset=%x\n", s1_tag, s1_wordoffset)
+  // printf(p"hitVec=${hitVec}, invalidVec=${invalidVec}\n")
+  // printf(p"s1_cacheline=${s1_cacheline}, s1_meta=${s1_meta}\n")
+  // printf(
+  //   p"cacheline_data=${cacheline_data}, cacheline_meta=${cacheline_meta}\n"
+  // )
+  // printf(
+  //   p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
+  // )
+  // printf(p"----------${cacheName} io.in----------\n")
+  // printf(p"${io.in}\n")
+  // printf(p"----------${cacheName} io.mem----------\n")
+  // printf(p"${io.mem}\n")
+  // printf("-----------------------------------------------\n")
 }
