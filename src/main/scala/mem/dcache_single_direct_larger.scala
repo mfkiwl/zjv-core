@@ -25,7 +25,7 @@
 //   val tagLength = xlen - (indexLength + offsetLength)
 // }
 
-// class CacheSimpleIO extends Bundle with CacheParameters {
+// class CacheIO extends Bundle with CacheParameters {
 //   val in = new MemIO
 //   val mem = Flipped(new MemIO(lineBits))
 //   val mmio = Flipped(new MemIO)
@@ -46,7 +46,7 @@
 // }
 
 // class DCacheSimple extends Module with CacheParameters {
-//   val io = IO(new CacheSimpleIO)
+//   val io = IO(new CacheIO)
 
 //   // printf(p"----------${cacheName} Parameters----------\n")
 //   // printf(
@@ -113,7 +113,7 @@
 //   )
 //   io.mem.req.bits.data := cacheline_data.data(victim_index).asUInt
 //   io.mem.req.bits.wen := (state == s_memWriteReq).B
-//   io.mem.req.bits.memtype := ControlConst.memOcto
+//   io.mem.req.bits.memtype := DontCare
 //   io.mem.resp.ready := s1_valid && state === s_memReadResp
 
 //   io.mmio.req.valid := s1_valid && (state === s_mmioReq || state === s_mmioResp)

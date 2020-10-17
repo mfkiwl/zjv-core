@@ -14,7 +14,7 @@ case class CacheConfig(
     ways: Int = 4, // set associativity
     lines: Int = 4, // number of `xlen`-bit blocks in each cache line
     totalSize: Int = 32, // K Bytes
-    replacementPolicy: String = "lru" // random or lru
+    replacementPolicy: String = "lru" // lru, random not implemented
 )
 
 trait CacheParameters extends phvntomParams {
@@ -42,7 +42,7 @@ trait CacheParameters extends phvntomParams {
   } else { RandomPolicy }
 }
 
-class CacheSimpleIO(implicit val cacheConfig: CacheConfig)
+class CacheIO(implicit val cacheConfig: CacheConfig)
     extends Bundle
     with CacheParameters {
   val in = new MemIO

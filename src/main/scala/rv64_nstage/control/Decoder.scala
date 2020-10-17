@@ -91,17 +91,14 @@ object ControlConst {
   val aluBits = aluXXX.getWidth
 
   // io.memType
-  val memXXX    = 0.U(4.W)
-  val memByte   = 1.U(4.W)
-  val memHalf   = 2.U(4.W)
-  val memWord   = 3.U(4.W)
-  val memDouble = 4.U(4.W)
-  val memByteU  = 5.U(4.W)
-  val memHalfU  = 6.U(4.W)
-  val memWordU  = 7.U(4.W)
-  val memQuad   = 8.U(4.W)
-  val memOcto   = 9.U(4.W)
-  val memHex    = 10.U(4.W)
+  val memXXX    = 0.U(3.W)
+  val memByte   = 1.U(3.W)
+  val memHalf   = 2.U(3.W)
+  val memWord   = 3.U(3.W)
+  val memDouble = 4.U(3.W)
+  val memByteU  = 5.U(3.W)
+  val memHalfU  = 6.U(3.W)
+  val memWordU  = 7.U(3.W)
   val memBits   = memXXX.getWidth
 
   // io.wbEnable

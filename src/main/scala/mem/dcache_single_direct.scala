@@ -24,7 +24,7 @@
 //   val tagLength = xlen - (indexLength + offsetLength)
 // }
 
-// class CacheSimpleIO extends Bundle with CacheParameters {
+// class CacheIO extends Bundle with CacheParameters {
 //   val in = new MemIO
 //   val mem = Flipped(new MemIO)
 //   val mmio = Flipped(new MemIO)
@@ -45,7 +45,7 @@
 // }
 
 // class DCacheSimple extends Module with CacheParameters {
-//   val io = IO(new CacheSimpleIO)
+//   val io = IO(new CacheIO)
 
 //   // printf(p"----------${cacheName} Parameters----------\n")
 //   // printf(

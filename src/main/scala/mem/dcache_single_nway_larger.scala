@@ -11,7 +11,7 @@ import utils._
 class DCacheSimple(implicit val cacheConfig: CacheConfig)
     extends Module
     with CacheParameters {
-  val io = IO(new CacheSimpleIO)
+  val io = IO(new CacheIO)
 
   // Module Used
   val metaArray = Mem(nSets, Vec(nWays, new MetaData))
@@ -65,6 +65,7 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
   io.in.resp.bits.data := result
   io.in.req.ready := state === s_idle
 
+  io.mem.stall := false.B
   io.mem.req.valid := s1_valid && (state === s_memReadReq || state === s_memReadResp || state === s_memWriteReq || state === s_memWriteResp) // (!hit && !ismmio)
   io.mem.req.bits.addr := Mux(
     state === s_memWriteReq || state === s_memWriteResp,
@@ -73,9 +74,10 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
   )
   io.mem.req.bits.data := cacheline_data.asUInt
   io.mem.req.bits.wen := state === s_memWriteReq || state === s_memWriteResp
-  io.mem.req.bits.memtype := ControlConst.memOcto
+  io.mem.req.bits.memtype := DontCare
   io.mem.resp.ready := s1_valid && (state === s_memReadResp || state === s_memWriteResp)
 
+  io.mmio.stall := false.B
   io.mmio.req.valid := s1_valid && (state === s_mmioReq || state === s_mmioResp)
   io.mmio.req.bits.addr := s1_addr
   io.mmio.req.bits.data := s1_data

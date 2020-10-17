@@ -27,9 +27,10 @@ class MemResp(val dataWidth: Int = 64) extends Bundle with phvntomParams { // re
 class MemIO(val dataWidth: Int = 64) extends Bundle with phvntomParams {
   val req = Flipped(Decoupled(new MemReq(dataWidth)))
   val resp = Decoupled(new MemResp(dataWidth))
+  val stall = Input(Bool())
 
   // override def cloneType: this.type = new MemIO(dataWidth).asInstanceOf[this.type]
-  override def toPrintable: Printable = p"req: valid=${req.valid}, ready=${req.ready}, ${req.bits}\nresp: valid=${resp.valid}, ready=${resp.ready}, ${resp.bits}\n"
+  override def toPrintable: Printable = p"stall=${stall}, req: valid=${req.valid}, ready=${req.ready}, ${req.bits}\nresp: valid=${resp.valid}, ready=${resp.ready}, ${resp.bits}\n"
 }
 
 class SimMemIO extends Bundle with phvntomParams {
