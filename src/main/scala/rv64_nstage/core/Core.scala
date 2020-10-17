@@ -2,7 +2,6 @@ package rv64_nstage.core
 
 import chisel3._
 import chisel3.util._
-import common._
 import rv64_nstage.control.ControlPath
 import device.MemIO
 import rv64_nstage.register.InterruptIO

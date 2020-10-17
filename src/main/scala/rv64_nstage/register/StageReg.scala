@@ -14,9 +14,6 @@ class StageRegIO extends Bundle with phvntomParams {
   // Info After Last Stage
   val last_stage_atomic_stall_req = Input(Bool())
   val next_stage_atomic_stall_req = Input(Bool())
-  // TODO *** CAUTION ***
-  // TODO THIS SIGNAL IS PURELY FOR DIFFTEST
-  // TODO BECAUSE ERET / TRAP / BRANCH DOES NOT MODIFY MEM OR REGS
   val next_stage_flush_req = Input(Bool())
   val bubble_in = Input(Bool())
   val pc_in = Input(UInt(xlen.W))
