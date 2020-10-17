@@ -2,14 +2,8 @@ package rv64_nstage.register
 
 import chisel3._
 import chisel3.util._
-import chisel3.util.experimental.BoringUtils
-import common.Str
-import device.MemIO
 import rv64_nstage.control._
-import rv64_nstage.control.ControlConst._
-import rv64_nstage.fu._
 import rv64_nstage.core._
-import rv64_nstage.register._
 
 import chisel3.util.experimental.BoringUtils
 
@@ -346,7 +340,12 @@ class CSRFile extends Module with phvntomParams {
   )
   val medelegr = RegInit(0.U(xlen.W))
   val midelegr = RegInit(0.U(xlen.W))
-  val misar = "h8000000000141101".U(xlen.W)
+  val misar = Wire(UInt(xlen.W))
+  if(only_M) {
+    misar := "h8000000000001101".U
+  } else {
+    misar := "h8000000000141101".U
+  }
   val mvendoridr = 0.U(xlen.W)
   val marchidr = 5.U(xlen.W)
   val mscratchr = RegInit(0.U(xlen.W))
@@ -525,10 +524,18 @@ class CSRFile extends Module with phvntomParams {
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.medeleg) {
     io.rdata := medelegr
-    csr_not_exists := false.B
+    if(only_M) {
+      csr_not_exists := true.B
+    } else {
+      csr_not_exists := false.B
+    }
   }.elsewhen(io.which_reg === CSR.mideleg) {
     io.rdata := midelegr
-    csr_not_exists := false.B
+    if(only_M) {
+      csr_not_exists := true.B
+    } else {
+      csr_not_exists := false.B
+    }
   }.elsewhen(io.which_reg === CSR.misa) {
     io.rdata := misar
     csr_not_exists := false.B
