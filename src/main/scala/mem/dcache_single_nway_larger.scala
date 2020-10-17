@@ -246,7 +246,6 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
     }
   }
 
-  // when(s1_valid && !hit && !ismmio && state === s_memReadResp) {
   // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
   // printf(
   //   "state=%d, ismmio=%d, hit=%d, result=%x\n",
@@ -292,5 +291,4 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
   // // printf(p"----------${cacheName} io.mmio----------\n")
   // // printf(p"${io.mmio}\n")
   // printf("-----------------------------------------------\n")
-  // }
 }
