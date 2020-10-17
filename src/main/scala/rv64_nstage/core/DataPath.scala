@@ -184,12 +184,12 @@ class DataPath extends Module with phvntomParams {
 
   scheduler.io.is_bubble := reg_id_exe.io.bubble_out
   scheduler.io.rs1_used_exe := (reg_id_exe.io.inst_info_out.ASelect === ARS1 ||
-    reg_id_exe.io.inst_info_out.pcSelect === pcBranch)
+    reg_id_exe.io.inst_info_out.pcSelect === pcBranch) && reg_id_exe.io.inst_out(19, 15).orR
   scheduler.io.rs1_addr_exe := reg_id_exe.io.inst_out(19, 15)
   scheduler.io.rs2_used_exe := (reg_id_exe.io.inst_info_out.BSelect === BXXX ||
     reg_id_exe.io.inst_info_out.amoSelect =/= amoXXX ||
     reg_id_exe.io.inst_info_out.pcSelect === pcBranch ||
-    reg_id_exe.io.inst_info_out.wbEnable === wenMem)
+    reg_id_exe.io.inst_info_out.wbEnable === wenMem) && reg_id_exe.io.inst_out(24, 20).orR
   scheduler.io.rs2_addr_exe := reg_id_exe.io.inst_out(24, 20)
   scheduler.io.rd_used_mem1 := (reg_exe_mem1.io.inst_info_out.wbEnable === wenReg ||
     reg_exe_mem1.io.inst_info_out.wbEnable === wenCSRC ||
@@ -229,7 +229,8 @@ class DataPath extends Module with phvntomParams {
     Seq(
       wbALU -> reg_mem2_wb.io.alu_val_out,
       wbMEM -> reg_mem2_wb.io.mem_val_out,
-      wbCSR -> reg_mem2_wb.io.csr_val_out
+      wbCSR -> reg_mem2_wb.io.csr_val_out,
+      wbCond -> reg_mem2_wb.io.mem_val_out
     )
   )
 
@@ -422,6 +423,7 @@ class DataPath extends Module with phvntomParams {
       printf("Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", BUBBLE(15, 0), BUBBLE(15, 0), reg_if2_id.io.inst_out(15, 0), reg_id_exe.io.inst_out(15, 0), reg_exe_mem1.io.inst_out(15, 0), reg_mem1_mem2.io.inst_out(15, 0), reg_mem2_wb.io.inst_out(15, 0))
       printf("Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, reg_if1_if2.io.bubble_out, reg_if2_id.io.bubble_out, reg_id_exe.io.bubble_out, reg_exe_mem1.io.bubble_out, reg_mem1_mem2.io.bubble_out, reg_mem2_wb.io.bubble_out)
     }
+    printf("alu %x, mem %x, csr %x, ioin %x\n", reg_mem2_wb.io.alu_val_out, reg_mem2_wb.io.mem_val_out, reg_mem2_wb.io.csr_val_out, scheduler.io.rd_from_wb)
       //    printf("------> compare %x, succeed %x, push %x\n", reservation.io.compare, reservation.io.succeed, reservation.io.push)
 
 //    printf("-------> exit flush %x, br_flush %x, pco %x, if_pco %x, \n", expt_int_flush, br_jump_flush, pc_gen.io.pc_out, reg_if2_id.io.pc_out)

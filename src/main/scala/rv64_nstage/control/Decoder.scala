@@ -136,6 +136,12 @@ object ControlConst {
   val amoMINU = 10.U(4.W)
   val amoBits = amoXXX.getWidth
 
+  val fwdXXX    = 0.U(2.W)
+  val fwdMem1   = 1.U(2.W)
+  val fwdMem2   = 2.U(2.W)
+  val fwdWb     = 3.U(2.W)
+  val fwdBits   = fwdXXX.getWidth
+
   // sign extend or unsigned extend
   val unsignedExt = 0.U(1.W)
   val signedExt = 1.U(1.W)
@@ -164,6 +170,7 @@ class InstInfo extends Bundle with phvntomParams {
   val wbSelect  = Output(UInt(wbBits.W))
   val wbEnable  = Output(UInt(wenBits.W))
   val amoSelect = Output(UInt(amoBits.W))
+//  val fwd_stage = Output(UInt(fwdBits.W))
 }
 
 class ControlPathIO extends Bundle with phvntomParams {
