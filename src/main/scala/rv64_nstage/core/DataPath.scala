@@ -418,14 +418,14 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_int, "difftestInt")
 
-    if(pipeTrace) {
-      printf("\t\tIF1\tIF2\tID\tEXE\tMEM1\tMEM2\tWB\t\n")
-      printf("Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, stall_req_if2_atomic, 0.U, stall_req_exe_atomic || stall_req_exe_interruptable, 0.U, stall_req_mem2_atomic, 0.U)
-      printf("Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", stall_pc, stall_if1_if2, stall_if2_id, stall_id_exe, stall_exe_mem1, stall_mem1_mem2, stall_mem2_wb)
-      printf("PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", pc_gen.io.pc_out(15, 0), reg_if1_if2.io.pc_out(15, 0), reg_if2_id.io.pc_out(15, 0), reg_id_exe.io.pc_out(15, 0), reg_exe_mem1.io.pc_out(15, 0), reg_mem1_mem2.io.pc_out(15, 0), reg_mem2_wb.io.pc_out(15, 0))
-      printf("Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", BUBBLE(15, 0), BUBBLE(15, 0), reg_if2_id.io.inst_out(15, 0), reg_id_exe.io.inst_out(15, 0), reg_exe_mem1.io.inst_out(15, 0), reg_mem1_mem2.io.inst_out(15, 0), reg_mem2_wb.io.inst_out(15, 0))
-      printf("Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, reg_if1_if2.io.bubble_out, reg_if2_id.io.bubble_out, reg_id_exe.io.bubble_out, reg_exe_mem1.io.bubble_out, reg_mem1_mem2.io.bubble_out, reg_mem2_wb.io.bubble_out)
-    }
+    // if(pipeTrace) {
+    //   printf("\t\tIF1\tIF2\tID\tEXE\tMEM1\tMEM2\tWB\t\n")
+    //   printf("Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, stall_req_if2_atomic, 0.U, stall_req_exe_atomic || stall_req_exe_interruptable, 0.U, stall_req_mem2_atomic, 0.U)
+    //   printf("Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", stall_pc, stall_if1_if2, stall_if2_id, stall_id_exe, stall_exe_mem1, stall_mem1_mem2, stall_mem2_wb)
+    //   printf("PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", pc_gen.io.pc_out(15, 0), reg_if1_if2.io.pc_out(15, 0), reg_if2_id.io.pc_out(15, 0), reg_id_exe.io.pc_out(15, 0), reg_exe_mem1.io.pc_out(15, 0), reg_mem1_mem2.io.pc_out(15, 0), reg_mem2_wb.io.pc_out(15, 0))
+    //   printf("Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", BUBBLE(15, 0), BUBBLE(15, 0), reg_if2_id.io.inst_out(15, 0), reg_id_exe.io.inst_out(15, 0), reg_exe_mem1.io.inst_out(15, 0), reg_mem1_mem2.io.inst_out(15, 0), reg_mem2_wb.io.inst_out(15, 0))
+    //   printf("Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, reg_if1_if2.io.bubble_out, reg_if2_id.io.bubble_out, reg_id_exe.io.bubble_out, reg_exe_mem1.io.bubble_out, reg_mem1_mem2.io.bubble_out, reg_mem2_wb.io.bubble_out)
+    // }
 //    printf("alu %x, mem %x, csr %x, ioin %x\n", reg_mem2_wb.io.alu_val_out, reg_mem2_wb.io.mem_val_out, reg_mem2_wb.io.csr_val_out, scheduler.io.rd_from_wb)
       //    printf("------> compare %x, succeed %x, push %x\n", reservation.io.compare, reservation.io.succeed, reservation.io.push)
 

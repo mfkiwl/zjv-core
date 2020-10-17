@@ -170,11 +170,11 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
         new_meta(access_index).dirty := true.B
         new_meta(access_index).tag := s1_tag
         metaArray.write(s1_index, new_meta)
-        printf(
-          p"dcache write: mask=${Hexadecimal(mask)}, filled_data=${Hexadecimal(filled_data)}, s1_index=0x${Hexadecimal(s1_index)}\n"
-        )
-        printf(p"\tnewdata=${newdata}\n")
-        printf(p"\tnew_meta=${new_meta}\n")
+        // printf(
+        //   p"dcache write: mask=${Hexadecimal(mask)}, filled_data=${Hexadecimal(filled_data)}, s1_index=0x${Hexadecimal(s1_index)}\n"
+        // )
+        // printf(p"\tnewdata=${newdata}\n")
+        // printf(p"\tnew_meta=${new_meta}\n")
       }
     }.otherwise {
       when(
@@ -220,9 +220,9 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
           }
         }
         result := Mux(ismmio, io.mmio.resp.bits.data, mem_result)
-        printf(
-          p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
-        )
+        // printf(
+        //   p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
+        // )
         when(!ismmio) {
           val writeData = VecInit(Seq.fill(nWays)(target_data))
           dataArray.write(s1_index, writeData, access_vec.asBools)
@@ -234,61 +234,61 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
           }
           new_meta(access_index).tag := s1_tag
           metaArray.write(s1_index, new_meta)
-          printf(
-            p"dcache write: mask=${Hexadecimal(mask)}, mem_result=${Hexadecimal(mem_result)}, s1_index=0x${Hexadecimal(s1_index)}\n"
-          )
-          printf(p"\ttarget_data=${target_data}\n")
-          printf(p"\tnew_meta=${new_meta}\n")
+          // printf(
+          //   p"dcache write: mask=${Hexadecimal(mask)}, mem_result=${Hexadecimal(mem_result)}, s1_index=0x${Hexadecimal(s1_index)}\n"
+          // )
+          // printf(p"\ttarget_data=${target_data}\n")
+          // printf(p"\tnew_meta=${new_meta}\n")
         }
       }
     }
   }
 
   // when(s1_valid && !hit && !ismmio && state === s_memReadResp) {
-  printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  printf(
-    "state=%d, ismmio=%d, hit=%d, result=%x\n",
-    state,
-    ismmio,
-    hit,
-    result
-  )
-  printf(
-    "s1_valid=%d, s1_addr=%x, s1_index=%x\n",
-    s1_valid,
-    s1_addr,
-    s1_index
-  )
-  printf(
-    "s1_data=%x, s1_wen=%d, s1_memtype=%d\n",
-    s1_data,
-    s1_wen,
-    s1_memtype
-  )
-  printf(
-    "s1_tag=%x, s1_lineoffset=%x, s1_wordoffset=%x\n",
-    s1_tag,
-    s1_lineoffset,
-    s1_wordoffset
-  )
-  printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
-  printf(
-    p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
-  )
-  printf(p"s1_cacheline=${s1_cacheline}\n")
-  printf(p"s1_meta=${s1_meta}\n")
-  // printf(p"cacheline_data=${cacheline_data}\n")
-  // printf(p"cacheline_meta=${cacheline_meta}\n")
-  // printf(p"dataArray(s1_index)=${dataArray(s1_index)}\n")
-  // printf(p"metaArray(s1_index)=${metaArray(s1_index)}\n")
-  // printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
-  // printf(p"fetched_vec=${fetched_vec}\n")
-  printf(p"----------${cacheName} io.in----------\n")
-  printf(p"${io.in}\n")
-  printf(p"----------${cacheName} io.mem----------\n")
-  printf(p"${io.mem}\n")
-  // printf(p"----------${cacheName} io.mmio----------\n")
-  // printf(p"${io.mmio}\n")
-  printf("-----------------------------------------------\n")
+  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  // printf(
+  //   "state=%d, ismmio=%d, hit=%d, result=%x\n",
+  //   state,
+  //   ismmio,
+  //   hit,
+  //   result
+  // )
+  // printf(
+  //   "s1_valid=%d, s1_addr=%x, s1_index=%x\n",
+  //   s1_valid,
+  //   s1_addr,
+  //   s1_index
+  // )
+  // printf(
+  //   "s1_data=%x, s1_wen=%d, s1_memtype=%d\n",
+  //   s1_data,
+  //   s1_wen,
+  //   s1_memtype
+  // )
+  // printf(
+  //   "s1_tag=%x, s1_lineoffset=%x, s1_wordoffset=%x\n",
+  //   s1_tag,
+  //   s1_lineoffset,
+  //   s1_wordoffset
+  // )
+  // printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
+  // printf(
+  //   p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
+  // )
+  // printf(p"s1_cacheline=${s1_cacheline}\n")
+  // printf(p"s1_meta=${s1_meta}\n")
+  // // printf(p"cacheline_data=${cacheline_data}\n")
+  // // printf(p"cacheline_meta=${cacheline_meta}\n")
+  // // printf(p"dataArray(s1_index)=${dataArray(s1_index)}\n")
+  // // printf(p"metaArray(s1_index)=${metaArray(s1_index)}\n")
+  // // printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
+  // // printf(p"fetched_vec=${fetched_vec}\n")
+  // printf(p"----------${cacheName} io.in----------\n")
+  // printf(p"${io.in}\n")
+  // printf(p"----------${cacheName} io.mem----------\n")
+  // printf(p"${io.mem}\n")
+  // // printf(p"----------${cacheName} io.mmio----------\n")
+  // // printf(p"${io.mmio}\n")
+  // printf("-----------------------------------------------\n")
   // }
 }

@@ -103,7 +103,7 @@ extern "C" void SimMemAccess(paddr_t raddr, paddr_t *rdata, paddr_t waddr, paddr
     // fprintf(stderr, "Write Done %lx -> %lx, offset = %d, size = %d\n", waddr, wdata, offset, size);
   }
 
-  fprintf(stderr, "[Memory Access] \n");
-  fprintf(stderr, "raddr %lx rdata %lx\n", raddr, *rdata);
-  fprintf(stderr, "waddr %lx wdata %lx mask %lx wen %d\n", waddr, wdata, wmask, wen);
+  // fprintf(stderr, "[Memory Access] \n");
+  // fprintf(stderr, "raddr %lx rdata %lx\n", raddr, *rdata);
+  // fprintf(stderr, "waddr %lx wdata %lx mask %lx wen %d\n", waddr, wdata, wmask, wen);
 }

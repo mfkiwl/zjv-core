@@ -13,7 +13,7 @@ case class CacheConfig(
     idBits: Int = 0,
     ways: Int = 4, // set associativity
     lines: Int = 4, // number of `xlen`-bit blocks in each cache line
-    totalSize: Int = 1, // K Bytes
+    totalSize: Int = 32, // K Bytes
     replacementPolicy: String = "lru" // random or lru
 )
 
