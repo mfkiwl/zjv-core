@@ -60,6 +60,7 @@ class DataPath extends Module with phvntomParams {
   val br_jump_flush = WireInit(Bool(), false.B)
   val expt_int_flush = WireInit(Bool(), false.B)
   val error_ret_flush = WireInit(Bool(), false.B)
+  val write_satp_flush = WireInit(Bool(), false.B)
 
   // Stall Signals
   val stall_pc = WireInit(Bool(), false.B)
@@ -103,8 +104,10 @@ class DataPath extends Module with phvntomParams {
   pc_gen.io.stall := stall_pc
   pc_gen.io.expt_int := expt_int_flush
   pc_gen.io.error_ret := error_ret_flush
+  pc_gen.io.write_satp := write_satp_flush
   pc_gen.io.epc := csr.io.epc
   pc_gen.io.tvec := csr.io.evec
+  pc_gen.io.pc_plus := csr.io.pc_plus
   pc_gen.io.branch_jump := br_jump_flush
   pc_gen.io.branch_pc := alu.io.out
   pc_gen.io.inst_addr_misaligned := inst_addr_misaligned
@@ -115,7 +118,7 @@ class DataPath extends Module with phvntomParams {
   // TODO Dummy stage
   // TODO ultimately, in this stage, I$ should access SRAM
   reg_if1_if2.io.stall := stall_if1_if2
-  reg_if1_if2.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush
+  reg_if1_if2.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush
   reg_if1_if2.io.bubble_in := false.B
   reg_if1_if2.io.pc_in := pc_gen.io.pc_out
   reg_if1_if2.io.last_stage_atomic_stall_req := false.B
@@ -140,7 +143,7 @@ class DataPath extends Module with phvntomParams {
   reg_if2_id.io.last_stage_atomic_stall_req := stall_req_if2_atomic
   reg_if2_id.io.next_stage_atomic_stall_req := false.B
   reg_if2_id.io.stall := stall_if2_id
-  reg_if2_id.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush
+  reg_if2_id.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush
   reg_if2_id.io.bubble_in := stall_req_if2_atomic || reg_if1_if2.io.bubble_out
   reg_if2_id.io.inst_in := Mux(reg_if1_if2.io.inst_af_out, BUBBLE, inst_if2)
   reg_if2_id.io.pc_in := reg_if1_if2.io.pc_out
@@ -154,7 +157,7 @@ class DataPath extends Module with phvntomParams {
   reg_id_exe.io.last_stage_atomic_stall_req := false.B
   reg_id_exe.io.next_stage_atomic_stall_req := stall_req_exe_atomic
   reg_id_exe.io.stall := stall_id_exe
-  reg_id_exe.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush
+  reg_id_exe.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush
   reg_id_exe.io.bubble_in := reg_if2_id.io.bubble_out
   reg_id_exe.io.inst_in := reg_if2_id.io.inst_out
   reg_id_exe.io.pc_in := reg_if2_id.io.pc_out
@@ -246,7 +249,7 @@ class DataPath extends Module with phvntomParams {
   reg_exe_mem1.io.last_stage_atomic_stall_req := stall_req_exe_atomic
   reg_exe_mem1.io.next_stage_atomic_stall_req := false.B
   reg_exe_mem1.io.stall := stall_exe_mem1
-  reg_exe_mem1.io.flush_one := expt_int_flush || error_ret_flush
+  reg_exe_mem1.io.flush_one := expt_int_flush || error_ret_flush || write_satp_flush
   reg_exe_mem1.io.bubble_in := (reg_id_exe.io.bubble_out || stall_req_exe_atomic ||
     stall_req_exe_interruptable || amo_bubble_inserter)
   reg_exe_mem1.io.inst_in := reg_id_exe.io.inst_out
@@ -259,7 +262,7 @@ class DataPath extends Module with phvntomParams {
   reg_exe_mem1.io.software_int_in := io.int.msip
   reg_exe_mem1.io.external_int_in := io.int.meip
   reg_exe_mem1.io.inst_af_in := reg_id_exe.io.inst_af_out
-  reg_exe_mem1.io.next_stage_flush_req := expt_int_flush || error_ret_flush
+  reg_exe_mem1.io.next_stage_flush_req := expt_int_flush || error_ret_flush || write_satp_flush
 
   amo_bubble_inserter := reg_exe_mem1.io.inst_info_out.amoSelect.orR
 
@@ -297,6 +300,7 @@ class DataPath extends Module with phvntomParams {
 
   expt_int_flush := csr.io.expt
   error_ret_flush := csr.io.ret
+  write_satp_flush := csr.io.write_satp
 
   // TODO 2-stage D$
   // REG MEM1 MEM2

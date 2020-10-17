@@ -112,3 +112,37 @@ class TLBConfig extends phvntomParams {
   }
 
 }
+
+class PTWalkerIO extends Bundle with TLBConfig {
+  val valid = Input(Bool())
+  val va = Input(UInt(validVABits.W))
+  val flush_all = Input(Bool())
+  val satp_val = Input(UInt(xlen.W))
+  // Output
+  val stall_req = Output(Bool())
+  val pa = Output(UInt(xlen.W))
+  val pf = Output(Bool())
+  val af = Output(Bool())
+}
+
+class PTWalker extends Module with TLBConfig {
+  val io = IO(new PTWalkerIO)
+
+  // TODO Wrap an UNCACHE Here
+  val s_idle = 0.U(1.W)
+  val s_busy = 1.U(1.W)
+
+  val satp_mode = satp_val(xlen - 1, 60)
+  val sapt_asid = sapt_val(59, 44)
+  val sapt_ppn = sapt_val(43, 0)
+
+  val level = RegInit(UInt(2.W), Level)
+  val entry_recv = RegInit(UInt(xlen.W), 0.U)
+  val next_pte_pa = RegInit(UInt(xlen.W), 0.U)
+  val state = RegInit(UInt(s_idle.getWidth.W), s_idle)
+
+  when()
+
+  io.pf := false.B
+  io.af := false.B
+}

@@ -11,11 +11,13 @@ class PcGenIO extends Bundle with phvntomParams {
   // Exception, Interrupt and Return
   val expt_int = Input(Bool())
   val error_ret = Input(Bool())
+  val write_sapt = Input(Bool())
   val epc = Input(UInt(xlen.W))
   val tvec = Input(UInt(xlen.W))
   // Branch and Jump
   val branch_jump = Input(Bool())
   val branch_pc = Input(UInt(xlen.W))
+  val pc_plus = Input(UInt(xlen.W))
   val inst_addr_misaligned = Input(Bool())
   // PC Output
   val pc_out = Output(UInt(xlen.W))
@@ -35,6 +37,8 @@ class PcGen extends Module with phvntomParams {
     pc_for_restore := io.tvec
   }.elsewhen(io.error_ret) {
     pc_for_restore := io.epc
+  }.elsewhen(io.write_sapt) {
+    pc_for_restore := io.pc_plus
   }.elsewhen(io.branch_jump && !io.inst_addr_misaligned) {
     pc_for_restore := io.branch_pc
   }.elsewhen(!last_stall && io.stall) {
@@ -46,6 +50,8 @@ class PcGen extends Module with phvntomParams {
       pc := Cat(io.tvec(xlen - 1, 1), Fill(1, 0.U))
     }.elsewhen(io.error_ret) {
       pc := Cat(io.epc(xlen - 1, 1), Fill(1, 0.U))
+    }.elsewhen(io.write_sapt) {
+      pc := io.pc_plus
     }.elsewhen(io.branch_jump && !io.inst_addr_misaligned) {
       pc := Cat(io.branch_pc(xlen - 1, 1), Fill(1, 0.U))
     }.elsewhen(last_stall) {
@@ -57,7 +63,7 @@ class PcGen extends Module with phvntomParams {
 
   io.pc_out := pc
 
-  if(pipeTrace) {
+  if (pipeTrace) {
     printf("In PC_Gen: pc %x, stall %x, br %x, bpc %x, ei %x, tvec %x\n", pc, io.stall, io.branch_jump, io.branch_pc, io.expt_int, io.tvec)
   }
 }

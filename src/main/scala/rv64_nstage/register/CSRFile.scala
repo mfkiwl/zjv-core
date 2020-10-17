@@ -98,6 +98,11 @@ object CSR {
   val minstret =    0xb02.U(12.W)
 }
 
+object SATP {
+  val Bare    = 0.U(4.W)
+  val Sv39    = 8.U(4.W)
+}
+
 object Exception {
   val InstAddrMisaligned = 0x0.U(4.W)
   val InstAccessFault = 0x1.U(4.W) // TODO
@@ -319,6 +324,10 @@ class CSRFile extends Module with phvntomParams {
   val mipr_seip = RegInit(false.B)
   val mipr_stip = RegInit(false.B)
   val mipr_ssip = RegInit(false.B)
+  // SATP
+  val satpr_mode = RegInit(UInt(4.W), Bare)
+  val satpr_asid = RegInit(UInt(16.W), 0.U)
+  val satpr_ppn = RegInit(UInt(44.U), 0.U)
 
   // [--------- Machine Mode Registers in CSR --------]
   val mepcr = RegInit(0.U(xlen.W))
@@ -378,7 +387,7 @@ class CSRFile extends Module with phvntomParams {
     mipr_stip, Fill(3, 0.U), mipr_ssip, false.B
   )
   val stvecr = RegInit(0.U(xlen.W))
-  val satpr = RegInit(0.U(xlen.W))
+  val satpr = Cat(saptr_mode, saptr_asid, saptr_ppn)
   val sepcr = RegInit(0.U(xlen.W))
   val scauser = Cat(scauser_int, 0.U((xlen - 5).W), scauser_cause)
   val stvalr = RegInit(0.U(xlen.W))
@@ -955,8 +964,10 @@ class CSRIO extends Bundle with phvntomParams {
   val expt = Output(Bool())
   val int = Output(Bool())
   val ret = Output(Bool())
+  val write_satp = Output(Bool())
   val evec = Output(UInt(xlen.W))
   val epc = Output(UInt(xlen.W))
+  val pc_plus = Output(UInt(xlen.W))
   // Interrupt
   val tim_int = Input(Bool())
   val soft_int = Input(Bool())
@@ -1005,4 +1016,6 @@ class CSR extends Module with phvntomParams {
   io.epc := csr_regfile.io.epc_out
   io.ret := csr_regfile.io.is_ret_out
   io.stall_req := false.B
+  io.write_satp := csr_regfile.io.write_satp
+  io.pc_plus := io.pc + 4.U(3.W)
 }
