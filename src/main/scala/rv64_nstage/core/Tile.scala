@@ -22,9 +22,9 @@ class Tile extends Module with phvntomParams with projectConfig {
   core.reset := reset
 
   // mem path
-  val icache = Module(new ICacheSimple)
+  val icache = Module(new ICacheSimple()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false)))
   val icacheBus = Module(new DUncache(4 * xlen, "inst uncache")) // TODO parameterize this
-  val dcache = Module(new DCacheSimple)
+  val dcache = Module(new DCacheSimple()(CacheConfig(name = "dcache")))
   val dcacheBus = Module(new DUncache(4 * xlen, "mem uncache")) // TODO parameterize this
   val mmioBus = Module(new Uncache(mname = "mmio uncache"))
   val mem_source = List(icacheBus, dcacheBus)

@@ -8,51 +8,14 @@ import bus._
 import device._
 import utils._
 
-trait DCacheParameters extends phvntomParams {
-  val cacheName = "dcache" // used for debug info
-  val userBits = 0
-  val idBits = 0
-  val nWays = 4
-  val nLine = 4
-  val nBytes = 32 * 1024
-  val nBits = nBytes * 8
-  val lineBits = nLine * xlen
-  val lineBytes = lineBits / 8
-  val lineLength = log2Ceil(nLine)
-  val nSets = nBytes / lineBytes / nWays
-  val offsetLength = log2Ceil(lineBytes)
-  val indexLength = log2Ceil(nSets)
-  val tagLength = xlen - (indexLength + offsetLength)
-  val policy: ReplacementPolicyBase = RandomPolicy
-}
-
-class CacheSimpleIO extends Bundle with DCacheParameters {
-  val in = new MemIO
-  val mem = Flipped(new MemIO(lineBits))
-  val mmio = Flipped(new MemIO)
-}
-
-class MetaData extends Bundle with DCacheParameters {
-  val valid = Bool()
-  val dirty = Bool()
-  val meta = UInt(1.W)
-  val tag = UInt(tagLength.W)
-  override def toPrintable: Printable =
-    p"MetaData(valid = ${valid}, dirty = ${dirty}, meta = ${meta}, tag = 0x${Hexadecimal(tag)})"
-}
-
-class DCacheLineData extends Bundle with DCacheParameters {
-  val data = Vec(nLine, UInt(xlen.W)) // UInt(lineBits.W)
-  override def toPrintable: Printable =
-    p"DCacheLineData(data = ${data})"
-}
-
-class DCacheSimple extends Module with DCacheParameters {
+class DCacheSimple(implicit val cacheConfig: CacheConfig)
+    extends Module
+    with CacheParameters {
   val io = IO(new CacheSimpleIO)
 
   // Module Used
   val metaArray = Mem(nSets, Vec(nWays, new MetaData))
-  val dataArray = Mem(nSets, Vec(nWays, new DCacheLineData))
+  val dataArray = Mem(nSets, Vec(nWays, new CacheLineData))
 
   /* stage2 registers */
   val s1_valid = WireInit(Bool(), false.B)
@@ -62,7 +25,7 @@ class DCacheSimple extends Module with DCacheParameters {
   val s1_wen = WireInit(Bool(), false.B)
   val s1_memtype = Wire(UInt(xlen.W))
   val s1_meta = Wire(Vec(nWays, new MetaData))
-  val s1_cacheline = Wire(Vec(nWays, new DCacheLineData))
+  val s1_cacheline = Wire(Vec(nWays, new CacheLineData))
   val s1_tag = Wire(UInt(tagLength.W))
   val s1_lineoffset = Wire(UInt(lineLength.W))
   val s1_wordoffset = Wire(UInt((offsetLength - lineLength).W))
@@ -80,36 +43,38 @@ class DCacheSimple extends Module with DCacheParameters {
   s1_wordoffset := s1_addr(offsetLength - lineLength - 1, 0)
 
   val hitVec = VecInit(s1_meta.map(m => m.valid && m.tag === s1_tag)).asUInt
-  val invalidVec = VecInit(s1_meta.map(m => !m.valid)).asUInt
+  val hit_index = PriorityEncoder(hitVec)
   val victim_index = policy.choose_victim(s1_meta)
-  val victim_vec = UIntToOH(victim_index)  
-  val cacheline_meta = Mux1H(hitVec, s1_meta)
-  val cacheline_data = Mux1H(hitVec, s1_cacheline)
+  val victim_vec = UIntToOH(victim_index)
   val ismmio = AddressSpace.isMMIO(s1_addr)
   val hit = hitVec.orR && !ismmio
   val result = Wire(UInt(xlen.W))
-  val write_vec = Mux(hit, hitVec, victim_vec)
+  val access_index = Mux(hit, hit_index, victim_index)
+  val access_vec = UIntToOH(access_index)
+  val cacheline_meta = s1_meta(access_index) // Mux1H(access_vec, s1_meta)
+  val cacheline_data =
+    s1_cacheline(access_index) // Mux1H(access_vec, s1_cacheline)
 
-  val s_idle :: s_memReadReq :: s_memReadWaitResp :: s_memReadResp :: s_memWriteReq :: s_memWriteResp :: s_mmioReq :: s_mmioResp :: s_wait_resp :: s_release :: Nil =
-    Enum(10)
+  val s_idle :: s_memReadReq :: s_memReadResp :: s_memWriteReq :: s_memWriteResp :: s_mmioReq :: s_mmioResp :: s_wait_resp :: s_release :: Nil =
+    Enum(9)
   val state = RegInit(s_idle)
   val read_address = Cat(s1_addr(xlen - 1, offsetLength), 0.U(offsetLength.W))
   val write_address = Cat(cacheline_meta.tag, s1_index, 0.U(offsetLength.W))
 
-  io.in.resp.valid := s1_valid && (hit || io.mem.resp.valid || io.mmio.resp.valid)
+  io.in.resp.valid := s1_valid && (hit || io.mem.resp.valid && state === s_memReadResp) || (io.mmio.resp.valid && state === s_mmioResp)
   io.in.resp.bits.data := result
   io.in.req.ready := state === s_idle
 
   io.mem.req.valid := s1_valid && (state === s_memReadReq || state === s_memReadResp || state === s_memWriteReq || state === s_memWriteResp) // (!hit && !ismmio)
   io.mem.req.bits.addr := Mux(
-    state === s_memWriteReq,
+    state === s_memWriteReq || state === s_memWriteResp,
     write_address,
     read_address
   )
-  io.mem.req.bits.data := cacheline_data.data(victim_index).asUInt
-  io.mem.req.bits.wen := (state == s_memWriteReq).B
+  io.mem.req.bits.data := cacheline_data.asUInt
+  io.mem.req.bits.wen := state === s_memWriteReq || state === s_memWriteResp
   io.mem.req.bits.memtype := ControlConst.memOcto
-  io.mem.resp.ready := s1_valid && state === s_memReadResp
+  io.mem.resp.ready := s1_valid && (state === s_memReadResp || state === s_memWriteResp)
 
   io.mmio.req.valid := s1_valid && (state === s_mmioReq || state === s_mmioResp)
   io.mmio.req.bits.addr := s1_addr
@@ -145,7 +110,7 @@ class DCacheSimple extends Module with DCacheParameters {
   when(!s1_valid) { state := s_idle }
 
   val fetched_data = io.mem.resp.bits.data
-  val fetched_vec = Wire(new DCacheLineData)
+  val fetched_vec = Wire(new CacheLineData)
   for (i <- 0 until nLine) {
     fetched_vec.data(i) := fetched_data((i + 1) * xlen - 1, i * xlen)
   }
@@ -154,8 +119,8 @@ class DCacheSimple extends Module with DCacheParameters {
   result := DontCare
   when(s1_valid) {
     when(s1_wen) {
-      when(hit || io.mem.resp.valid) {
-        val newdata = Wire(new DCacheLineData)
+      when(hit || (io.mem.resp.valid && state === s_memReadResp)) {
+        val newdata = Wire(new CacheLineData)
         val filled_data = WireInit(UInt(xlen.W), 0.U(xlen.W))
         val offset = s1_wordoffset << 3
         val mask = WireInit(UInt(xlen.W), 0.U)
@@ -198,21 +163,23 @@ class DCacheSimple extends Module with DCacheParameters {
           s1_lineoffset
         ) := (mask & filled_data) | (~mask & target_data.data(s1_lineoffset))
         val writeData = VecInit(Seq.fill(nWays)(newdata))
-        dataArray.write(s1_index, writeData, write_vec.asBools)
+        dataArray.write(s1_index, writeData, access_vec.asBools)
         val new_meta = Wire(Vec(nWays, new MetaData))
-        new_meta := policy.update_meta(s1_meta, hitVec, victim_index)
-        new_meta(victim_index).valid := true.B
-        new_meta(victim_index).dirty := true.B
-        new_meta(victim_index).tag := s1_tag
-        metaArray.write(s1_index, new_meta, write_vec.asBools)
+        new_meta := policy.update_meta(s1_meta, access_index)
+        new_meta(access_index).valid := true.B
+        new_meta(access_index).dirty := true.B
+        new_meta(access_index).tag := s1_tag
+        metaArray.write(s1_index, new_meta)
         printf(
-          p"dcache write: s1_index=0x${Hexadecimal(s1_index)}, new_meta=${new_meta}\n"
+          p"dcache write: mask=${Hexadecimal(mask)}, filled_data=${Hexadecimal(filled_data)}, s1_index=0x${Hexadecimal(s1_index)}\n"
         )
-        printf(p"\ttarget_data=${target_data}\n")
+        printf(p"\tnewdata=${newdata}\n")
         printf(p"\tnew_meta=${new_meta}\n")
       }
     }.otherwise {
-      when(hit || io.mem.resp.valid || io.mmio.resp.valid) {
+      when(
+        hit || (io.mem.resp.valid && state === s_memReadResp) || (io.mmio.resp.valid && state === s_mmioResp)
+      ) {
         val result_data = target_data.data(s1_lineoffset)
         val offset = s1_wordoffset << 3
         val mask = WireInit(UInt(xlen.W), 0.U)
@@ -258,15 +225,17 @@ class DCacheSimple extends Module with DCacheParameters {
         )
         when(!ismmio) {
           val writeData = VecInit(Seq.fill(nWays)(target_data))
-          dataArray.write(s1_index, writeData, write_vec.asBools)
+          dataArray.write(s1_index, writeData, access_vec.asBools)
           val new_meta = Wire(Vec(nWays, new MetaData))
-          new_meta := policy.update_meta(s1_meta, hitVec, victim_index)
-          new_meta(victim_index).valid := true.B
-          new_meta(victim_index).dirty := false.B
-          new_meta(victim_index).tag := s1_tag
-          metaArray.write(s1_index, new_meta, write_vec.asBools)
+          new_meta := policy.update_meta(s1_meta, access_index)
+          new_meta(access_index).valid := true.B
+          when(!hit) {
+            new_meta(access_index).dirty := false.B
+          }
+          new_meta(access_index).tag := s1_tag
+          metaArray.write(s1_index, new_meta)
           printf(
-            p"dcache write: s1_index=0x${Hexadecimal(s1_index)}, new_meta=${new_meta}\n"
+            p"dcache write: mask=${Hexadecimal(mask)}, mem_result=${Hexadecimal(mem_result)}, s1_index=0x${Hexadecimal(s1_index)}\n"
           )
           printf(p"\ttarget_data=${target_data}\n")
           printf(p"\tnew_meta=${new_meta}\n")
@@ -275,6 +244,7 @@ class DCacheSimple extends Module with DCacheParameters {
     }
   }
 
+  // when(s1_valid && !hit && !ismmio && state === s_memReadResp) {
   printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
   printf(
     "state=%d, ismmio=%d, hit=%d, result=%x\n",
@@ -283,31 +253,42 @@ class DCacheSimple extends Module with DCacheParameters {
     hit,
     result
   )
-  printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
+  printf(
+    "s1_valid=%d, s1_addr=%x, s1_index=%x\n",
+    s1_valid,
+    s1_addr,
+    s1_index
+  )
+  printf(
+    "s1_data=%x, s1_wen=%d, s1_memtype=%d\n",
+    s1_data,
+    s1_wen,
+    s1_memtype
+  )
   printf(
     "s1_tag=%x, s1_lineoffset=%x, s1_wordoffset=%x\n",
     s1_tag,
     s1_lineoffset,
     s1_wordoffset
   )
-  printf(p"hitVec=${hitVec}, invalidVec=${invalidVec}\n")
+  printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
   printf(
-    p"victim_index=${victim_index}, victim_vec=${victim_vec}, write_vec = ${write_vec}\n"
+    p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
   )
   printf(p"s1_cacheline=${s1_cacheline}\n")
   printf(p"s1_meta=${s1_meta}\n")
-  printf(p"cacheline_data=${cacheline_data}\n")
-  printf(p"cacheline_meta=${cacheline_meta}\n")
-  printf(p"dataArray(s1_index)=${dataArray(s1_index)}\n")
-  printf(p"metaArray(s1_index)=${metaArray(s1_index)}\n")
-  printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
-  printf(p"fetched_vec=${fetched_vec}\n")
+  // printf(p"cacheline_data=${cacheline_data}\n")
+  // printf(p"cacheline_meta=${cacheline_meta}\n")
+  // printf(p"dataArray(s1_index)=${dataArray(s1_index)}\n")
+  // printf(p"metaArray(s1_index)=${metaArray(s1_index)}\n")
+  // printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
+  // printf(p"fetched_vec=${fetched_vec}\n")
   printf(p"----------${cacheName} io.in----------\n")
   printf(p"${io.in}\n")
   printf(p"----------${cacheName} io.mem----------\n")
   printf(p"${io.mem}\n")
-  printf(p"----------${cacheName} io.mmio----------\n")
-  printf(p"${io.mmio}\n")
+  // printf(p"----------${cacheName} io.mmio----------\n")
+  // printf(p"${io.mmio}\n")
   printf("-----------------------------------------------\n")
+  // }
 }

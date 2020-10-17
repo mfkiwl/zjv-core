@@ -15,7 +15,7 @@ void init_ram(const std::string img)
   reg_t entry;
   load_elf(img.c_str(), memif, &entry);
 
-  printf("[SimMem] load elf %s\n", img.c_str());
+  fprintf(stderr, "[SimMem] load elf %s\n", img.c_str());
 
   //  mem->mem_check();
 }
@@ -92,7 +92,7 @@ extern "C" void SimMemAccess(paddr_t raddr, paddr_t *rdata, paddr_t waddr, paddr
   {
     // daddr = daddr - mem->get_base();
     RACCESS(raddr, memDouble, rdata);
-    // printf("Read Done %lx -> %lx\n", raddr, *rdata);
+    // fprintf(stderr, "Read Done %lx -> %lx\n", raddr, *rdata);
   }
 
   if (waddr != 0xdeadbeefL)
@@ -100,10 +100,10 @@ extern "C" void SimMemAccess(paddr_t raddr, paddr_t *rdata, paddr_t waddr, paddr
     int offset = getOffset(wmask);
     int size   = getSize(wmask);
     WACCESS(waddr + (offset >> 3), size, wen, wdata >> offset);
-    // printf("Write Done %lx -> %lx, offset = %d, size = %d\n", waddr, wdata, offset, size);
+    // fprintf(stderr, "Write Done %lx -> %lx, offset = %d, size = %d\n", waddr, wdata, offset, size);
   }
 
-//   printf("[Memory Access] \n");
-//   printf("raddr %lx rdata %lx\n", raddr, *rdata);
-//   printf("waddr %lx wdata %lx mask %lx wen %d\n", waddr, wdata, wmask, wen);
+  fprintf(stderr, "[Memory Access] \n");
+  fprintf(stderr, "raddr %lx rdata %lx\n", raddr, *rdata);
+  fprintf(stderr, "waddr %lx wdata %lx mask %lx wen %d\n", waddr, wdata, wmask, wen);
 }

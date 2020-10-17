@@ -8,44 +8,54 @@ import bus._
 import device._
 import utils._
 
-trait ICacheParameters extends phvntomParams {
-  val cacheName = "icache" // used for debug info
-  val userBits = 0
-  val idBits = 0
-  val nWays = 1
-  val nLine = 4
-  val nBytes = 32 * 1024
-  val nBits = nBytes * 8
-  val lineBits = nLine * xlen
-  val lineBytes = lineBits / 8
-  val lineLength = log2Ceil(nLine)
-  val nSets = nBytes / lineBytes / nWays
-  val offsetLength = log2Ceil(lineBytes)
-  val indexLength = log2Ceil(nSets)
-  val tagLength = xlen - (indexLength + offsetLength)
-}
+// trait ICacheParameters extends phvntomParams {
+//   implicit val cacheConfig: CacheConfig
 
-class ICacheSimpleIO extends Bundle with ICacheParameters {
-  val in = new MemIO
-  val mem = Flipped(new MemIO(lineBits))
-}
+//   val readOnly = cacheConfig.readOnly
+//   val cacheName = "icache" // used for debug info
+//   val userBits = 0
+//   val idBits = 0
+//   val nWays = 4
+//   val nLine = 4
+//   val nBytes = 32 * 1024
+//   val nBits = nBytes * 8
+//   val lineBits = nLine * xlen
+//   val lineBytes = lineBits / 8
+//   val lineLength = log2Ceil(nLine)
+//   val nSets = nBytes / lineBytes / nWays
+//   val offsetLength = log2Ceil(lineBytes)
+//   val indexLength = log2Ceil(nSets)
+//   val tagLength = xlen - (indexLength + offsetLength)
+//   val replacementPolicy: String = "random"
+//   val policy: ReplacementPolicyBase = if (replacementPolicy == "lru") {
+//     LRUPolicy
+//   } else { RandomPolicy }
+// }
 
-class IMetaData extends Bundle with ICacheParameters {
-  val valid = Bool()
-  val dirty = Bool()
-  val tag = UInt(tagLength.W)
-  override def toPrintable: Printable =
-    p"IMetaData(valid = ${valid}, dirty = ${dirty}, tag = 0x${Hexadecimal(tag)})"
-}
+// class ICacheSimpleIO extends Bundle with ICacheParameters {
+//   val in = new MemIO
+//   val mem = Flipped(new MemIO(lineBits))
+// }
 
-class ICacheLineData extends Bundle with ICacheParameters {
-  val data = Vec(nLine, UInt(xlen.W)) // UInt(lineBits.W)
-  override def toPrintable: Printable =
-    p"ICacheLineData(data = ${data})"
-}
+// class IMetaData extends Bundle with ICacheParameters {
+//   val valid = Bool()
+//   val meta = if (replacementPolicy == "lru") { UInt(log2Ceil(nWays).W) }
+//   else { UInt(1.W) }
+//   val tag = UInt(tagLength.W)
+//   override def toPrintable: Printable =
+//     p"IMetaData(valid = ${valid}, ag = 0x${Hexadecimal(tag)})"
+// }
 
-class ICacheSimple extends Module with ICacheParameters {
-  val io = IO(new ICacheSimpleIO)
+// class ICacheLineData extends Bundle with ICacheParameters {
+//   val data = Vec(nLine, UInt(xlen.W)) // UInt(lineBits.W)
+//   override def toPrintable: Printable =
+//     p"ICacheLineData(data = ${data})"
+// }
+
+class ICacheSimple(implicit val cacheConfig: CacheConfig)
+    extends Module
+    with CacheParameters {
+  val io = IO(new CacheSimpleIO)
 
   // printf(p"----------${cacheName} Parameters----------\n")
   // printf(
@@ -57,8 +67,8 @@ class ICacheSimple extends Module with ICacheParameters {
   // printf("-----------------------------------------------\n")
 
   // Module Used
-  val metaArray = Mem(nSets, new IMetaData)
-  val dataArray = Mem(nSets, new ICacheLineData)
+  val metaArray = Mem(nSets, Vec(nWays, new MetaData))
+  val dataArray = Mem(nSets, Vec(nWays, new CacheLineData))
 
   /* stage2 registers */
   val s1_valid = WireInit(Bool(), false.B)
@@ -67,8 +77,8 @@ class ICacheSimple extends Module with ICacheParameters {
   val s1_data = Wire(UInt(xlen.W))
   val s1_wen = WireInit(Bool(), false.B)
   val s1_memtype = Wire(UInt(xlen.W))
-  val s1_meta = Wire(new IMetaData)
-  val s1_cacheline = Wire(new ICacheLineData)
+  val s1_meta = Wire(Vec(nWays, new MetaData))
+  val s1_cacheline = Wire(Vec(nWays, new CacheLineData))
   val s1_tag = Wire(UInt(tagLength.W))
   val s1_lineoffset = Wire(UInt(lineLength.W))
   val s1_wordoffset = Wire(UInt((offsetLength - lineLength).W))
@@ -85,13 +95,16 @@ class ICacheSimple extends Module with ICacheParameters {
   s1_lineoffset := s1_addr(offsetLength - 1, offsetLength - lineLength)
   s1_wordoffset := s1_addr(offsetLength - lineLength - 1, 0)
 
-  val hitVec = s1_meta.valid && s1_meta.tag === s1_tag
-  val invalidVec = !s1_meta.valid
-  val victim_index = 0.U
-  val cacheline_meta = s1_meta
-  val cacheline_data = s1_cacheline
+  val hitVec = VecInit(s1_meta.map(m => m.valid && m.tag === s1_tag)).asUInt
+  val hit_index = PriorityEncoder(hitVec)
+  val victim_index = policy.choose_victim(s1_meta)
+  val victim_vec = UIntToOH(victim_index)
+  val cacheline_meta = Mux1H(hitVec, s1_meta)
+  val cacheline_data = Mux1H(hitVec, s1_cacheline)
   val hit = hitVec.orR
   val result = Wire(UInt(xlen.W))
+  val access_index = Mux(hit, hit_index, victim_index)
+  val access_vec = UIntToOH(access_index)
 
   val s_idle :: s_memReadReq :: s_memReadResp :: s_wait_resp :: s_release :: Nil =
     Enum(5)
@@ -102,9 +115,9 @@ class ICacheSimple extends Module with ICacheParameters {
   io.in.resp.bits.data := result
   io.in.req.ready := state === s_idle
 
-  io.mem.req.valid := s1_valid && state === s_memReadReq
+  io.mem.req.valid := s1_valid && (state === s_memReadReq || state === s_memReadResp)
   io.mem.req.bits.addr := read_address
-  io.mem.req.bits.data := cacheline_data.data(victim_index).asUInt
+  io.mem.req.bits.data := DontCare
   io.mem.req.bits.wen := false.B
   io.mem.req.bits.memtype := ControlConst.memOcto
   io.mem.resp.ready := s1_valid && state === s_memReadResp
@@ -127,7 +140,7 @@ class ICacheSimple extends Module with ICacheParameters {
   when(!s1_valid) { state := s_idle }
 
   val fetched_data = io.mem.resp.bits.data
-  val fetched_vec = Wire(new ICacheLineData)
+  val fetched_vec = Wire(new CacheLineData)
   for (i <- 0 until nLine) {
     fetched_vec.data(i) := fetched_data((i + 1) * xlen - 1, i * xlen)
   }
@@ -174,12 +187,13 @@ class ICacheSimple extends Module with ICacheParameters {
           result := Cat(Fill(32, 0.U), realdata(31, 0))
         }
       }
-      dataArray(s1_index) := target_data
-      val new_meta = Wire(new IMetaData)
-      new_meta.valid := true.B
-      new_meta.dirty := false.B
-      new_meta.tag := s1_tag
-      metaArray(s1_index) := new_meta
+      val writeData = VecInit(Seq.fill(nWays)(target_data))
+      dataArray.write(s1_index, writeData, access_vec.asBools)
+      val new_meta = Wire(Vec(nWays, new MetaData))
+      new_meta := policy.update_meta(s1_meta, access_index)
+      new_meta(access_index).valid := true.B
+      new_meta(access_index).tag := s1_tag
+      metaArray.write(s1_index, new_meta)
       // printf(
       //     p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
       //   )
@@ -192,14 +206,18 @@ class ICacheSimple extends Module with ICacheParameters {
   // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
   // printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
   // printf("s1_tag=%x, s1_wordoffset=%x\n", s1_tag, s1_wordoffset)
-  // printf(p"hitVec=${hitVec}, invalidVec=${invalidVec}\n")
-  // printf(p"s1_cacheline=${s1_cacheline}, s1_meta=${s1_meta}\n")
+  // printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
   // printf(
-  //   p"cacheline_data=${cacheline_data}, cacheline_meta=${cacheline_meta}\n"
+  //   p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
   // )
-  // printf(
-  //   p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
-  // )
+  // printf(p"s1_cacheline=${s1_cacheline}\n")
+  // printf(p"s1_meta=${s1_meta}\n")
+  // // printf(
+  // //   p"cacheline_data=${cacheline_data}, cacheline_meta=${cacheline_meta}\n"
+  // // )
+  // // printf(
+  // //   p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
+  // // )
   // printf(p"----------${cacheName} io.in----------\n")
   // printf(p"${io.in}\n")
   // printf(p"----------${cacheName} io.mem----------\n")

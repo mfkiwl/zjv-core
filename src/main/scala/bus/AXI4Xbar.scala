@@ -262,14 +262,14 @@ class CrossbarNto1(n: Int) extends Module {
     }
   }
 
-  // printf(p"[${GTimer()}]: XbarNto1 Debug Start-----------\n")
-  // printf(
-  //   p"r_state=${r_state},inflightSrc_r=${inflightSrc_r},w_state=${w_state},inflightSrc_w=${inflightSrc_w}\n"
-  // )
-  // printf(p"io.in(0): \n${io.in(0)}\n")
-  // printf(p"io.in(1): \n${io.in(1)}\n")
-  // printf(p"io.out: \n${io.out}\n")
-  // printf("--------------------------------\n")
+  printf(p"[${GTimer()}]: XbarNto1 Debug Start-----------\n")
+  printf(
+    p"r_state=${r_state},inflightSrc_r=${inflightSrc_r},w_state=${w_state},inflightSrc_w=${inflightSrc_w}\n"
+  )
+  printf(p"io.in(0): \n${io.in(0)}\n")
+  printf(p"io.in(1): \n${io.in(1)}\n")
+  printf(p"io.out: \n${io.out}\n")
+  printf("--------------------------------\n")
 }
 
 class AXI4Xbar(n: Int, addressSpace: List[(Long, Long)]) extends Module {
