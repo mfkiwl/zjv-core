@@ -133,10 +133,10 @@ class RegIdExe extends Module with phvntomParams {
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits).W),
     default_inst_info)
 
   val delay_flush = RegInit(Bool(), false.B)
@@ -202,10 +202,10 @@ class RegExeMem1 extends Module with phvntomParams {
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -299,10 +299,10 @@ class RegMem1Mem2 extends Module with phvntomParams {
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -403,10 +403,10 @@ class RegMem2Wb extends Module with phvntomParams {
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
