@@ -57,4 +57,7 @@ class PcGen extends Module with phvntomParams {
 
   io.pc_out := pc
 
+  if(pipeTrace) {
+    printf("In PC_Gen: pc %x, stall %x, br %x, bpc %x, ei %x, tvec %x\n", pc, io.stall, io.branch_jump, io.branch_pc, io.expt_int, io.tvec)
+  }
 }

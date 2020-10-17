@@ -8,13 +8,15 @@ import device.MemIO
 import rv64_nstage.register.InterruptIO
 
 trait phvntomParams {
-  val xlen       = 64
-  val bitWidth   = log2Ceil(xlen)
-  val regNum     = 32
-  val regWidth   = log2Ceil(regNum)
-  val diffTest   = true
-  val pipeTrace  = true
-  val rtThread   = true
+  val xlen          = 64
+  val bitWidth      = log2Ceil(xlen)
+  val regNum        = 32
+  val regWidth      = log2Ceil(regNum)
+  val diffTest      = true
+  val pipeTrace     = false
+  val rtThread      = true
+  val only_M        = true
+  val validVABits   = 39
 }
 
 

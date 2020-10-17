@@ -3,14 +3,15 @@ package rv64_nstage.register
 import chisel3._
 import chisel3.util._
 import rv64_nstage.control._
-import rv64_nstage.control.ControlConst._
-import rv64_nstage.core.phvntomParams
+import rv64_nstage.core._
 
 import chisel3.util.experimental.BoringUtils
 
 class InterruptIO extends Bundle with phvntomParams {
   val mtip = Input(Bool())
   val msip = Input(Bool())
+  val meip = Input(Bool())
+  val seip = Input(Bool())
 }
 
 object CSR {
@@ -125,28 +126,148 @@ object Interrupt {
   val MExternalInterrupt = 0xb.U
 }
 
+
+class InterruptJudgerIO extends Bundle with phvntomParams {
+  val int_vec = Input(UInt(12.W))
+  val int_out = Output(UInt(4.W))
+  val has_int = Output(Bool())
+}
+
+class InterruptJudger extends Module with phvntomParams {
+  val io = IO(new InterruptJudgerIO)
+
+  when(io.int_vec(11)) {
+    io.int_out := 11.U
+    io.has_int := true.B
+  }.elsewhen(io.int_vec(9)) {
+    io.int_out := 9.U
+    io.has_int := true.B
+  }.elsewhen(io.int_vec(7)) {
+    io.int_out := 7.U
+    io.has_int := true.B
+  }.elsewhen(io.int_vec(5)) {
+    io.int_out := 5.U
+    io.has_int := true.B
+  }.elsewhen(io.int_vec(3)) {
+    io.int_out := 3.U
+    io.has_int := true.B
+  }.elsewhen(io.int_vec(1)) {
+    io.int_out := 1.U
+    io.has_int := true.B
+  }.otherwise {
+    io.int_out := 0.U
+    io.has_int := false.B
+  }
+}
+
+
+class ExceptionJudgerIO extends Bundle with phvntomParams {
+  val breakpoint = Input(Bool())
+  val inst_pf = Input(Bool())
+  val inst_af = Input(Bool())
+  val illegal_inst = Input(Bool())
+  val inst_ma = Input(Bool())
+  val ecall_m = Input(Bool())
+  val ecall_s = Input(Bool())
+  val ecall_u = Input(Bool())
+  val store_ma = Input(Bool())
+  val load_ma = Input(Bool())
+  val store_pf = Input(Bool())
+  val load_pf = Input(Bool())
+  val store_af = Input(Bool())
+  val load_af = Input(Bool())
+  val has_except = Output(Bool())
+  val except_out = Output(UInt(4.W))
+}
+
+class ExceptionJudger extends Module with phvntomParams {
+  val io = IO(new ExceptionJudgerIO)
+
+  when(io.breakpoint) {
+    io.has_except := true.B
+    io.except_out := Exception.Breakpoint
+  }.elsewhen(io.inst_pf) {
+    io.has_except := true.B
+    io.except_out := Exception.InstPageFault
+  }.elsewhen(io.inst_af) {
+    io.has_except := true.B
+    io.except_out := Exception.InstAccessFault
+  }.elsewhen(io.illegal_inst) {
+    io.has_except := true.B
+    io.except_out := Exception.IllegalInst
+  }.elsewhen(io.inst_ma) {
+    io.has_except := true.B
+    io.except_out := Exception.InstAddrMisaligned
+  }.elsewhen(io.ecall_m) {
+    io.has_except := true.B
+    io.except_out := Exception.EcallM
+  }.elsewhen(io.ecall_s) {
+    io.has_except := true.B
+    io.except_out := Exception.EcallS
+  }.elsewhen(io.ecall_u) {
+    io.has_except := true.B
+    io.except_out := Exception.EcallU
+  }.elsewhen(io.store_ma) {
+    io.has_except := true.B
+    io.except_out := Exception.StoreAddrMisaligned
+  }.elsewhen(io.load_ma) {
+    io.has_except := true.B
+    io.except_out := Exception.LoadAddrMisaligned
+  }.elsewhen(io.store_pf) {
+    io.has_except := true.B
+    io.except_out := Exception.StorePageFault
+  }.elsewhen(io.load_pf) {
+    io.has_except := true.B
+    io.except_out := Exception.LoadPageFault
+  }.elsewhen(io.store_af) {
+    io.has_except := true.B
+    io.except_out := Exception.StoreAccessFault
+  }.elsewhen(io.load_af) {
+    io.has_except := true.B
+    io.except_out := Exception.LoadAccessFault
+  }.otherwise {
+    io.has_except := false.B
+    io.except_out := Exception.IllegalInst
+  }
+}
+
 class CSRFileIO extends Bundle with phvntomParams {
+  // CSRRX
   val which_reg = Input(UInt(12.W))
-  val current_pc = Input(UInt(xlen.W))
   val wen = Input(Bool())
   val sen = Input(Bool())
   val cen = Input(Bool())
   val wdata = Input(UInt(xlen.W))
-  val illegal_addr = Input(UInt(xlen.W))
-  val has_int = Input(Bool())
-  val int_type = Input(UInt(4.W))
-  val has_except = Input(Bool())
-  val except_type = Input(UInt(4.W))
+  val rdata = Output(UInt(xlen.W))
+  // Golden Control Signals
   val stall = Input(Bool())
+  val current_pc = Input(UInt(xlen.W))
   val bubble = Input(Bool())
+  // Exceptions in RegExeMem1
+  val inst_af = Input(Bool())
+  val inst_pf = Input(Bool())
+  val inst_ma = Input(Bool())
+  val illegal_inst = Input(Bool())
+  val mem_af = Input(Bool())
+  val mem_ma = Input(Bool())
+  val mem_pf = Input(Bool())
+  val is_load = Input(Bool())
+  val is_store = Input(Bool())
+  val is_ecall = Input(Bool())
+  val is_bpoint = Input(Bool())
+  val bad_addr = Input(UInt(xlen.W))
+  // Exception Return
   val is_mret = Input(Bool())
   val is_sret = Input(Bool())
   val is_uret = Input(Bool())
-  val rdata = Output(UInt(xlen.W))
-  val evec_out = Output(UInt(xlen.W))
+  // Interrupt in RegExeMem1
+  val int_pend = Flipped(Flipped(new InterruptIO))
+  // Some Trap-Ret Registers
+  val expt_or_int_out = Output(Bool())
+  val interrupt_out = Output(Bool())
+  val is_ret_out = Output(Bool())
+  val tvec_out = Output(UInt(xlen.W))
   val epc_out = Output(UInt(xlen.W))
-  val global_int_enable = Output(Bool())
-  val illegal_csr = Output(Bool())
 }
 
 class CSRFile extends Module with phvntomParams {
@@ -162,8 +283,8 @@ class CSRFile extends Module with phvntomParams {
   val mstatusr_sd = RegInit(false.B)
   val mstatusr_mbe = RegInit(false.B)
   val mstatusr_sbe = RegInit(false.B)
-  val mstatusr_sxl = RegInit(0.U(2.W))
-  val mstatusr_uxl = RegInit(0.U(2.W))
+  val mstatusr_sxl = Wire(UInt(2.W))
+  val mstatusr_uxl = Wire(UInt(2.W))
   val mstatusr_tsr = RegInit(false.B)
   val mstatusr_tw = RegInit(false.B)
   val mstatusr_tvm = RegInit(false.B)
@@ -179,6 +300,13 @@ class CSRFile extends Module with phvntomParams {
   val mstatusr_spie = RegInit(false.B)
   val mstatusr_mie = RegInit(false.B)
   val mstatusr_sie = RegInit(false.B)
+  if(only_M) {
+    mstatusr_sxl := 0.U
+    mstatusr_uxl := 0.U
+  } else {
+    mstatusr_sxl := 2.U
+    mstatusr_uxl := 2.U
+  }
   // MIE
   val mier_meie = RegInit(false.B)
   val mier_seie = RegInit(false.B)
@@ -200,10 +328,9 @@ class CSRFile extends Module with phvntomParams {
     mier_mtie, false.B, mier_stie, false.B,
     mier_msie, false.B, mier_ssie, false.B
   )
-  val mipr = Cat(0.U((xlen - 12).W), io.has_int && io.int_type === Interrupt.MExternalInterrupt, false.B,
-    mipr_seip, false.B, io.has_int && io.int_type === Interrupt.MTimerInterrupt, false.B,
-    mipr_stip, false.B, io.has_int && io.int_type === Interrupt.MSoftwareInterrupt, false.B,
-    mipr_ssip, false.B
+  val mipr = Cat(0.U((xlen - 12).W), io.int_pend.meip, false.B,
+    mipr_seip, false.B, io.int_pend.mtip, false.B, mipr_stip, false.B,
+    io.int_pend.msip, false.B, mipr_ssip, false.B
   )
   val mstatusr = Cat(mstatusr_sd, 0.U((xlen - 39).W), mstatusr_mbe, mstatusr_sbe, mstatusr_sxl, mstatusr_uxl,
     "b000000000".U(9.W), mstatusr_tsr, mstatusr_tw, mstatusr_tvm, mstatusr_mxr, mstatusr_sum,
@@ -213,7 +340,12 @@ class CSRFile extends Module with phvntomParams {
   )
   val medelegr = RegInit(0.U(xlen.W))
   val midelegr = RegInit(0.U(xlen.W))
-  val misar = Cat(2.U(2.W), 0.U((xlen - 2 - 13).W), true.B, 0.U(3.W), true.B, 1.U(8.W))
+  val misar = Wire(UInt(xlen.W))
+  if(only_M) {
+    misar := "h8000000000001101".U
+  } else {
+    misar := "h8000000000141101".U
+  }
   val mvendoridr = 0.U(xlen.W)
   val marchidr = 5.U(xlen.W)
   val mscratchr = RegInit(0.U(xlen.W))
@@ -253,7 +385,7 @@ class CSRFile extends Module with phvntomParams {
   val scounterenr = RegInit(0.U(xlen.W))
 
   //  [--------- User Mode Registers in CSR --------]
-  val uepc = RegInit(0.U(xlen.W))
+  val uepcr = RegInit(0.U(xlen.W))
 
   // [--------- Debug Registers in CSR --------]
   val tselectr = RegInit(0.U(xlen.W))
@@ -262,23 +394,88 @@ class CSRFile extends Module with phvntomParams {
   val tdata3r = RegInit(0.U(xlen.W))
 
   // Interrupt Pending For Read Signals
-  val seip_for_read = (io.has_int && io.int_type === Interrupt.SExternalInterrupt) || mipr_seip
+  val seip_for_read = io.int_pend.seip || mipr_seip
 
   // Current Privilege Mode and Delegation Information
   val current_p = RegInit(UInt(2.W), CSR.PRV_M)
   val ideleg = midelegr & mipr
 
-  //  // Interrupt and Exception
-  //  val machine_int_global_enable = Mux(midelegr(io.int_type),
-  //    current_p < mdelegate_p || (current_p === mdelegate_p && Mux(mdelegate_p === CSR.PRV_S, mstatusr_sie, mstatusr_mie)),
-  //    current_p < CSR.PRV_M || (current_p === CSR.PRV_M && mstatusr_mie))
-  val machine_int_global_enable = current_p < CSR.PRV_M || (current_p === CSR.PRV_M && mstatusr_mie)
-  val machine_int_enable = io.has_int && (mier(io.int_type)) && machine_int_global_enable
+  // Combinational Judger for Interrupt
+  val int_judger = Module(new InterruptJudger)
+  def int_global_enable(ideleg_bit: Bool): Bool = Mux(ideleg_bit,
+    current_p < CSR.PRV_S || (current_p === CSR.PRV_S && mstatusr_sie),
+    current_p < CSR.PRV_M || (current_p === CSR.PRV_M && mstatusr_mie)
+  )
+  val int_enable_vec = Cat(int_global_enable(ideleg(11)), int_global_enable(ideleg(10)), int_global_enable(ideleg(9)),
+    int_global_enable(ideleg(8)), int_global_enable(ideleg(7)), int_global_enable(ideleg(6)),
+    int_global_enable(ideleg(5)), int_global_enable(ideleg(4)), int_global_enable(ideleg(3)),
+    int_global_enable(ideleg(2)), int_global_enable(ideleg(1)), int_global_enable(ideleg(0))
+  )
+  val int_vec = int_enable_vec & mier(11, 0) & Cat(mipr(11, 10), seip_for_read, mipr(8, 0))
+  int_judger.io.int_vec := int_vec
+  val has_int_comb = int_judger.io.has_int
+  val int_num_comb = int_judger.io.int_out
+
+  // Combinational Judger for Exceptions
+  val expt_judger = Module(new ExceptionJudger)
   val csr_not_exists = WireInit(false.B)
-  io.global_int_enable := machine_int_enable
+  val expt_vec = Wire(Vec(16, Bool()))
+  expt_vec.map(_ := false.B)
+  expt_vec(Exception.Breakpoint) := io.is_bpoint
+  expt_vec(Exception.EcallM) := current_p === CSR.PRV_M && io.is_ecall
+  expt_vec(Exception.EcallS) := current_p === CSR.PRV_S && io.is_ecall
+  expt_vec(Exception.EcallU) := current_p === CSR.PRV_U && io.is_ecall
+  expt_vec(Exception.IllegalInst) := io.illegal_inst || (csr_not_exists && (io.wen || io.cen || io.sen))
+  expt_vec(Exception.InstAccessFault) := io.inst_af
+  expt_vec(Exception.InstAddrMisaligned) := io.inst_ma
+  expt_vec(Exception.InstPageFault) := io.inst_pf
+  expt_vec(Exception.LoadAccessFault) := io.mem_af && io.is_load
+  expt_vec(Exception.LoadAddrMisaligned) := io.mem_ma && io.is_load
+  expt_vec(Exception.LoadPageFault) := io.mem_pf && io.is_load
+  expt_vec(Exception.StoreAccessFault) := io.mem_af && io.is_store
+  expt_vec(Exception.StoreAddrMisaligned) := io.mem_ma && io.is_store
+  expt_vec(Exception.StorePageFault) := io.mem_pf && io.is_store
+  expt_judger.io.breakpoint := expt_vec(Exception.Breakpoint)
+  expt_judger.io.inst_pf := expt_vec(Exception.InstPageFault)
+  expt_judger.io.inst_af := expt_vec(Exception.InstAccessFault)
+  expt_judger.io.illegal_inst := expt_vec(Exception.IllegalInst)
+  expt_judger.io.inst_ma := expt_vec(Exception.InstAddrMisaligned)
+  expt_judger.io.ecall_m := expt_vec(Exception.EcallM)
+  expt_judger.io.ecall_s := expt_vec(Exception.EcallS)
+  expt_judger.io.ecall_u := expt_vec(Exception.EcallU)
+  expt_judger.io.store_ma := expt_vec(Exception.StoreAddrMisaligned)
+  expt_judger.io.load_ma := expt_vec(Exception.LoadAddrMisaligned)
+  expt_judger.io.store_pf := expt_vec(Exception.StorePageFault)
+  expt_judger.io.load_pf := expt_vec(Exception.LoadPageFault)
+  expt_judger.io.store_af := expt_vec(Exception.StoreAccessFault)
+  expt_judger.io.load_af := expt_vec(Exception.LoadAccessFault)
+  val has_expt_comb = expt_judger.io.has_except
+  val expt_num_comb = expt_judger.io.except_out
+
+  // Combinational Logic for Trap-Ret Delegations and Addresses
+  val trap_addr = WireInit(0.U(xlen.W))
+  val eret_addr = WireInit(0.U(xlen.W))
+  val deleg = Mux(has_int_comb, midelegr, medelegr)
+  val deleg_2_s = Mux(has_int_comb, deleg(int_num_comb), deleg(expt_num_comb))
+  val eret = io.is_mret || io.is_sret || io.is_uret
+  trap_addr := Mux(deleg_2_s, stvecr, mtvecr)
+  eret_addr := Mux(io.is_mret, mepcr, Mux(io.is_sret, sepcr, uepcr))
+
+  // Output Comb Logic
+  io.tvec_out := trap_addr
+  io.epc_out := eret_addr
+  io.expt_or_int_out := !io.stall && !io.bubble && (has_expt_comb || has_int_comb)
+  io.interrupt_out := !io.stall && !io.bubble && has_int_comb
+  io.is_ret_out := !io.stall && !io.bubble && eret
+
+  // Write Signal for MTVAL or STVAL
+  val write_tval = io.mem_af || io.mem_pf || io.mem_ma || io.inst_af || io.inst_pf || io.inst_ma
+  val tval_value = Mux(expt_num_comb === Exception.InstAddrMisaligned, Cat(io.bad_addr(xlen - 1, 1),
+    Fill(1, 0.U)), io.bad_addr
+  )
 
   // MCYCLE and MINSTRET
-  BoringUtils.addSource(mcycler, "difftestmcycler")
+  // TODO Restore + 3.U and + 1.U
   when(!io.stall && io.which_reg === CSR.mcycle) {
     when(io.wen) {
       mcycler := io.wdata
@@ -327,10 +524,18 @@ class CSRFile extends Module with phvntomParams {
     csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.medeleg) {
     io.rdata := medelegr
-    csr_not_exists := true.B
+    if(only_M) {
+      csr_not_exists := true.B
+    } else {
+      csr_not_exists := false.B
+    }
   }.elsewhen(io.which_reg === CSR.mideleg) {
     io.rdata := midelegr
-    csr_not_exists := true.B
+    if(only_M) {
+      csr_not_exists := true.B
+    } else {
+      csr_not_exists := false.B
+    }
   }.elsewhen(io.which_reg === CSR.misa) {
     io.rdata := misar
     csr_not_exists := false.B
@@ -425,41 +630,60 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := "hdeadbeef".U
     csr_not_exists := true.B
   }
-  io.epc_out := mepcr
-  io.evec_out := mtvecr
 
   // Write CSR File
-  // TODO Write newly added registers
   when(!io.stall && !io.bubble) {
-    when((io.has_int & machine_int_enable) || io.has_except || io.illegal_csr) {
-      when(io.has_int) {
-        mepcr := io.current_pc
-        mcauser_int := 1.U(1.W)
-        mcauser_cause := io.int_type
+    when(has_int_comb || has_expt_comb) {
+      when(deleg_2_s) {
+        when(has_int_comb) {
+          scauser_int := 1.U(1.W)
+          scauser_cause := int_num_comb
+        }.otherwise {
+          scauser_int := 0.U(1.W)
+          scauser_cause := expt_num_comb
+        }
+        sepcr := io.current_pc
+        mstatusr_spp := current_p
+        mstatusr_spie := mstatusr_sie
+        mstatusr_sie := false.B
+        current_p := CSR.PRV_S
+        when(write_tval) {
+          stvalr := tval_value
+        }
       }.otherwise {
+        when(has_int_comb) {
+          mcauser_int := 1.U(1.W)
+          mcauser_cause := int_num_comb
+        }.otherwise {
+          mcauser_int := 0.U(1.W)
+          mcauser_cause := expt_num_comb
+        }
         mepcr := io.current_pc
-        mcauser_int := 0.U(1.W)
-        mcauser_cause := io.except_type
-        when(io.except_type === Exception.LoadAddrMisaligned || io.except_type === Exception.StoreAddrMisaligned ||
-          io.except_type === Exception.InstAccessFault || io.except_type === Exception.LoadAccessFault ||
-          io.except_type === Exception.StoreAccessFault) {
-          mtvalr := io.illegal_addr
-        }.elsewhen(io.except_type === Exception.InstAddrMisaligned) {
-          mtvalr := Cat(io.illegal_addr(xlen - 1, 1), Fill(1, 0.U))
+        mstatusr_mpp := current_p
+        mstatusr_mpie := mstatusr_mie
+        mstatusr_mie := false.B
+        current_p := CSR.PRV_M
+        when(write_tval) {
+          mtvalr := tval_value
         }
       }
-      mstatusr_mpie := mstatusr_mie
-      mstatusr_mie := false.B
-      mstatusr_mpp := CSR.PRV_M
     }.elsewhen(io.is_mret) {
       mstatusr_mie := mstatusr_mpie
+      current_p := mstatusr_mpp
       mstatusr_mpie := true.B
-      mstatusr_mpp := CSR.PRV_M
+      if (only_M) {
+        mstatusr_mpp := CSR.PRV_M
+      } else {
+        mstatusr_mpp := CSR.PRV_U
+      }
     }.elsewhen(io.is_sret) {
-      // TODO
+      mstatusr_sie := mstatusr_spie
+      current_p := Cat(0.U(1.W), mstatusr_spp)
+      mstatusr_spie := true.B
+      mstatusr_spp := CSR.PRV_U
     }.elsewhen(io.is_uret) {
-      // TODO
-    }.otherwise { // handle CSRXX instructions
+      // TODO add N Extension and U Mode
+    }.otherwise {
       when(io.which_reg === CSR.mepc) {
         when(io.wen) {
           mepcr := io.wdata
@@ -550,8 +774,6 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_sd := io.wdata(xlen - 1)
           mstatusr_mbe := io.wdata(37)
           mstatusr_sbe := io.wdata(36)
-          mstatusr_sxl := io.wdata(35, 34)
-          mstatusr_uxl := io.wdata(33, 32)
           mstatusr_tsr := io.wdata(22)
           mstatusr_tw := io.wdata(21)
           mstatusr_tvm := io.wdata(20)
@@ -559,8 +781,9 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_sum := io.wdata(18)
           mstatusr_mprv := io.wdata(17)
           mstatusr_xs := io.wdata(16, 15)
-          // mstatusr_fs := io.wdata(14, 13)
-          // mstatusr_mpp := io.wdata(12, 11) TODO M-Mode, so always 3
+          if(!only_M) {
+            mstatusr_mpp := io.wdata(12, 11)
+          }
           mstatusr_spp := io.wdata(8)
           mstatusr_mpie := io.wdata(7)
           mstatusr_ube := io.wdata(6)
@@ -571,8 +794,6 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_sd := mstatusr(xlen - 1) | io.wdata(xlen - 1)
           mstatusr_mbe := mstatusr(37) | io.wdata(37)
           mstatusr_sbe := mstatusr(36) | io.wdata(36)
-          mstatusr_sxl := mstatusr(35, 34) | io.wdata(35, 34)
-          mstatusr_uxl := mstatusr(33, 32) | io.wdata(33, 32)
           mstatusr_tsr := mstatusr(22) | io.wdata(22)
           mstatusr_tw := mstatusr(21) | io.wdata(21)
           mstatusr_tvm := mstatusr(20) | io.wdata(20)
@@ -580,8 +801,9 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_sum := mstatusr(18) | io.wdata(18)
           mstatusr_mprv := mstatusr(17) | io.wdata(17)
           mstatusr_xs := mstatusr(16, 15) | io.wdata(16, 15)
-          // mstatusr_fs := mstatusr(14, 13) | io.wdata(14, 13)
-          // mstatusr_mpp := mstatusr(12, 11) | io.wdata(12, 11) TODO M-Mode, so always 3
+          if(!only_M) {
+            mstatusr_mpp := mstatusr(12, 11) | io.wdata(12, 11)
+          }
           mstatusr_spp := mstatusr(8) | io.wdata(8)
           mstatusr_mpie := mstatusr(7) | io.wdata(7)
           mstatusr_ube := mstatusr(6) | io.wdata(6)
@@ -592,8 +814,6 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_sd := mstatusr(xlen - 1) & ~io.wdata(xlen - 1)
           mstatusr_mbe := mstatusr(37) & ~io.wdata(37)
           mstatusr_sbe := mstatusr(36) & ~io.wdata(36)
-          mstatusr_sxl := mstatusr(35, 34) & ~io.wdata(35, 34)
-          mstatusr_uxl := mstatusr(33, 32) & ~io.wdata(33, 32)
           mstatusr_tsr := mstatusr(22) & ~io.wdata(22)
           mstatusr_tw := mstatusr(21) & ~io.wdata(21)
           mstatusr_tvm := mstatusr(20) & ~io.wdata(20)
@@ -601,8 +821,9 @@ class CSRFile extends Module with phvntomParams {
           mstatusr_sum := mstatusr(18) & ~io.wdata(18)
           mstatusr_mprv := mstatusr(17) & ~io.wdata(17)
           mstatusr_xs := mstatusr(16, 15) & ~io.wdata(16, 15)
-          // mstatusr_fs := mstatusr(14, 13) & ~io.wdata(14, 13)
-          // mstatusr_mpp := mstatusr(12, 11) & ~io.wdata(12, 11) TODO M-Mode, so always 3
+          if(!only_M) {
+            mstatusr_mpp := mstatusr(12, 11) & ~io.wdata(12, 11)
+          }
           mstatusr_spp := mstatusr(8) & ~io.wdata(8)
           mstatusr_mpie := mstatusr(7) & ~io.wdata(7)
           mstatusr_ube := mstatusr(6) & ~io.wdata(6)
@@ -654,131 +875,20 @@ class CSRFile extends Module with phvntomParams {
     }
   }
 
-  io.illegal_csr := csr_not_exists & (io.cen | io.wen | io.sen)
-}
-
-class ExceptionJudgerIO extends Bundle with phvntomParams {
-  val if_inst_addr = Input(UInt(xlen.W))
-  val if_pc_check = Input(Bool())
-  val if_pf = Input(Bool())
-  val decode_illegal_inst = Input(Bool())
-  val mem_is_ld = Input(Bool())
-  val mem_is_st = Input(Bool())
-  val illegal_mem_addr = Input(Bool())
-  val illegal_inst_addr = Input(Bool())
-  val inst_access_fault = Input(Bool())
-  val mem_access_fault = Input(Bool())
-  val mem_pf = Input(Bool())
-  val mem_type = Input(UInt(ControlConst.memBits.W))
-  val wb_inst = Input(UInt(32.W))
-  val has_except = Output(Bool())
-  val except_out = Output(UInt(4.W))
-}
-
-class ExceptionJudger extends Module with phvntomParams {
-  val io = IO(new ExceptionJudgerIO)
-
-  when(io.inst_access_fault) {
-    io.has_except := true.B
-    io.except_out := Exception.InstAccessFault
-  }.elsewhen(io.if_pf) {
-    io.has_except := true.B
-    io.except_out := Exception.InstPageFault
-  }.elsewhen(io.decode_illegal_inst) {
-    io.has_except := true.B
-    io.except_out := Exception.IllegalInst
-  }.elsewhen(io.if_pc_check & io.illegal_inst_addr) {
-    io.has_except := true.B
-    io.except_out := Exception.InstAddrMisaligned
-  }.elsewhen(io.mem_is_ld) {
-    when(io.illegal_mem_addr) {
-      io.has_except := true.B
-      io.except_out := Exception.LoadAddrMisaligned
-    }.elsewhen(io.mem_access_fault) {
-      io.has_except := true.B
-      io.except_out := Exception.LoadAccessFault
-    }.elsewhen(io.mem_pf) {
-      io.has_except := true.B
-      io.except_out := Exception.LoadPageFault
-    }.otherwise {
-      io.has_except := false.B
-      io.except_out := Exception.InstAddrMisaligned
-    }
-  }.elsewhen(io.mem_is_st) {
-    when(io.illegal_mem_addr) {
-      io.has_except := true.B
-      io.except_out := Exception.StoreAddrMisaligned
-    }.elsewhen(io.mem_access_fault) {
-      io.has_except := true.B
-      io.except_out := Exception.StoreAccessFault
-    }.elsewhen(io.mem_pf) {
-      io.has_except := true.B
-      io.except_out := Exception.StorePageFault
-    }.otherwise {
-      io.has_except := false.B
-      io.except_out := Exception.InstAddrMisaligned
-    }
-  }.elsewhen(io.wb_inst === "b00000000000000000000000001110011".U) {
-    io.has_except := true.B
-    io.except_out := Exception.EcallM
-  }.elsewhen(io.wb_inst === "b00000000000100000000000001110011".U) {
-    io.has_except := true.B
-    io.except_out := Exception.Breakpoint
-  }.otherwise {
-    io.has_except := false.B
-    io.except_out := Exception.IllegalInst
-  }
-}
-
-class InterruptJudgerIO extends Bundle with phvntomParams {
-  val software_int = Input(Bool())
-  val timer_int = Input(Bool())
-  val external_int = Input(Bool())
-  val int_mode = Input(UInt(1.W)) // 0 for machine mode, 1 for supervisor mode
-  val int_out = Output(UInt(4.W))
-  val has_int = Output(Bool())
-}
-
-class InterruptJudger extends Module with phvntomParams {
-  val io = IO(new InterruptJudgerIO)
-
-  when(io.external_int) {
-    io.has_int := true.B
-    when(io.int_mode === 0.U(1.W)) {
-      io.int_out := Interrupt.MExternalInterrupt
-    }.otherwise {
-      io.int_out := Interrupt.SExternalInterrupt
-    }
-  }.elsewhen(io.software_int) {
-    io.has_int := true.B
-    when(io.int_mode === 0.U(1.W)) {
-      io.int_out := Interrupt.MSoftwareInterrupt
-    }.otherwise {
-      io.int_out := Interrupt.SSoftwareInterrupt
-    }
-  }.elsewhen(io.timer_int) {
-    io.has_int := true.B
-    when(io.int_mode === 0.U(1.W)) {
-      io.int_out := Interrupt.MTimerInterrupt
-    }.otherwise {
-      io.int_out := Interrupt.STimerInterrupt
-    }
-  }.otherwise {
-    io.has_int := false.B
-    io.int_out := Interrupt.ReservedInterrupt
+  if(diffTest) {
+    BoringUtils.addSource(mcycler, "difftestmcycler")
   }
 }
 
 class CSRIO extends Bundle with phvntomParams {
   // CSRXX
   val stall = Input(Bool())
+  val bubble = Input(Bool())
   val cmd = Input(UInt(ControlConst.wenBits.W))
   val in = Input(UInt(xlen.W))
   val out = Output(UInt(xlen.W))
   // Stall Request
   val stall_req = Output(Bool())
-  // Minstret
-  val bubble = Input(Bool())
   // Exception
   val pc = Input(UInt(xlen.W))
   val illegal_mem_addr = Input(Bool())
@@ -787,10 +897,9 @@ class CSRIO extends Bundle with phvntomParams {
   val illegal = Input(Bool())
   val is_load = Input(Bool())
   val is_store = Input(Bool())
-  val mem_type = Input(UInt(ControlConst.memBits.W))
-  val pc_check = Input(Bool())
   val inst_access_fault = Input(Bool())
   val mem_access_fault = Input(Bool())
+  // Output
   val expt = Output(Bool())
   val int = Output(Bool())
   val ret = Output(Bool())
@@ -805,33 +914,9 @@ class CSRIO extends Bundle with phvntomParams {
 class CSR extends Module with phvntomParams {
   val io = IO(new CSRIO)
   val csr_regfile = Module(new CSRFile)
-  val interrupt_judger = Module(new InterruptJudger)
-  val exception_judger = Module(new ExceptionJudger)
-
-  val last_stall_req = RegInit(false.B)
-  last_stall_req := io.stall_req
 
   val csr_addr = io.inst(31, 20)
   val read_only_csr = csr_addr(11) & csr_addr(10)
-
-  interrupt_judger.io.timer_int := io.tim_int
-  interrupt_judger.io.software_int := io.soft_int
-  interrupt_judger.io.external_int := io.external_int
-  interrupt_judger.io.int_mode := 0.U(1.W) // machine mode only TODO
-
-  exception_judger.io.if_inst_addr := io.pc
-  exception_judger.io.if_pc_check := io.pc_check
-  exception_judger.io.if_pf := false.B
-  exception_judger.io.decode_illegal_inst := io.illegal
-  exception_judger.io.mem_is_ld := io.is_load
-  exception_judger.io.mem_is_st := io.is_store
-  exception_judger.io.illegal_mem_addr := io.illegal_mem_addr
-  exception_judger.io.illegal_inst_addr := io.illegal_inst_addr
-  exception_judger.io.inst_access_fault := io.inst_access_fault
-  exception_judger.io.mem_access_fault := io.mem_access_fault
-  exception_judger.io.mem_pf := false.B
-  exception_judger.io.mem_type := io.mem_type
-  exception_judger.io.wb_inst := io.inst
 
   csr_regfile.io.which_reg := csr_addr
   csr_regfile.io.wen := io.cmd === ControlConst.wenCSRW
@@ -839,27 +924,33 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.sen := io.cmd === ControlConst.wenCSRS
   csr_regfile.io.wdata := io.in
   csr_regfile.io.stall := io.stall
-  csr_regfile.io.has_except := exception_judger.io.has_except
-  csr_regfile.io.except_type := exception_judger.io.except_out
-  csr_regfile.io.has_int := interrupt_judger.io.has_int
-  csr_regfile.io.int_type := interrupt_judger.io.int_out
   csr_regfile.io.current_pc := Cat(io.pc(31, 2), 0.U(2.W))
   csr_regfile.io.is_mret := io.inst === "b00110000001000000000000001110011".U
   csr_regfile.io.is_sret := io.inst === "b00010000001000000000000001110011".U
   csr_regfile.io.is_uret := io.inst === "b00000000001000000000000001110011".U
-  csr_regfile.io.illegal_addr := io.in
+  csr_regfile.io.bad_addr := io.in
   csr_regfile.io.bubble := io.bubble
+  csr_regfile.io.inst_af := io.inst_access_fault
+  csr_regfile.io.inst_pf := false.B
+  csr_regfile.io.inst_ma := io.illegal_inst_addr
+  csr_regfile.io.illegal_inst := io.illegal
+  csr_regfile.io.mem_af := io.mem_access_fault
+  csr_regfile.io.mem_ma := io.illegal_mem_addr
+  csr_regfile.io.mem_pf := false.B
+  csr_regfile.io.is_load := io.is_load
+  csr_regfile.io.is_store := io.is_store
+  csr_regfile.io.is_ecall := io.inst === "b00000000000000000000000001110011".U
+  csr_regfile.io.is_bpoint := io.inst === "b00000000000100000000000001110011".U
+  csr_regfile.io.int_pend.msip := io.soft_int
+  csr_regfile.io.int_pend.meip := io.external_int
+  csr_regfile.io.int_pend.mtip := io.tim_int
+  csr_regfile.io.int_pend.seip := false.B
 
   io.out := csr_regfile.io.rdata
-  io.int := (interrupt_judger.io.has_int & csr_regfile.io.global_int_enable &
-    !io.stall && !io.bubble)
-  io.expt := (io.int |
-    exception_judger.io.has_except | csr_regfile.io.illegal_csr) // here we temporarily do not consider if the CSR file is valid
-  io.evec := csr_regfile.io.evec_out
+  io.int := csr_regfile.io.interrupt_out
+  io.expt := csr_regfile.io.expt_or_int_out
+  io.evec := csr_regfile.io.tvec_out
   io.epc := csr_regfile.io.epc_out
-  io.ret := csr_regfile.io.is_mret
-
+  io.ret := csr_regfile.io.is_ret_out
   io.stall_req := false.B
-  //  io.stall_req := !last_stall_req && (csr_regfile.io.cen || csr_regfile.io.wen ||
-  //    csr_regfile.io.sen || csr_regfile.io.is_eret)
 }
