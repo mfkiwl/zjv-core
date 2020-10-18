@@ -17,6 +17,7 @@ trait phvntomParams {
   val rtThread      = true
   val only_M        = true
   val validVABits   = 39
+  val hasL2Cache    = true
 }
 
 

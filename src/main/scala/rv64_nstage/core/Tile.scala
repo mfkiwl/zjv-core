@@ -23,24 +23,35 @@ class Tile extends Module with phvntomParams with projectConfig {
 
   // mem path
   // val icache = Module(new ICacheSimple()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false)))
-  val icache = Module(new ICache()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false)))
-  val icacheBus = Module(new DUncache(icache.lineBits, "inst uncache")) // TODO parameterize this
+  val icache = Module(new ICache()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false)))  
   val dcache = Module(new DCacheSimple()(CacheConfig(name = "dcache")))
-  // val dcache = Module(new DCache()(CacheConfig(name = "dcache")))
-  val dcacheBus = Module(new DUncache(dcache.lineBits, "mem uncache")) // TODO parameterize this
-  val mmioBus = Module(new Uncache(mname = "mmio uncache"))
-  val mem_source = List(icacheBus, dcacheBus)
+  // val dcache = Module(new DCache()(CacheConfig(name = "dcache")))  
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
-  val memxbar = Module(new CrossbarNto1(2))
 
-  core.io.imem <> icache.io.in
-  icache.io.mem <> icacheBus.io.in
-  core.io.dmem <> dcache.io.in
-  dcache.io.mem <> dcacheBus.io.in
-  for (i <- 0 until mem_source.length) {
-    mem_source(i).io.out <> memxbar.io.in(i)
+  core.io.imem <> icache.io.in  
+  core.io.dmem <> dcache.io.in  
+
+  if (hasL2Cache) {
+    val mem_source = List(icache, dcache)
+    val l2cache = Module(new L2Cache(mem_source.length)(CacheConfig(name = "l2cache")))
+    val l2cacheBus = Module(new DUncache(l2cache.lineBits, "mem uncache"))
+    for (i <- 0 until mem_source.length) {
+      mem_source(i).io.mem <> l2cache.io.in(i)
+    }
+    l2cache.io.mem <> l2cacheBus.io.in
+    l2cacheBus.io.out <> mem.io.in
+  } else {
+    val icacheBus = Module(new DUncache(icache.lineBits, "inst uncache"))
+    val dcacheBus = Module(new DUncache(dcache.lineBits, "mem uncache"))  
+    val mem_source = List(icacheBus, dcacheBus)
+    val memxbar = Module(new CrossbarNto1(mem_source.length))
+    icache.io.mem <> icacheBus.io.in
+    dcache.io.mem <> dcacheBus.io.in
+    memxbar.io.out <> mem.io.in
+    for (i <- 0 until mem_source.length) {
+      mem_source(i).io.out <> memxbar.io.in(i)
+    }
   }
-  memxbar.io.out <> mem.io.in
 
   // mmio path
   // power off
@@ -61,10 +72,10 @@ class Tile extends Module with phvntomParams with projectConfig {
 
   // uart
   val uart = Module(new AXI4UART)
-  uart.io.extra.get.offset := mmioBus.io.offset
 
   // xbar
   val mmio_device = List(poweroff, clint, uart)
+  val mmioBus = Module(new Uncache(mname = "mmio uncache"))
   val mmioxbar = Module(new Crossbar1toN(AddressSpace.mmio))
   // val xbar = Module(new AXI4Xbar(2, addrSpace))
 

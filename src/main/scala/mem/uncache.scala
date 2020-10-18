@@ -12,7 +12,7 @@ import scala.annotation.switch
 class UncacheIO(val dataWidth: Int = 64) extends Bundle with phvntomParams {
   val in = new MemIO(dataWidth)
   val out = new AXI4Bundle
-  val offset = Output(UInt(xlen.W))
+  // val offset = Output(UInt(xlen.W))
 }
 
 // serve as a simple convertor from MemIO to AXI4 interface
@@ -142,7 +142,7 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
   }
 
   val offset = io.in.req.bits.addr(blen - 1, 0) << 3
-  io.offset := io.in.req.bits.addr(blen - 1, 0)
+  // io.offset := io.in.req.bits.addr(blen - 1, 0)
   val mask = Wire(UInt(xlen.W))
   val realdata = Wire(UInt(xlen.W))
   mask := 0.U

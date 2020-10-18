@@ -8,7 +8,7 @@ import device._
 case class CacheConfig(
     readOnly: Boolean = false,
     hasMMIO: Boolean = true,
-    name: String = "cache", // used for debug info    
+    name: String = "cache", // used for debug info
     userBits: Int = 0,
     idBits: Int = 0,
     ways: Int = 4, // set associativity
@@ -51,7 +51,16 @@ class CacheIO(implicit val cacheConfig: CacheConfig)
   else { null }
 }
 
-class MetaData(implicit val cacheConfig: CacheConfig) extends Bundle with CacheParameters {
+class L2CacheIO(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
+    extends Bundle
+    with CacheParameters {
+  val in = Vec(n_sources, new MemIO)
+  val mem = Flipped(new MemIO(lineBits))
+}
+
+class MetaData(implicit val cacheConfig: CacheConfig)
+    extends Bundle
+    with CacheParameters {
   val valid = Bool()
   val dirty = if (!readOnly) { Bool() }
   else { null }
@@ -62,7 +71,9 @@ class MetaData(implicit val cacheConfig: CacheConfig) extends Bundle with CacheP
     p"MetaData(valid = ${valid}, dirty = ${dirty}, meta = ${meta}, tag = 0x${Hexadecimal(tag)})\n"
 }
 
-class CacheLineData(implicit val cacheConfig: CacheConfig) extends Bundle with CacheParameters {
+class CacheLineData(implicit val cacheConfig: CacheConfig)
+    extends Bundle
+    with CacheParameters {
   val data = Vec(nLine, UInt(xlen.W))
   override def toPrintable: Printable =
     p"DCacheLineData(data = ${data})\n"
