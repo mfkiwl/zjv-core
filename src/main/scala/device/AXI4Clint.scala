@@ -60,7 +60,7 @@ class Clint extends AXI4Slave(new ClintIO) with AXI4Parameters {
     MaskExpand(io.in.w.bits.strb)
   )
 
-//  printf("MY CLINT %x, cnt %x\n", mtime, cnt)
+  // printf("MTIME %x, MCMP %x, cnt %x\n", mtime, mtimecmp, cnt)
 
   io.extra.get.mtip := RegNext(mtime >= mtimecmp)
   io.extra.get.msip := RegNext(msip =/= 0.U)

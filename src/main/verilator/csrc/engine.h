@@ -47,6 +47,7 @@ public:
     
     void sim_step(uint step);
     void emu_step(uint step);
+    void sim_checkINT();
 
     dtengine_t(std::string elfpath);
 
@@ -62,7 +63,6 @@ public:
 
     unsigned long sim_get_pc();
     void sim_sync_cycle();
-    void sim_set_mip();
 
     bool is_finish();
     unsigned long emu_difftest_valid();

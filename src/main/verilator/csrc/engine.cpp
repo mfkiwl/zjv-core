@@ -68,6 +68,11 @@ void dtengine_t::sim_step(uint step) {
     sim_get_state();
 }
 
+void dtengine_t::sim_checkINT() {
+    spike->difftest_checkINT();
+    sim_get_state();
+}
+
 void dtengine_t::emu_step(uint step) {
     zjv->clock = 0;
     zjv->eval();
@@ -172,10 +177,6 @@ unsigned long dtengine_t::emu_get_int() {
 
 void dtengine_t::sim_sync_cycle() {
     spike->sync_cycle();
-}
-
-void dtengine_t::sim_set_mip() {
-    spike->set_mip();
 }
 
 bool dtengine_t::is_finish() {
