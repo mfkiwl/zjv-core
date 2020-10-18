@@ -11,7 +11,7 @@ class PcGenIO extends Bundle with phvntomParams {
   // Exception, Interrupt and Return
   val expt_int = Input(Bool())
   val error_ret = Input(Bool())
-  val write_sapt = Input(Bool())
+  val write_satp = Input(Bool())
   val epc = Input(UInt(xlen.W))
   val tvec = Input(UInt(xlen.W))
   // Branch and Jump
@@ -37,7 +37,7 @@ class PcGen extends Module with phvntomParams {
     pc_for_restore := io.tvec
   }.elsewhen(io.error_ret) {
     pc_for_restore := io.epc
-  }.elsewhen(io.write_sapt) {
+  }.elsewhen(io.write_satp) {
     pc_for_restore := io.pc_plus
   }.elsewhen(io.branch_jump && !io.inst_addr_misaligned) {
     pc_for_restore := io.branch_pc
@@ -50,7 +50,7 @@ class PcGen extends Module with phvntomParams {
       pc := Cat(io.tvec(xlen - 1, 1), Fill(1, 0.U))
     }.elsewhen(io.error_ret) {
       pc := Cat(io.epc(xlen - 1, 1), Fill(1, 0.U))
-    }.elsewhen(io.write_sapt) {
+    }.elsewhen(io.write_satp) {
       pc := io.pc_plus
     }.elsewhen(io.branch_jump && !io.inst_addr_misaligned) {
       pc := Cat(io.branch_pc(xlen - 1, 1), Fill(1, 0.U))

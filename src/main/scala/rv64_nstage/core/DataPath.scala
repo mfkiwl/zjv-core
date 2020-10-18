@@ -9,6 +9,7 @@ import rv64_nstage.control._
 import rv64_nstage.control.ControlConst._
 import rv64_nstage.fu._
 import rv64_nstage.register._
+import rv64_nstage.tlb.PTWalker
 
 class DataPathIO extends Bundle with phvntomParams {
   val ctrl = Flipped(new ControlPathIO)
@@ -46,11 +47,15 @@ class DataPath extends Module with phvntomParams {
   val scheduler = Module(new ALUScheduler)
   val amo_arbiter = Module(new AMOArbiter)
   val reservation = Module(new Reservation)
+  val immu = Module(new PTWalker)
+//  val dmmu = Module(new PTWalker)
 
   // Stall Request Signals
+  val stall_req_if1_atomic = WireInit(Bool(), false.B)
   val stall_req_if2_atomic = WireInit(Bool(), false.B)
   val stall_req_exe_atomic = WireInit(Bool(), false.B)
   val stall_req_exe_interruptable = WireInit(Bool(), false.B)
+  val stall_req_mem1_atomic = WireInit(Bool(), false.B)
   val stall_req_mem2_atomic = WireInit(Bool(), false.B)
 
   // Strange Bubble Inserter
@@ -94,11 +99,11 @@ class DataPath extends Module with phvntomParams {
   // Stall Control Logic
   stall_mem2_wb := false.B
   stall_mem1_mem2 := stall_mem2_wb || stall_req_mem2_atomic
-  stall_exe_mem1 := stall_mem1_mem2 || false.B
+  stall_exe_mem1 := stall_mem1_mem2 || stall_req_mem1_atomic
   stall_id_exe := stall_exe_mem1 || stall_req_exe_interruptable || stall_req_exe_atomic || amo_bubble_inserter
   stall_if2_id := stall_id_exe || false.B
   stall_if1_if2 := stall_if2_id || stall_req_if2_atomic
-  stall_pc := stall_if1_if2 || false.B
+  stall_pc := stall_if1_if2 || stall_req_if1_atomic
 
   // PC Generator
   pc_gen.io.stall := stall_pc
@@ -114,14 +119,23 @@ class DataPath extends Module with phvntomParams {
 
   // Inst Access Fault Detector
   inst_af := !is_legal_addr(pc_gen.io.pc_out)
+  immu.io.valid := !stall_pc
+  immu.io.va := pc_gen.io.pc_out
+  immu.io.flush_all = write_satp_flush
+  immu.io.satp_val = 0.U  // TODO
+  immu.io.current_p = 3.U   // TODO
+  // TODO add PAGE_FAULT
+
+  stall_req_if1_atomic := immu.io.stall_req
 
   // TODO Dummy stage
   // TODO ultimately, in this stage, I$ should access SRAM
   reg_if1_if2.io.stall := stall_if1_if2
   reg_if1_if2.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush
-  reg_if1_if2.io.bubble_in := false.B
+  reg_if1_if2.io.bubble_in := stall_req_if1_atomic
   reg_if1_if2.io.pc_in := pc_gen.io.pc_out
-  reg_if1_if2.io.last_stage_atomic_stall_req := false.B
+  reg_if1_if2.io.ppc_in := immu.io.pa
+  reg_if1_if2.io.last_stage_atomic_stall_req := stall_req_if1_atomic
   reg_if1_if2.io.next_stage_atomic_stall_req := stall_req_if2_atomic
   reg_if1_if2.io.inst_af_in := inst_af
   reg_if1_if2.io.next_stage_flush_req := false.B
@@ -247,7 +261,7 @@ class DataPath extends Module with phvntomParams {
 
   // Reg EXE MEM1
   reg_exe_mem1.io.last_stage_atomic_stall_req := stall_req_exe_atomic
-  reg_exe_mem1.io.next_stage_atomic_stall_req := false.B
+  reg_exe_mem1.io.next_stage_atomic_stall_req := stall_req_mem1_atomic
   reg_exe_mem1.io.stall := stall_exe_mem1
   reg_exe_mem1.io.flush_one := expt_int_flush || error_ret_flush || write_satp_flush
   reg_exe_mem1.io.bubble_in := (reg_id_exe.io.bubble_out || stall_req_exe_atomic ||
@@ -304,11 +318,11 @@ class DataPath extends Module with phvntomParams {
 
   // TODO 2-stage D$
   // REG MEM1 MEM2
-  reg_mem1_mem2.io.last_stage_atomic_stall_req := false.B
+  reg_mem1_mem2.io.last_stage_atomic_stall_req := stall_req_mem1_atomic
   reg_mem1_mem2.io.next_stage_atomic_stall_req := stall_req_mem2_atomic
   reg_mem1_mem2.io.stall := stall_mem1_mem2
   reg_mem1_mem2.io.flush_one := false.B
-  reg_mem1_mem2.io.bubble_in := reg_exe_mem1.io.bubble_out
+  reg_mem1_mem2.io.bubble_in := reg_exe_mem1.io.bubble_out || stall_req_mem1_atomic
   reg_mem1_mem2.io.inst_in := reg_exe_mem1.io.inst_out
   reg_mem1_mem2.io.pc_in := reg_exe_mem1.io.pc_out
   reg_mem1_mem2.io.inst_info_in := reg_exe_mem1.io.inst_info_out
