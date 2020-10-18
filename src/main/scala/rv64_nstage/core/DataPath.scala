@@ -9,12 +9,15 @@ import rv64_nstage.control._
 import rv64_nstage.control.ControlConst._
 import rv64_nstage.fu._
 import rv64_nstage.register._
-import rv64_nstage.tlb.PTWalker
+import rv64_nstage.tlb._
+import utils._
 
 class DataPathIO extends Bundle with phvntomParams {
   val ctrl = Flipped(new ControlPathIO)
   val imem = Flipped(new MemIO)
   val dmem = Flipped(new MemIO)
+  val immu = Flipped(new MemIO)
+  //  val dmmu = Flipped(new MemIO)
   val int = Flipped(Flipped(new InterruptIO))
 }
 
@@ -48,7 +51,7 @@ class DataPath extends Module with phvntomParams {
   val amo_arbiter = Module(new AMOArbiter)
   val reservation = Module(new Reservation)
   val immu = Module(new PTWalker)
-//  val dmmu = Module(new PTWalker)
+  //  val dmmu = Module(new PTWalker)
 
   // Stall Request Signals
   val stall_req_if1_atomic = WireInit(Bool(), false.B)
@@ -117,41 +120,56 @@ class DataPath extends Module with phvntomParams {
   pc_gen.io.branch_pc := alu.io.out
   pc_gen.io.inst_addr_misaligned := inst_addr_misaligned
 
-  // Inst Access Fault Detector
-  inst_af := !is_legal_addr(pc_gen.io.pc_out)
-  immu.io.valid := !stall_pc
+  // IMMU
+  inst_af := !is_legal_addr(pc_gen.io.pc_out) || immu.io.af   // TODO
+  immu.io.valid := !pc_gen.io.last_stall_out
   immu.io.va := pc_gen.io.pc_out
-  immu.io.flush_all = write_satp_flush
-  immu.io.satp_val = 0.U  // TODO
-  immu.io.current_p = 3.U   // TODO
-  // TODO add PAGE_FAULT
+  immu.io.flush_all := write_satp_flush
+  immu.io.satp_val := csr.io.satp_val
+  immu.io.current_p := csr.io.current_p
+  io.immu.stall := false.B
+  io.immu.resp.ready := true.B
+  io.immu.req.bits.addr := immu.io.cache_req_addr
+  io.immu.req.bits.data := DontCare
+  io.immu.req.valid := immu.io.cache_req_valid
+  io.immu.req.bits.wen := false.B
+  io.immu.req.bits.memtype := memDouble
+  immu.io.cache_resp_rdata := io.immu.resp.bits.data
+  immu.io.cache_resp_valid := io.immu.resp.valid
+  // TODO add PAGE_FAULT and ACCESS_FAULT
 
   stall_req_if1_atomic := immu.io.stall_req
 
-  // TODO Dummy stage
-  // TODO ultimately, in this stage, I$ should access SRAM
   reg_if1_if2.io.stall := stall_if1_if2
   reg_if1_if2.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush
   reg_if1_if2.io.bubble_in := stall_req_if1_atomic
   reg_if1_if2.io.pc_in := pc_gen.io.pc_out
-  reg_if1_if2.io.ppc_in := immu.io.pa
   reg_if1_if2.io.last_stage_atomic_stall_req := stall_req_if1_atomic
   reg_if1_if2.io.next_stage_atomic_stall_req := stall_req_if2_atomic
   reg_if1_if2.io.inst_af_in := inst_af
   reg_if1_if2.io.next_stage_flush_req := false.B
 
-  // TODO before this is a dummy stage, because we only have 1-stage I$
-  // TODO which is bound to be 2-or-3-stage later
   // I$ and Stall Request
-  io.imem.req.bits.addr := reg_if1_if2.io.pc_out
+  // io.imem.req.bits.addr := reg_if1_if2.io.pc_out
+  // io.imem.req.bits.data := DontCare
+  // io.imem.req.valid := !reg_if1_if2.io.bubble_out && !reg_if1_if2.io.inst_af_out
+  // io.imem.req.bits.wen := false.B
+  // io.imem.req.bits.memtype := memWordU
+  // io.imem.resp.ready := true.B
+
+  // !reg_if1_if2.io.bubble_out && !io.imem.resp.valid
+
+  // TODO parallel visiting of RAM and TLB
+  io.imem.stall := stall_if1_if2
+  io.imem.req.bits.addr := immu.io.pa
   io.imem.req.bits.data := DontCare
-  io.imem.req.valid := !reg_if1_if2.io.bubble_out && !reg_if1_if2.io.inst_af_out
+  io.imem.req.valid := !stall_req_if1_atomic
   io.imem.req.bits.wen := false.B
   io.imem.req.bits.memtype := memWordU
   io.imem.resp.ready := true.B
 
   inst_if2 := io.imem.resp.bits.data
-  stall_req_if2_atomic := io.imem.req.valid && !io.imem.resp.valid
+  stall_req_if2_atomic := !io.imem.req.ready
 
   // Reg IF2 ID
   reg_if2_id.io.last_stage_atomic_stall_req := stall_req_if2_atomic
@@ -280,17 +298,19 @@ class DataPath extends Module with phvntomParams {
 
   amo_bubble_inserter := reg_exe_mem1.io.inst_info_out.amoSelect.orR
 
+  stall_req_mem1_atomic := false.B
+
   // CSR
   mem_addr_misaligned := MuxLookup(reg_exe_mem1.io.inst_info_out.memType,
     false.B, Seq(
-    memByte -> false.B,
-    memByteU -> false.B,
-    memHalf -> reg_exe_mem1.io.alu_val_out(0),
-    memHalfU -> reg_exe_mem1.io.alu_val_out(0),
-    memWord -> reg_exe_mem1.io.alu_val_out(1, 0).orR,
-    memWordU -> reg_exe_mem1.io.alu_val_out(1, 0).orR,
-    memDouble -> reg_exe_mem1.io.alu_val_out(2, 0).orR
-  ))
+      memByte -> false.B,
+      memByteU -> false.B,
+      memHalf -> reg_exe_mem1.io.alu_val_out(0),
+      memHalfU -> reg_exe_mem1.io.alu_val_out(0),
+      memWord -> reg_exe_mem1.io.alu_val_out(1, 0).orR,
+      memWordU -> reg_exe_mem1.io.alu_val_out(1, 0).orR,
+      memDouble -> reg_exe_mem1.io.alu_val_out(2, 0).orR
+    ))
   mem_af := reg_exe_mem1.io.inst_info_out.memType.orR && !is_legal_addr(reg_exe_mem1.io.alu_val_out)
 
   csr.io.stall := stall_exe_mem1
@@ -339,12 +359,13 @@ class DataPath extends Module with phvntomParams {
   reg_mem1_mem2.io.next_stage_flush_req := false.B
 
   // Memory and AMO
+  io.dmem.stall := false.B
   io.dmem.req.bits.addr := reg_mem1_mem2.io.alu_val_out
   io.dmem.req.bits.data := Mux(amo_arbiter.io.write_now, amo_arbiter.io.write_what, reg_mem1_mem2.io.mem_wdata_out)
   io.dmem.req.valid := Mux(reservation.io.compare, reservation.io.succeed,
     (reg_mem1_mem2.io.expt_out === false.B && ((reg_mem1_mem2.io.inst_info_out.memType.orR &&
-    !amo_arbiter.io.dont_read_again) ||
-    amo_arbiter.io.write_now)))
+      !amo_arbiter.io.dont_read_again) ||
+      amo_arbiter.io.write_now)))
   io.dmem.req.bits.wen := (reg_mem1_mem2.io.inst_info_out.wbEnable === wenMem || amo_arbiter.io.write_now)
   io.dmem.req.bits.memtype := reg_mem1_mem2.io.inst_info_out.memType
   io.dmem.resp.ready := true.B
@@ -436,7 +457,7 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_int, "difftestInt")
 
-    if(pipeTrace) {
+    if (pipeTrace) {
       printf("\t\tIF1\tIF2\tID\tEXE\tMEM1\tMEM2\tWB\t\n")
       printf("Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, stall_req_if2_atomic, 0.U, stall_req_exe_atomic || stall_req_exe_interruptable, 0.U, stall_req_mem2_atomic, 0.U)
       printf("Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", stall_pc, stall_if1_if2, stall_if2_id, stall_id_exe, stall_exe_mem1, stall_mem1_mem2, stall_mem2_wb)
@@ -444,19 +465,19 @@ class DataPath extends Module with phvntomParams {
       printf("Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", BUBBLE(15, 0), BUBBLE(15, 0), reg_if2_id.io.inst_out(15, 0), reg_id_exe.io.inst_out(15, 0), reg_exe_mem1.io.inst_out(15, 0), reg_mem1_mem2.io.inst_out(15, 0), reg_mem2_wb.io.inst_out(15, 0))
       printf("Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, reg_if1_if2.io.bubble_out, reg_if2_id.io.bubble_out, reg_id_exe.io.bubble_out, reg_exe_mem1.io.bubble_out, reg_mem1_mem2.io.bubble_out, reg_mem2_wb.io.bubble_out)
     }
-//    printf("alu %x, mem %x, csr %x, ioin %x\n", reg_mem2_wb.io.alu_val_out, reg_mem2_wb.io.mem_val_out, reg_mem2_wb.io.csr_val_out, scheduler.io.rd_from_wb)
-      //    printf("------> compare %x, succeed %x, push %x\n", reservation.io.compare, reservation.io.succeed, reservation.io.push)
+    //    printf("alu %x, mem %x, csr %x, ioin %x\n", reg_mem2_wb.io.alu_val_out, reg_mem2_wb.io.mem_val_out, reg_mem2_wb.io.csr_val_out, scheduler.io.rd_from_wb)
+    //    printf("------> compare %x, succeed %x, push %x\n", reservation.io.compare, reservation.io.succeed, reservation.io.push)
 
-//    printf("-------> exit flush %x, br_flush %x, pco %x, if_pco %x, \n", expt_int_flush, br_jump_flush, pc_gen.io.pc_out, reg_if2_id.io.pc_out)
-//    printf("-----> Mem req valid %x addr %x, resp valid %x data %x\n", io.dmem.req.valid, io.dmem.req.bits.addr, io.dmem.resp.valid, io.dmem.resp.bits.data)
-//    printf("<AMO-------regm1m2stall %x; \n", stall_mem1_mem2)
-//    printf("----->instmis %x; aluout %x, pcselect %x\n", inst_addr_misaligned, alu.io.out, reg_id_exe.io.inst_info_out.pcSelect)
-    when (pipeTrace.B && dtest_expt){
+    //    printf("-------> exit flush %x, br_flush %x, pco %x, if_pco %x, \n", expt_int_flush, br_jump_flush, pc_gen.io.pc_out, reg_if2_id.io.pc_out)
+    //    printf("-----> Mem req valid %x addr %x, resp valid %x data %x\n", io.dmem.req.valid, io.dmem.req.bits.addr, io.dmem.resp.valid, io.dmem.resp.bits.data)
+    //    printf("<AMO-------regm1m2stall %x; \n", stall_mem1_mem2)
+    //    printf("----->instmis %x; aluout %x, pcselect %x\n", inst_addr_misaligned, alu.io.out, reg_id_exe.io.inst_info_out.pcSelect)
+    when(pipeTrace.B && dtest_expt) {
       // printf("[[[[[EXPT_OR_INTRESP %d,   INT_REQ %d]]]]]\n", dtest_expt, dtest_int);
     }
 
     // printf("Interrupt if %x exe: %x wb %x [EPC]] %x!\n", if_mtip, exe_mtip, wb_mtip, csrFile.io.epc);
-    when (dtest_int) {
+    when(dtest_int) {
       // printf("Interrupt mtvec: %x stall_req %x!\n", csrFile.io.evec, csrFile.io.stall_req);
     }
     //    printf("------->stall_req %x, imenreq_valid %x, imem_pc %x, csr_out %x, dmemaddr %x!\n", csrFile.io.stall_req, io.imem.req.valid, if_pc, csrFile.io.out, io.dmem.req.bits.addr)

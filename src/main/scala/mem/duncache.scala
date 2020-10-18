@@ -63,10 +63,10 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
     io.out.aw.bits.cache := 0.U
     io.out.aw.bits.prot := 0.U
     io.out.aw.bits.qos := 0.U
-    val offset = writeBeatCnt.value << 8
+    val offset = writeBeatCnt.value << 6
     io.out.w.bits.data := (io.in.req.bits.data >> offset)(xlen - 1, 0)
     io.out.w.bits.strb := Fill(xlen / 8, 1.U(1.W))
-    io.out.w.bits.last := writeBeatCnt.value === burst_length.U
+    io.out.w.bits.last := writeBeatCnt.value === (burst_length - 1).U
 
     when(state === s_WB_WAIT_AWREADY) {
       io.out.aw.valid := true.B

@@ -12,7 +12,7 @@ trait phvntomParams {
   val regNum        = 32
   val regWidth      = log2Ceil(regNum)
   val diffTest      = true
-  val pipeTrace     = false
+  val pipeTrace     = true
   val rtThread      = true
   val only_M        = true
   val validVABits   = 39
@@ -22,6 +22,7 @@ trait phvntomParams {
 class CoreIO extends Bundle with phvntomParams {
   val imem = Flipped(new MemIO)
   val dmem = Flipped(new MemIO)
+  val immu = Flipped(new MemIO)
   val int = new InterruptIO
 }
 
@@ -33,5 +34,6 @@ class Core extends Module with phvntomParams {
   dpath.io.ctrl <> cpath.io
   dpath.io.imem <> io.imem
   dpath.io.dmem <> io.dmem
+  dpath.io.immu <> io.immu
   dpath.io.int  <> io.int
 }

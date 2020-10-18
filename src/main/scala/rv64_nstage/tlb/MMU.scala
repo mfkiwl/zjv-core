@@ -4,114 +4,7 @@ import chisel3._
 import chisel3.util._
 import rv64_nstage.core.phvntomParams
 import utils._
-
-class TLBConfig extends phvntomParams {
-  val Level = 3
-  val offLen = 12
-  val ppn0Len = 9
-  val ppn1Len = 9
-  val ppn2Len = 64 - offLen - ppn0Len - ppn1Len // 2
-  val ppnLen = ppn2Len + ppn1Len + ppn0Len
-  val vpn2Len = 9
-  val vpn1Len = 9
-  val vpn0Len = 9
-  val vpnLen = vpn2Len + vpn1Len + vpn0Len
-
-  //val paddrLen = PAddrBits
-  //val vaddrLen = VAddrBits
-  val satpLen = xlen
-  val satpModeLen = 4
-  val asidLen = 16
-  val flagLen = 8
-
-  val ptEntryLen = xlen
-  val satpResLen = xlen - ppnLen - satpModeLen - asidLen
-  //val vaResLen = 25 // unused
-  //val paResLen = 25 // unused
-  val pteResLen = xlen - ppnLen - 2 - flagLen
-
-  def vaBundle = new Bundle {
-    val vpn2 = UInt(vpn2Len.W)
-    val vpn1 = UInt(vpn1Len.W)
-    val vpn0 = UInt(vpn0Len.W)
-    val off = UInt(offLen.W)
-  }
-
-  def vaBundle2 = new Bundle {
-    val vpn = UInt(vpnLen.W)
-    val off = UInt(offLen.W)
-  }
-
-  def vaBundle3 = new Bundle {
-    val vpn = UInt(vpnLen.W)
-    val off = UInt(offLen.W)
-  }
-
-  def vpnBundle = new Bundle {
-    val vpn2 = UInt(vpn2Len.W)
-    val vpn1 = UInt(vpn1Len.W)
-    val vpn0 = UInt(vpn0Len.W)
-  }
-
-  def paBundle = new Bundle {
-    val ppn2 = UInt(ppn2Len.W)
-    val ppn1 = UInt(ppn1Len.W)
-    val ppn0 = UInt(ppn0Len.W)
-    val off = UInt(offLen.W)
-  }
-
-  def paBundle2 = new Bundle {
-    val ppn = UInt(ppnLen.W)
-    val off = UInt(offLen.W)
-  }
-
-  def paddrApply(ppn: UInt, vpnn: UInt): UInt = {
-    Cat(Cat(ppn, vpnn), 0.U(3.W))
-  }
-
-  def pteBundle = new Bundle {
-    val reserved = UInt(pteResLen.W)
-    val ppn = UInt(ppnLen.W)
-    val rsw = UInt(2.W)
-    val flag = new Bundle {
-      val d = UInt(1.W)
-      val a = UInt(1.W)
-      val g = UInt(1.W)
-      val u = UInt(1.W)
-      val x = UInt(1.W)
-      val w = UInt(1.W)
-      val r = UInt(1.W)
-      val v = UInt(1.W)
-    }
-  }
-
-  def satpBundle = new Bundle {
-    val mode = UInt(satpModeLen.W)
-    val asid = UInt(asidLen.W)
-    val res = UInt(satpResLen.W)
-    val ppn = UInt(ppnLen.W)
-  }
-
-  def flagBundle = new Bundle {
-    val d = Bool() //UInt(1.W)
-    val a = Bool() //UInt(1.W)
-    val g = Bool() //UInt(1.W)
-    val u = Bool() //UInt(1.W)
-    val x = Bool() //UInt(1.W)
-    val w = Bool() //UInt(1.W)
-    val r = Bool() //UInt(1.W)
-    val v = Bool() //UInt(1.W)
-  }
-
-  def maskPaddr(ppn: UInt, vaddr: UInt, mask: UInt) = {
-    MaskData(vaddr, Cat(ppn, 0.U(offLen.W)), Cat(Fill(ppn2Len, 1.U(1.W)), mask, 0.U(offLen.W)))
-  }
-
-  def MaskEQ(mask: UInt, pattern: UInt, vpn: UInt) = {
-    (Cat("h1ff".U(vpn2Len.W), mask) & pattern) === (Cat("h1ff".U(vpn2Len.W), mask) & vpn)
-  }
-
-}
+import rv64_nstage.register.SATP
 
 // TODO This should be an Arbiter when TLB is setup
 // The privilege Mode should flow with the pipeline because
@@ -125,7 +18,7 @@ class TLBConfig extends phvntomParams {
 //            |           |            |
 //            |           |            |
 //        ||||||||   AXI X Bar   ||||||||||
-class PTWalkerIO extends Bundle with TLBConfig {
+class PTWalkerIO extends Bundle with phvntomParams {
   val valid = Input(Bool())
   val va = Input(UInt(xlen.W))
   val flush_all = Input(Bool()) // TODO flush TLB, do nothing now
@@ -137,32 +30,34 @@ class PTWalkerIO extends Bundle with TLBConfig {
   val pf = Output(Bool())
   val af = Output(Bool()) // TODO PMA PMP to generate access fault
   // Memory Interface
+  val cache_req_valid = Output(Bool())
+  val cache_req_addr = Output(UInt(xlen.W))
+  val cache_resp_valid = Input(Bool())
+  val cache_resp_rdata = Input(UInt(xlen.W))
 }
 
-class PTWalker extends Module with TLBConfig {
+class PTWalker extends Module with phvntomParams {
   val io = IO(new PTWalkerIO)
-  val uncache_wrapper = Module(new)
 
-  // TODO Wrap an UNCACHE Here
   val s_idle = 0.U(2.W)
   val s_busy = 1.U(2.W)
   val s_check = 2.U(2.W)
   val s_finish = 3.U(2.W)
 
-  val satp_mode = satp_val(xlen - 1, 60)
-  val satp_asid = sapt_val(59, 44)
-  val satp_ppn = sapt_val(43, 0)
+  val satp_mode = io.satp_val(xlen - 1, 60)
+  val satp_asid = io.satp_val(59, 44)
+  val satp_ppn = io.satp_val(43, 0)
 
   // To AXI Uncache Wrapper
   val pte_addr = RegInit(UInt(xlen.W), 0.U)
   val valid_access = RegInit(Bool(), false.B)
 
   // From AXI Uncache Wrapper
-  val axi_valid = Wire(Bool())
-  val axi_rdara = Wire(UInt(xlen.W))
+  val axi_valid = io.cache_resp_valid
+  val axi_rdata = io.cache_resp_rdata
   val pte_ppn = axi_rdata(53, 10)
 
-  val level = Level
+  val level = 3.U(2.W)
   val entry_recv = RegInit(UInt(xlen.W), 0.U)
   val next_pte_pa = RegInit(UInt(xlen.W), 0.U)
   val state = RegInit(UInt(s_idle.getWidth.W), s_idle)
@@ -207,7 +102,7 @@ class PTWalker extends Module with TLBConfig {
   // TODO to the original access type.
   // Sequential Logic
   state := next_state
-  when(state === idle) {
+  when(state === s_idle) {
     last_pte := io.va
     when(next_state === s_busy) {
       pte_addr := (satp_ppn << l_page_size) + (io.va(38, 30) << l_pte_size)
@@ -230,7 +125,7 @@ class PTWalker extends Module with TLBConfig {
 
   // Combinational Logic
   when(state === s_idle) {
-    when(!io.valid || satp_mode === CSR.Bare) {
+    when(!io.valid || satp_mode === SATP.Bare) {
       next_state := s_idle
       page_fault := false.B
     }.otherwise {
@@ -284,6 +179,9 @@ class PTWalker extends Module with TLBConfig {
   io.pf := page_fault
   io.af := false.B
   io.stall_req := next_state =/= s_idle
-  io.pa := last_pte
+  io.pa := Mux(state === s_idle && (!io.valid || satp_mode === SATP.Bare), io.va, last_pte)
+
+  io.cache_req_valid := valid_access
+  io.cache_req_addr := pte_addr
 }
 

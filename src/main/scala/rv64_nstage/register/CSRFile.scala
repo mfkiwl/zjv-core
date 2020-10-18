@@ -274,6 +274,8 @@ class CSRFileIO extends Bundle with phvntomParams {
   val tvec_out = Output(UInt(xlen.W))
   val epc_out = Output(UInt(xlen.W))
   val write_satp = Output(Bool())
+  val satp_val = Output(UInt(xlen.W))
+  val current_p = Output(UInt(2.W))
 }
 
 class CSRFile extends Module with phvntomParams {
@@ -325,9 +327,9 @@ class CSRFile extends Module with phvntomParams {
   val mipr_stip = RegInit(false.B)
   val mipr_ssip = RegInit(false.B)
   // SATP
-  val satpr_mode = RegInit(UInt(4.W), Bare)
+  val satpr_mode = RegInit(UInt(4.W), SATP.Bare)
   val satpr_asid = RegInit(UInt(16.W), 0.U)
-  val satpr_ppn = RegInit(UInt(44.U), 0.U)
+  val satpr_ppn = RegInit(UInt(44.W), 0.U)
 
   // [--------- Machine Mode Registers in CSR --------]
   val mepcr = RegInit(0.U(xlen.W))
@@ -387,7 +389,7 @@ class CSRFile extends Module with phvntomParams {
     mipr_stip, Fill(3, 0.U), mipr_ssip, false.B
   )
   val stvecr = RegInit(0.U(xlen.W))
-  val satpr = Cat(saptr_mode, saptr_asid, saptr_ppn)
+  val satpr = Cat(satpr_mode, satpr_asid, satpr_ppn)
   val sepcr = RegInit(0.U(xlen.W))
   val scauser = Cat(scauser_int, 0.U((xlen - 5).W), scauser_cause)
   val stvalr = RegInit(0.U(xlen.W))
@@ -789,10 +791,6 @@ class CSRFile extends Module with phvntomParams {
           mipr_ssip := mipr_ssip & ~io.wdata(1)
         }
       }.elsewhen(io.which_reg === CSR.mstatus || io.which_reg === CSR.sstatus) {
-//        Cat(mstatusr_sd, Fill(xlen - 2 - 33, 0.U), mstatusr_uxl, Fill(12, 0.U),
-//          mstatusr_mxr, mstatusr_sum, Fill(1, 0.U), mstatusr_xs, mstatusr_fs, Fill(4, 0.U),
-//          mstatusr_spp, Fill(1, 0.U), mstatusr_ube, mstatusr_spie, Fill(3, 0.U), mstatusr_sie, Fill(1, 0.U)
-//        )
         when(io.wen) {
           when(io.which_reg === CSR.mstatus) {
             mstatusr_sd := io.wdata(xlen - 1)
@@ -868,11 +866,11 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.scause) {
         when(io.wen) {
-          scauser := io.wdata
+          scauser_cause := io.wdata(3, 0)
         }.elsewhen(io.sen) {
-          scauser := scauser | io.wdata
+          scauser_cause := scauser_cause | io.wdata(3, 0)
         }.elsewhen(io.cen) {
-          scauser := scauser & (~io.wdata)
+          scauser_cause := scauser_cause & (~io.wdata(3, 0))
         }
       }.elsewhen(io.which_reg === CSR.sepc) {
         when(io.wen) {
@@ -892,11 +890,17 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.satp) {
         when(io.wen) {
-          satpr := io.wdata
+          satpr_mode := io.wdata(63, 60)
+          satpr_asid := io.wdata(59, 44)
+          satpr_ppn := io.wdata(43, 0)
         }.elsewhen(io.sen) {
-          satpr := satpr | io.wdata
+          satpr_mode := satpr_mode | io.wdata(63, 60)
+          satpr_asid := satpr_asid | io.wdata(59, 44)
+          satpr_ppn := satpr_ppn | io.wdata(43, 0)
         }.elsewhen(io.cen) {
-          satpr := satpr & (~io.wdata)
+          satpr_mode := satpr_mode & (~io.wdata(63, 60))
+          satpr_asid := satpr_asid & (~io.wdata(59, 44))
+          satpr_ppn := satpr_ppn & (~io.wdata(43, 0))
         }
       }.elsewhen(io.which_reg === CSR.tselect) {
         when(io.wen) {
@@ -935,6 +939,8 @@ class CSRFile extends Module with phvntomParams {
   }
 
   io.write_satp := io.which_reg === CSR.satp && (io.wen || io.cen || io.sen)
+  io.satp_val := satpr
+  io.current_p := current_p
 
   if(diffTest) {
     BoringUtils.addSource(mcycler, "difftestmcycler")
@@ -968,6 +974,8 @@ class CSRIO extends Bundle with phvntomParams {
   val evec = Output(UInt(xlen.W))
   val epc = Output(UInt(xlen.W))
   val pc_plus = Output(UInt(xlen.W))
+  val satp_val = Output(UInt(xlen.W))
+  val current_p = Output(UInt(2.W))
   // Interrupt
   val tim_int = Input(Bool())
   val soft_int = Input(Bool())
@@ -1018,4 +1026,6 @@ class CSR extends Module with phvntomParams {
   io.stall_req := false.B
   io.write_satp := csr_regfile.io.write_satp
   io.pc_plus := io.pc + 4.U(3.W)
+  io.satp_val := csr_regfile.io.satp_val
+  io.current_p := csr_regfile.io.current_p
 }

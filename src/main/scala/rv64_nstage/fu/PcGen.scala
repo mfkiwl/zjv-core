@@ -21,6 +21,7 @@ class PcGenIO extends Bundle with phvntomParams {
   val inst_addr_misaligned = Input(Bool())
   // PC Output
   val pc_out = Output(UInt(xlen.W))
+  val last_stall_out = Output(Bool())
 }
 
 class PcGen extends Module with phvntomParams {
@@ -32,6 +33,7 @@ class PcGen extends Module with phvntomParams {
   val pc_for_restore = RegInit(UInt(xlen.W), startAddr)
 
   last_stall := io.stall
+  io.last_stall_out := last_stall
 
   when(io.expt_int) {
     pc_for_restore := io.tvec

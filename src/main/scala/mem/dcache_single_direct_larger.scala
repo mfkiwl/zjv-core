@@ -6,13 +6,14 @@
 // import rv64_3stage.ControlConst._
 // import bus._
 // import device._
+// import utils._
 
 // trait CacheParameters extends phvntomParams {
 //   val cacheName = "dcache" // used for debug info
 //   val userBits = 0
 //   val idBits = 0
 //   val nWays = 1
-//   val nLine = 1
+//   val nLine = 4
 //   val nBytes = 32 * 1024
 //   val nBits = nBytes * 8
 //   val lineBits = nLine * xlen
@@ -24,9 +25,9 @@
 //   val tagLength = xlen - (indexLength + offsetLength)
 // }
 
-// class CacheSimpleIO extends Bundle with CacheParameters {
+// class CacheIO extends Bundle with CacheParameters {
 //   val in = new MemIO
-//   val mem = Flipped(new MemIO)
+//   val mem = Flipped(new MemIO(lineBits))
 //   val mmio = Flipped(new MemIO)
 // }
 
@@ -39,13 +40,13 @@
 // }
 
 // class CacheLineData extends Bundle with CacheParameters {
-//   val data = UInt(xlen.W) // UInt(lineBits.W)
+//   val data = Vec(nLine, UInt(xlen.W)) // UInt(lineBits.W)
 //   override def toPrintable: Printable =
-//     p"CacheLineData(data = 0x${Hexadecimal(data)})"
+//     p"CacheLineData(data = ${data})"
 // }
 
 // class DCacheSimple extends Module with CacheParameters {
-//   val io = IO(new CacheSimpleIO)
+//   val io = IO(new CacheIO)
 
 //   // printf(p"----------${cacheName} Parameters----------\n")
 //   // printf(
@@ -62,19 +63,17 @@
 
 //   /* stage2 registers */
 //   val s1_valid = WireInit(Bool(), false.B)
-//   val s1_addr = WireInit(UInt(xlen.W), 0.U)
-//   val s1_index = WireInit(UInt(indexLength.W), 0.U)
-//   val s1_data = WireInit(UInt(xlen.W), 0.U)
+//   val s1_addr = Wire(UInt(xlen.W))
+//   val s1_index = Wire(UInt(indexLength.W))
+//   val s1_data = Wire(UInt(xlen.W))
 //   val s1_wen = WireInit(Bool(), false.B)
-//   val s1_memtype = WireInit(UInt(xlen.W), 0.U)
+//   val s1_memtype = Wire(UInt(xlen.W))
 //   val s1_meta = Wire(new MetaData)
 //   val s1_cacheline = Wire(new CacheLineData)
-//   val s1_tag = WireInit(UInt(tagLength.W), 0.U)
-//   val s1_wordoffset = WireInit(UInt((offsetLength - lineLength).W), 0.U)
+//   val s1_tag = Wire(UInt(tagLength.W))
+//   val s1_lineoffset = Wire(UInt(lineLength.W))
+//   val s1_wordoffset = Wire(UInt((offsetLength - lineLength).W))
 
-//   // ******************************
-//   //           Stage1
-//   // ******************************
 //   s1_valid := io.in.req.valid
 //   s1_addr := io.in.req.bits.addr
 //   s1_index := s1_addr(indexLength + offsetLength - 1, offsetLength)
@@ -84,6 +83,7 @@
 //   s1_meta := metaArray(s1_index)
 //   s1_cacheline := dataArray(s1_index)
 //   s1_tag := s1_addr(xlen - 1, xlen - tagLength)
+//   s1_lineoffset := s1_addr(offsetLength - 1, offsetLength - lineLength)
 //   s1_wordoffset := s1_addr(offsetLength - lineLength - 1, 0)
 
 //   val hitVec = s1_meta.valid && s1_meta.tag === s1_tag
@@ -103,8 +103,9 @@
 
 //   io.in.resp.valid := s1_valid && (hit || io.mem.resp.valid || io.mmio.resp.valid)
 //   io.in.resp.bits.data := result
+//   io.in.req.ready := state === s_idle
 
-//   io.mem.req.valid := s1_valid && (state === s_memReadReq || state === s_memWriteReq) // (!hit && !ismmio)
+//   io.mem.req.valid := s1_valid && (state === s_memReadReq || state === s_memReadResp || state === s_memWriteReq || state === s_memWriteResp) // (!hit && !ismmio)
 //   io.mem.req.bits.addr := Mux(
 //     state === s_memWriteReq,
 //     write_address,
@@ -112,13 +113,15 @@
 //   )
 //   io.mem.req.bits.data := cacheline_data.data(victim_index).asUInt
 //   io.mem.req.bits.wen := (state == s_memWriteReq).B
-//   io.mem.req.bits.memtype := ControlConst.memDouble
+//   io.mem.req.bits.memtype := DontCare
+//   io.mem.resp.ready := s1_valid && state === s_memReadResp
 
-//   io.mmio.req.valid := s1_valid && ismmio
+//   io.mmio.req.valid := s1_valid && (state === s_mmioReq || state === s_mmioResp)
 //   io.mmio.req.bits.addr := s1_addr
 //   io.mmio.req.bits.data := s1_data
 //   io.mmio.req.bits.wen := s1_wen
 //   io.mmio.req.bits.memtype := s1_memtype
+//   io.mmio.resp.ready := s1_valid && state === s_mmioResp
 
 //   switch(state) {
 //     is(s_idle) {
@@ -149,11 +152,12 @@
 
 //   when(!s1_valid) { state := s_idle }
 
-//   val fetched_data = Wire(UInt(xlen.W))
-//   when(ismmio) { fetched_data := io.mmio.resp.bits.data }
-//     .otherwise { fetched_data := io.mem.resp.bits.data }
+//   val fetched_data = io.mem.resp.bits.data
 //   val fetched_vec = Wire(new CacheLineData)
-//   fetched_vec.data := fetched_data
+//   // fetched_vec.data := fetched_data
+//   for (i <- 0 until nLine) {
+//     fetched_vec.data(i) := fetched_data((i + 1) * xlen - 1, i * xlen)
+//   }
 
 //   val target_data = Mux(hit, cacheline_data, fetched_vec)
 //   result := DontCare
@@ -198,56 +202,66 @@
 //             mask := Fill(32, 1.U(1.W)) << offset
 //           }
 //         }
-//         newdata.data := (mask & filled_data) | (~mask & target_data.data)
+//         newdata := target_data
+//         newdata.data(
+//           s1_lineoffset
+//         ) := (mask & filled_data) | (~mask & target_data.data(s1_lineoffset))
 //         dataArray(s1_index) := newdata
 //         val new_meta = Wire(new MetaData)
 //         new_meta.valid := true.B
 //         new_meta.dirty := true.B
 //         new_meta.tag := s1_tag
 //         metaArray(s1_index) := new_meta
-//         printf(
-//           p"dcache write: s1_index=0x${Hexadecimal(s1_index)}, new_data=${newdata}, new_meta=${new_meta}\n"
-//         )
+//         // printf(
+//         //   p"dcache write: s1_index=0x${Hexadecimal(s1_index)}, new_meta=${new_meta}\n"
+//         // )
+//         // printf(p"\ttarget_data=${target_data}\n")
 //       }
 //     }.otherwise {
 //       when(hit || io.mem.resp.valid || io.mmio.resp.valid) {
+//         val result_data = target_data.data(s1_lineoffset)
 //         val offset = s1_wordoffset << 3
 //         val mask = WireInit(UInt(xlen.W), 0.U)
 //         val realdata = WireInit(UInt(xlen.W), 0.U)
+//         val mem_result = WireInit(UInt(xlen.W), 0.U)
 //         switch(s1_memtype) {
-//           is(memXXX) { result := target_data.data }
+//           is(memXXX) { mem_result := result_data }
 //           is(memByte) {
 //             mask := Fill(8, 1.U(1.W)) << offset
-//             realdata := (target_data.data & mask) >> offset
-//             result := Cat(Fill(56, realdata(7)), realdata(7, 0))
+//             realdata := (result_data & mask) >> offset
+//             mem_result := Cat(Fill(56, realdata(7)), realdata(7, 0))
 //           }
 //           is(memHalf) {
 //             mask := Fill(16, 1.U(1.W)) << offset
-//             realdata := (target_data.data & mask) >> offset
-//             result := Cat(Fill(48, realdata(15)), realdata(15, 0))
+//             realdata := (result_data & mask) >> offset
+//             mem_result := Cat(Fill(48, realdata(15)), realdata(15, 0))
 //           }
 //           is(memWord) {
 //             mask := Fill(32, 1.U(1.W)) << offset
-//             realdata := (target_data.data & mask) >> offset
-//             result := Cat(Fill(32, realdata(31)), realdata(31, 0))
+//             realdata := (result_data & mask) >> offset
+//             mem_result := Cat(Fill(32, realdata(31)), realdata(31, 0))
 //           }
-//           is(memDouble) { result := target_data.data }
+//           is(memDouble) { mem_result := result_data }
 //           is(memByteU) {
 //             mask := Fill(8, 1.U(1.W)) << offset
-//             realdata := (target_data.data & mask) >> offset
-//             result := Cat(Fill(56, 0.U), realdata(7, 0))
+//             realdata := (result_data & mask) >> offset
+//             mem_result := Cat(Fill(56, 0.U), realdata(7, 0))
 //           }
 //           is(memHalfU) {
 //             mask := Fill(16, 1.U(1.W)) << offset
-//             realdata := (target_data.data & mask) >> offset
-//             result := Cat(Fill(48, 0.U), realdata(15, 0))
+//             realdata := (result_data & mask) >> offset
+//             mem_result := Cat(Fill(48, 0.U), realdata(15, 0))
 //           }
 //           is(memWordU) {
 //             mask := Fill(32, 1.U(1.W)) << offset
-//             realdata := (target_data.data & mask) >> offset
-//             result := Cat(Fill(32, 0.U), realdata(31, 0))
+//             realdata := (result_data & mask) >> offset
+//             mem_result := Cat(Fill(32, 0.U), realdata(31, 0))
 //           }
 //         }
+//         result := Mux(ismmio, io.mmio.resp.bits.data, mem_result)
+// //         printf(
+// //           p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
+// //         )
 //         when(!ismmio) {
 //           dataArray(s1_index) := target_data
 //           val new_meta = Wire(new MetaData)
@@ -255,79 +269,45 @@
 //           new_meta.dirty := false.B
 //           new_meta.tag := s1_tag
 //           metaArray(s1_index) := new_meta
-//           printf(
-//             p"dcache read: offset=${offset}, mask=${mask}, realdata=${realdata}\n"
-//           )
+//           // printf(
+//           //   p"dcache write: s1_index=0x${Hexadecimal(s1_index)}, new_meta=${new_meta}\n"
+//           // )
+//           // printf(p"\ttarget_data=${target_data}\n")
 //         }
-
 //       }
 //     }
 //   }
 
-//   printf(p"----------${cacheName} Debug Info----------\n")
-//   printf(
-//     "state=%d, ismmio=%d, hit=%d, result=%x\n",
-//     state,
-//     ismmio,
-//     hit,
-//     result
-//   )
-//   printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-//   printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-//   printf("s1_tag=%x, s1_wordoffset=%x\n", s1_tag, s1_wordoffset)
-//   printf(p"hitVec=${hitVec}, invalidVec=${invalidVec}\n")
-//   printf(p"s1_cacheline=${s1_cacheline}, s1_meta=${s1_meta}\n")
-//   printf(
-//     p"cacheline_data=${cacheline_data}, cacheline_meta=${cacheline_meta}\n"
-//   )
-//   // printf(
-//   //   p"dataArray(0x0)=${dataArray(0x0.U)},metaArray(0x0)=${metaArray(0x0.U)}\n"
-//   // )
-//   // printf(
-//   //   p"dataArray(0x200)=${dataArray(0x200.U)},metaArray(0x200)=${metaArray(0x200.U)}\n"
-//   // )
-//   // printf(
-//   //   p"dataArray(0x201)=${dataArray(0x201.U)},metaArray(0x201)=${metaArray(0x201.U)}\n"
-//   // )
-//   // printf(
-//   //   p"dataArray(0x204)=${dataArray(0x204.U)},metaArray(0x204)=${metaArray(0x204.U)}\n"
-//   // )
-//   printf(
-//     p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
-//   )
-//   printf(p"----------${cacheName} io.in----------\n")
-//   printf(
-//     "req.valid = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d, resp.valid = %d, resp.data = %x\n",
-//     io.in.req.valid,
-//     io.in.req.bits.addr,
-//     io.in.req.bits.data,
-//     io.in.req.bits.wen,
-//     io.in.req.bits.memtype,
-//     io.in.resp.valid,
-//     io.in.resp.bits.data
-//   )
-//   printf(p"----------${cacheName} io.mem----------\n")
-//   printf(
-//     "req.valid = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d, resp.valid = %d, resp.data = %x\n",
-//     io.mem.req.valid,
-//     io.mem.req.bits.addr,
-//     io.mem.req.bits.data,
-//     io.mem.req.bits.wen,
-//     io.mem.req.bits.memtype,
-//     io.mem.resp.valid,
-//     io.mem.resp.bits.data
-//   )
-//   printf("-----------------------------------------------\n")
-//   printf(p"----------${cacheName} io.mmio----------\n")
-//   printf(
-//     "req.valid = %d, req.addr = %x, req.data = %x, req.wen = %d, req.memtype = %d, resp.valid = %d, resp.data = %x\n",
-//     io.mmio.req.valid,
-//     io.mmio.req.bits.addr,
-//     io.mmio.req.bits.data,
-//     io.mmio.req.bits.wen,
-//     io.mmio.req.bits.memtype,
-//     io.mmio.resp.valid,
-//     io.mmio.resp.bits.data
-//   )
-//   printf("-----------------------------------------------\n")
+// //   printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+// //   printf(
+// //     "state=%d, ismmio=%d, hit=%d, result=%x\n",
+// //     state,
+// //     ismmio,
+// //     hit,
+// //     result
+// //   )
+// //   printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+// //   printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
+// //    printf(
+// //      "s1_tag=%x, s1_lineoffset=%x, s1_wordoffset=%x\n",
+// //      s1_tag,
+// //      s1_lineoffset,
+// //      s1_wordoffset
+// //    )
+// //   printf(p"hitVec=${hitVec}, invalidVec=${invalidVec}\n")
+// //    printf(p"s1_cacheline=${s1_cacheline}\n")
+// //    printf(p"s1_meta=${s1_meta}\n")
+// //    printf(p"cacheline_data=${cacheline_data}\n")
+// //    printf(p"cacheline_meta=${cacheline_meta}\n")
+// //    printf(p"dataArray(s1_index)=${dataArray(s1_index)}\n")
+// //    printf(p"metaArray(s1_index)=${metaArray(s1_index)}\n")
+// //   printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
+// //   printf(p"fetched_vec=${fetched_vec}\n")
+// //   printf(p"----------${cacheName} io.in----------\n")
+// //   printf(p"${io.in}\n")
+// //    printf(p"----------${cacheName} io.mem----------\n")
+// //    printf(p"${io.mem}\n")
+// //   printf(p"----------${cacheName} io.mmio----------\n")
+// //   printf(p"${io.mmio}\n")
+// //   printf("-----------------------------------------------\n")
 // }
