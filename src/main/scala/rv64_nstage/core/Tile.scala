@@ -25,11 +25,13 @@ class Tile extends Module with phvntomParams with projectConfig {
   // val icache = Module(new ICacheSimple()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false)))
   val icache = Module(new ICache()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false)))
   val icacheBus = Module(new DUncache(icache.lineBits, "inst uncache")) // TODO parameterize this
-  val dcache = Module(new DCacheSimple()(CacheConfig(name = "dcache")))
+//  val dcache = Module(new DCacheSimple()(CacheConfig(name = "dcache")))
+  val dcache = Module(new DCache()(CacheConfig(name = "dcache")))
   val dcacheBus = Module(new DUncache(dcache.lineBits, "mem uncache")) // TODO parameterize this
   val immuBus = Module(new DUncache)
+  val dmmuBus = Module(new DUncache)
   val mmioBus = Module(new Uncache(mname = "mmio uncache"))
-  val mem_source = List(icacheBus, dcacheBus, immuBus)
+  val mem_source = List(icacheBus, dcacheBus, immuBus, dmmuBus)
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
   val memxbar = Module(new CrossbarNto1(mem_source.length))
 
@@ -38,6 +40,7 @@ class Tile extends Module with phvntomParams with projectConfig {
   core.io.dmem <> dcache.io.in
   dcache.io.mem <> dcacheBus.io.in
   core.io.immu <> immuBus.io.in
+  core.io.dmmu <> dmmuBus.io.in
   for (i <- 0 until mem_source.length) {
     mem_source(i).io.out <> memxbar.io.in(i)
   }
