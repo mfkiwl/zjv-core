@@ -23,26 +23,39 @@ class Tile extends Module with phvntomParams with projectConfig {
 
   // mem path
   // val icache = Module(new ICacheSimple()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false)))
-  val icache = Module(new ICache()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false)))  
+  val icache = Module(
+    new ICache()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false))
+  )
   val dcache = Module(new DCacheSimple()(CacheConfig(name = "dcache")))
-  // val dcache = Module(new DCache()(CacheConfig(name = "dcache")))  
+  // val dcache = Module(new DCache()(CacheConfig(name = "dcache")))
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
 
-  core.io.imem <> icache.io.in  
-  core.io.dmem <> dcache.io.in  
+  core.io.imem <> icache.io.in
+  core.io.dmem <> dcache.io.in
 
   if (hasL2Cache) {
     val mem_source = List(icache, dcache)
-    val l2cache = Module(new L2Cache(mem_source.length)(CacheConfig(name = "l2cache")))
+    val memxbar = Module(new CrossbarNto1(1))
+    val l2cache = Module(
+      new L2Cache(mem_source.length)(
+        CacheConfig(
+          name = "l2cache",
+          blockBits = dcache.lineBits,
+          totalSize = 2
+        )
+      )
+    )
     val l2cacheBus = Module(new DUncache(l2cache.lineBits, "mem uncache"))
     for (i <- 0 until mem_source.length) {
       mem_source(i).io.mem <> l2cache.io.in(i)
     }
     l2cache.io.mem <> l2cacheBus.io.in
-    l2cacheBus.io.out <> mem.io.in
+    l2cacheBus.io.out <> memxbar.io.in(0)
+    memxbar.io.out <> mem.io.in
+
   } else {
     val icacheBus = Module(new DUncache(icache.lineBits, "inst uncache"))
-    val dcacheBus = Module(new DUncache(dcache.lineBits, "mem uncache"))  
+    val dcacheBus = Module(new DUncache(dcache.lineBits, "mem uncache"))
     val mem_source = List(icacheBus, dcacheBus)
     val memxbar = Module(new CrossbarNto1(mem_source.length))
     icache.io.mem <> icacheBus.io.in

@@ -25,7 +25,7 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val s1_valid = WireInit(Bool(), false.B)
   val s1_addr = Wire(UInt(xlen.W))
   val s1_index = Wire(UInt(indexLength.W))
-  val s1_data = Wire(UInt(xlen.W))
+  val s1_data = Wire(UInt(blockBits.W))
   val s1_wen = WireInit(Bool(), false.B)
   val s1_memtype = Wire(UInt(xlen.W))
 
@@ -40,7 +40,7 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val s2_valid = RegInit(Bool(), false.B)
   val s2_addr = RegInit(UInt(xlen.W), 0.U)
   val s2_index = RegInit(UInt(indexLength.W), 0.U)
-  val s2_data = RegInit(UInt(xlen.W), 0.U)
+  val s2_data = RegInit(UInt(blockBits.W), 0.U)
   val s2_wen = RegInit(Bool(), false.B)
   val s2_memtype = RegInit(UInt(xlen.W), 0.U)
   val s2_meta = Reg(Vec(nWays, new MetaData))
@@ -50,25 +50,27 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val s2_wordoffset = Wire(UInt((offsetLength - lineLength).W))
 
   when(!io.in.stall) {
-    s2_valid := s1_valid
-    s2_addr := s1_addr
-    s2_index := s1_index
-    s2_data := s1_data
-    s2_wen := s1_wen
-    s2_memtype := s1_memtype
-    s2_meta := metaArray(s1_index)
-    s2_cacheline := dataArray(s1_index)
-  }.elsewhen(need_forward) {
-    s2_valid := false.B
-    s2_addr := DontCare
-    s2_index := DontCare
-    s2_data := DontCare
-    s2_wen := DontCare
-    s2_memtype := DontCare
-    s2_meta := DontCare
-    s2_cacheline := DontCare
+    when(need_forward) {
+      s2_valid := false.B
+      s2_addr := DontCare
+      s2_index := DontCare
+      s2_data := DontCare
+      s2_wen := DontCare
+      s2_memtype := DontCare
+      s2_meta := DontCare
+      s2_cacheline := DontCare
+    }.otherwise {
+      s2_valid := s1_valid
+      s2_addr := s1_addr
+      s2_index := s1_index
+      s2_data := s1_data
+      s2_wen := s1_wen
+      s2_memtype := s1_memtype
+      s2_meta := metaArray(s1_index)
+      s2_cacheline := dataArray(s1_index)
+    }
   }
-
+  
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
   s2_lineoffset := s2_addr(offsetLength - 1, offsetLength - lineLength)
   s2_wordoffset := s2_addr(offsetLength - lineLength - 1, 0)
@@ -78,7 +80,7 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val victim_index = policy.choose_victim(s2_meta)
   val victim_vec = UIntToOH(victim_index)
   val hit = hitVec.orR
-  val result = Wire(UInt(xlen.W))
+  val result = Wire(UInt(blockBits.W))
   val access_index = Mux(hit, hit_index, victim_index)
   val access_vec = UIntToOH(access_index)
   val cacheline_meta = s2_meta(access_index)
@@ -95,7 +97,7 @@ class ICache(implicit val cacheConfig: CacheConfig)
 
   io.in.resp.valid := s2_valid && request_satisfied
   io.in.resp.bits.data := result
-  io.in.req.ready := !stall && !need_forward
+  io.in.req.ready := !stall // && !need_forward
 
   io.mem.stall := false.B
   io.mem.req.valid := s2_valid && (state === s_memReadReq || state === s_memReadResp)
@@ -124,7 +126,7 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val fetched_data = io.mem.resp.bits.data
   val fetched_vec = Wire(new CacheLineData)
   for (i <- 0 until nLine) {
-    fetched_vec.data(i) := fetched_data((i + 1) * xlen - 1, i * xlen)
+    fetched_vec.data(i) := fetched_data((i + 1) * blockBits - 1, i * blockBits)
   }
 
   val target_data = Mux(hit, cacheline_data, fetched_vec)
@@ -133,8 +135,8 @@ class ICache(implicit val cacheConfig: CacheConfig)
     when(request_satisfied) {
       val result_data = target_data.data(s2_lineoffset)
       val offset = s2_wordoffset << 3
-      val mask = WireInit(UInt(xlen.W), 0.U)
-      val realdata = WireInit(UInt(xlen.W), 0.U)
+      val mask = WireInit(UInt(blockBits.W), 0.U)
+      val realdata = WireInit(UInt(blockBits.W), 0.U)
       switch(s2_memtype) {
         is(memXXX) { result := result_data }
         is(memByte) {

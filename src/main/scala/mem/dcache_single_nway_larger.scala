@@ -21,7 +21,7 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
   val s1_valid = WireInit(Bool(), false.B)
   val s1_addr = Wire(UInt(xlen.W))
   val s1_index = Wire(UInt(indexLength.W))
-  val s1_data = Wire(UInt(xlen.W))
+  val s1_data = Wire(UInt(blockBits.W))
   val s1_wen = WireInit(Bool(), false.B)
   val s1_memtype = Wire(UInt(xlen.W))
   val s1_meta = Wire(Vec(nWays, new MetaData))
@@ -48,12 +48,11 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
   val victim_vec = UIntToOH(victim_index)
   val ismmio = AddressSpace.isMMIO(s1_addr)
   val hit = hitVec.orR && !ismmio
-  val result = Wire(UInt(xlen.W))
+  val result = Wire(UInt(blockBits.W))
   val access_index = Mux(hit, hit_index, victim_index)
   val access_vec = UIntToOH(access_index)
-  val cacheline_meta = s1_meta(access_index) // Mux1H(access_vec, s1_meta)
-  val cacheline_data =
-    s1_cacheline(access_index) // Mux1H(access_vec, s1_cacheline)
+  val cacheline_meta = s1_meta(access_index)
+  val cacheline_data = s1_cacheline(access_index)
 
   val s_idle :: s_memReadReq :: s_memReadResp :: s_memWriteReq :: s_memWriteResp :: s_mmioReq :: s_mmioResp :: s_wait_resp :: s_release :: Nil =
     Enum(9)
@@ -95,12 +94,8 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
         )
       }
     }
-    is(s_memReadReq) {
-      when(io.mem.req.fire()) { state := s_memReadResp }
-    }
-    is(s_memReadResp) {
-      when(io.mem.resp.fire()) { state := s_idle }
-    }
+    is(s_memReadReq) { when(io.mem.req.fire()) { state := s_memReadResp } }
+    is(s_memReadResp) { when(io.mem.resp.fire()) { state := s_idle } }
     is(s_memWriteReq) { when(io.mem.req.fire()) { state := s_memWriteResp } }
     is(s_memWriteResp) { when(io.mem.resp.fire()) { state := s_memReadReq } }
     is(s_mmioReq) { when(io.mmio.req.fire()) { state := s_mmioResp } }
@@ -114,7 +109,7 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
   val fetched_data = io.mem.resp.bits.data
   val fetched_vec = Wire(new CacheLineData)
   for (i <- 0 until nLine) {
-    fetched_vec.data(i) := fetched_data((i + 1) * xlen - 1, i * xlen)
+    fetched_vec.data(i) := fetched_data((i + 1) * blockBits - 1, i * blockBits)
   }
 
   val target_data = Mux(hit, cacheline_data, fetched_vec)
@@ -123,13 +118,13 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
     when(s1_wen) {
       when(hit || (io.mem.resp.valid && state === s_memReadResp)) {
         val newdata = Wire(new CacheLineData)
-        val filled_data = WireInit(UInt(xlen.W), 0.U(xlen.W))
+        val filled_data = WireInit(UInt(blockBits.W), 0.U(blockBits.W))
         val offset = s1_wordoffset << 3
-        val mask = WireInit(UInt(xlen.W), 0.U)
+        val mask = WireInit(UInt(blockBits.W), 0.U)
         switch(s1_memtype) {
           is(memXXX) {
             filled_data := s1_data
-            mask := Fill(xlen, 1.U(1.W)) << offset
+            mask := Fill(blockBits, 1.U(1.W)) << offset
           }
           is(memByte) {
             filled_data := Fill(8, s1_data(7, 0))
@@ -145,7 +140,7 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
           }
           is(memDouble) {
             filled_data := s1_data
-            mask := Fill(xlen, 1.U(1.W)) << offset
+            mask := Fill(blockBits, 1.U(1.W)) << offset
           }
           is(memByteU) {
             filled_data := Fill(8, s1_data(7, 0))
@@ -184,9 +179,9 @@ class DCacheSimple(implicit val cacheConfig: CacheConfig)
       ) {
         val result_data = target_data.data(s1_lineoffset)
         val offset = s1_wordoffset << 3
-        val mask = WireInit(UInt(xlen.W), 0.U)
-        val realdata = WireInit(UInt(xlen.W), 0.U)
-        val mem_result = WireInit(UInt(xlen.W), 0.U)
+        val mask = WireInit(UInt(blockBits.W), 0.U)
+        val realdata = WireInit(UInt(blockBits.W), 0.U)
+        val mem_result = WireInit(UInt(blockBits.W), 0.U)
         switch(s1_memtype) {
           is(memXXX) { mem_result := result_data }
           is(memByte) {

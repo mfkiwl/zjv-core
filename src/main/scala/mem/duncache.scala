@@ -123,7 +123,7 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
     }
   }
 
-  io.offset := io.in.req.bits.addr(blen - 1, 0)
+  // io.offset := io.in.req.bits.addr(blen - 1, 0)
   io.in.resp.bits.data := DontCare
   val data_vec = Reg(Vec(burst_length, UInt(xlen.W)))
   when(state === s_RECEIVING && io.out.r.valid) {
