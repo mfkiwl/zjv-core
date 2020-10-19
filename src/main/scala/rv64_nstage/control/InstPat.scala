@@ -76,6 +76,9 @@ object ISA extends phvntomParams {
 
   // RV32/64 Privilage
   def MRET          = BitPat("b00110000001000000000000001110011")
+  def SRET          = BitPat("b00010000001000000000000001110011")
+  def URET          = BitPat("b00000000001000000000000001110011")
+  def SFENCE_VMA    = BitPat("b0001001??????????000000001110011")
 
   // RV32M
   def MUL                = BitPat("b0000001??????????000?????0110011")

@@ -142,10 +142,10 @@ class RegIdExe extends Module with phvntomParams {
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
     default_inst_info)
 
   val delay_flush = RegInit(Bool(), false.B)
@@ -210,10 +210,10 @@ class RegExeDTLB extends Module with phvntomParams {
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -299,10 +299,10 @@ class RegDTLBMem1 extends Module with phvntomParams {
   val inst_pf = RegInit(Bool(), false.B)
   val mem_af = RegInit(Bool(), false.B)
   val mem_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -415,10 +415,10 @@ class RegMem1Mem2 extends Module with phvntomParams {
   val inst_pf = RegInit(Bool(), false.B)
   val mem_af = RegInit(Bool(), false.B)
   val mem_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -544,10 +544,10 @@ class RegMem2Wb extends Module with phvntomParams {
   val inst_pf = RegInit(Bool(), false.B)
   val mem_af = RegInit(Bool(), false.B)
   val mem_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)

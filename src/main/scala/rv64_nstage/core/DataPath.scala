@@ -62,6 +62,8 @@ class DataPath extends Module with phvntomParams {
 
   // Flush Signals
   val br_jump_flush = WireInit(Bool(), false.B)
+  val i_fence_flush = WireInit(Bool(), false.B)
+  val s_fence_flush = WireInit(Bool(), false.B)
   val expt_int_flush = WireInit(Bool(), false.B)
   val error_ret_flush = WireInit(Bool(), false.B)
   val write_satp_flush = WireInit(Bool(), false.B)
@@ -113,9 +115,10 @@ class DataPath extends Module with phvntomParams {
   pc_gen.io.expt_int := expt_int_flush
   pc_gen.io.error_ret := error_ret_flush
   pc_gen.io.write_satp := write_satp_flush
+  pc_gen.io.flush_cache_tlb := i_fence_flush || s_fence_flush
   pc_gen.io.epc := csr.io.epc
   pc_gen.io.tvec := csr.io.evec
-  pc_gen.io.pc_plus := csr.io.pc_plus
+  pc_gen.io.pc_plus := reg_dtlb_mem1.io.pc_out + 4.U(3.W)
   pc_gen.io.branch_jump := br_jump_flush
   pc_gen.io.branch_pc := alu.io.out
   pc_gen.io.inst_addr_misaligned := inst_addr_misaligned
@@ -125,7 +128,7 @@ class DataPath extends Module with phvntomParams {
   inst_pf := immu.io.pf
   immu.io.valid := !pc_gen.io.last_stall_out
   immu.io.va := pc_gen.io.pc_out
-  immu.io.flush_all := write_satp_flush
+  immu.io.flush_all := write_satp_flush || s_fence_flush
   immu.io.satp_val := csr.io.satp_val
   immu.io.current_p := csr.io.current_p
   immu.io.is_inst := true.B
@@ -144,7 +147,7 @@ class DataPath extends Module with phvntomParams {
   stall_req_if1_atomic := immu.io.stall_req
 
   reg_if1_if2.io.stall := stall_if1_if2
-  reg_if1_if2.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush
+  reg_if1_if2.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
   reg_if1_if2.io.bubble_in := stall_req_if1_atomic
   reg_if1_if2.io.pc_in := pc_gen.io.pc_out
   reg_if1_if2.io.last_stage_atomic_stall_req := stall_req_if1_atomic
@@ -154,6 +157,7 @@ class DataPath extends Module with phvntomParams {
   reg_if1_if2.io.next_stage_flush_req := false.B
 
   // TODO parallel visiting of RAM and TLB
+  // io.imem.flush := i_fence_flush || s_fence_flush
   io.imem.stall := stall_if1_if2
   io.imem.req.bits.addr := immu.io.pa
   io.imem.req.bits.data := DontCare
@@ -169,12 +173,12 @@ class DataPath extends Module with phvntomParams {
   reg_if2_id.io.last_stage_atomic_stall_req := stall_req_if2_atomic
   reg_if2_id.io.next_stage_atomic_stall_req := false.B
   reg_if2_id.io.stall := stall_if2_id
-  reg_if2_id.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush
+  reg_if2_id.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
   reg_if2_id.io.bubble_in := stall_req_if2_atomic || reg_if1_if2.io.bubble_out
   reg_if2_id.io.inst_in := Mux(reg_if1_if2.io.inst_af_out, BUBBLE, inst_if2)
   reg_if2_id.io.pc_in := reg_if1_if2.io.pc_out
   reg_if2_id.io.inst_af_in := reg_if1_if2.io.inst_af_out
-  reg_if2_id.io.next_stage_flush_req := false.B
+  reg_if2_id.io.next_stage_flush_req := i_fence_flush
   reg_if2_id.io.inst_pf_in := reg_if1_if2.io.inst_pf_out
 
   // Decoder
@@ -184,7 +188,7 @@ class DataPath extends Module with phvntomParams {
   reg_id_exe.io.last_stage_atomic_stall_req := false.B
   reg_id_exe.io.next_stage_atomic_stall_req := stall_req_exe_atomic
   reg_id_exe.io.stall := stall_id_exe
-  reg_id_exe.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush
+  reg_id_exe.io.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
   reg_id_exe.io.bubble_in := reg_if2_id.io.bubble_out
   reg_id_exe.io.inst_in := reg_if2_id.io.inst_out
   reg_id_exe.io.pc_in := reg_if2_id.io.pc_out
@@ -286,7 +290,7 @@ class DataPath extends Module with phvntomParams {
   reg_exe_dtlb.io.last_stage_atomic_stall_req := stall_req_exe_atomic
   reg_exe_dtlb.io.next_stage_atomic_stall_req := stall_req_dtlb_atomic
   reg_exe_dtlb.io.stall := stall_exe_dtlb
-  reg_exe_dtlb.io.flush_one := expt_int_flush || error_ret_flush || write_satp_flush
+  reg_exe_dtlb.io.flush_one := expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
   reg_exe_dtlb.io.bubble_in := (reg_id_exe.io.bubble_out || stall_req_exe_atomic ||
     stall_req_exe_interruptable)
   reg_exe_dtlb.io.inst_in := reg_id_exe.io.inst_out
@@ -304,7 +308,7 @@ class DataPath extends Module with phvntomParams {
     reg_exe_dtlb.io.inst_info_out.memType.orR) // TODO
   dmmu.io.valid := reg_exe_dtlb.io.inst_info_out.memType.orR
   dmmu.io.va := reg_exe_dtlb.io.alu_val_out
-  dmmu.io.flush_all := write_satp_flush
+  dmmu.io.flush_all := write_satp_flush || s_fence_flush
   dmmu.io.satp_val := csr.io.satp_val
   dmmu.io.current_p := csr.io.current_p
   dmmu.io.is_inst := false.B
@@ -326,7 +330,7 @@ class DataPath extends Module with phvntomParams {
   reg_dtlb_mem1.io.last_stage_atomic_stall_req := stall_req_dtlb_atomic
   reg_dtlb_mem1.io.next_stage_atomic_stall_req := false.B
   reg_dtlb_mem1.io.stall := stall_dtlb_mem1
-  reg_dtlb_mem1.io.flush_one := expt_int_flush || error_ret_flush || write_satp_flush
+  reg_dtlb_mem1.io.flush_one := expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
   reg_dtlb_mem1.io.bubble_in := (reg_exe_dtlb.io.bubble_out || stall_req_dtlb_atomic || amo_bubble_insert)
   reg_dtlb_mem1.io.inst_in := reg_exe_dtlb.io.inst_out
   reg_dtlb_mem1.io.pc_in := reg_exe_dtlb.io.pc_out
@@ -338,7 +342,7 @@ class DataPath extends Module with phvntomParams {
   reg_dtlb_mem1.io.software_int_in := io.int.msip
   reg_dtlb_mem1.io.external_int_in := io.int.meip
   reg_dtlb_mem1.io.inst_af_in := reg_exe_dtlb.io.inst_af_out
-  reg_dtlb_mem1.io.next_stage_flush_req := expt_int_flush || error_ret_flush || write_satp_flush
+  reg_dtlb_mem1.io.next_stage_flush_req := expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
   reg_dtlb_mem1.io.inst_pf_in := reg_exe_dtlb.io.inst_pf_out
   reg_dtlb_mem1.io.mem_af_in := mem_af
   reg_dtlb_mem1.io.mem_pf_in := dmmu.io.pf
@@ -379,6 +383,10 @@ class DataPath extends Module with phvntomParams {
   expt_int_flush := csr.io.expt
   error_ret_flush := csr.io.ret
   write_satp_flush := csr.io.write_satp
+  i_fence_flush := (reg_dtlb_mem1.io.inst_info_out.flushType === flushI ||
+    reg_dtlb_mem1.io.inst_info_out.flushType === flushAll)
+  s_fence_flush := (reg_dtlb_mem1.io.inst_info_out.flushType === flushAll ||
+    reg_dtlb_mem1.io.inst_info_out.flushType === flushTLB)
 
   // REG MEM1 MEM2
   reg_mem1_mem2.io.last_stage_atomic_stall_req := false.B
