@@ -2,6 +2,7 @@ package rv64_nstage.fu
 
 import chisel3._
 import rv64_nstage.core._
+import chisel3.util._
 
 class PHTIO extends Bundle with phvntomParams {
   // Combinational History Query
@@ -97,14 +98,14 @@ class BPUIO extends Bundle with phvntomParams {
   // Normal Prediction
   val pc_to_predict = Input(UInt(xlen.W))
   val branch_taken = Output(Bool())
-  val jump_taken = Output(Bool()) // TODO
   val pc_in_btb = Output(UInt(xlen.W))
-  val pc_in_ras = Output(UInt(xlen.W))  // TODO
+  val xored_index_out = Output(UInt(bpuEntryBits.W))
   // Modify Data from BRANCH
-  val pc_feedback = Input(UInt(xlen.W))
-  val pc_feedback_br = Input(Bool())
-  val pc_feedback_target_addr = Input(UInt(xlen.W))
-  val pc_feedback_taken = Input(Bool())
+  val feedback_pc = Input(UInt(xlen.W))
+  val feedback_xored_index = Input(UInt(bpuEntryBits.W))
+  val feedback_is_br = Input(Bool())
+  val feedback_target_pc = Input(UInt(xlen.W))
+  val feedback_br_taken = Input(Bool())
   // TODO Modify Data from CALL-RET
 }
 
@@ -120,15 +121,27 @@ class BPU extends Module with phvntomParams {
   val bht = Module(new BHT)
   val btb = Module(new BTB)
 
+  val history_from_pht = pht.io.history_out
+  val predict_taken_from_bht = bht.io.predit_taken
+  val xored_index = history_from_pht ^ io.pc_to_predict(bpuEntryBits + 1, 2)
+
   // TODO Here, we do not care C Extension for now
   pht.io.index_in := io.pc_to_predict(bpuEntryBits + 1, 2)
-  pht.io.update_valid := io.pc_feedback_br
+  pht.io.update_valid := io.feedback_is_br
+  pht.io.update_index_in := io.feedback_pc(bpuEntryBits + 1, 2)
+  pht.io.update_taken_in := io.feedback_br_taken
 
-  // Combinational History Query
-  val index_in = Input(UInt(bpuEntryBits.W))
-  val history_out = Output(UInt(historyBits.W))
-  // Update History
-  val update_valid = Input(Bool())
-  val update_index_in = Input(UInt(bpuEntryBits.W))
-  val update_taken_in = Input(Bool())
+  bht.io.xored_index_in := xored_index
+  bht.io.update_valid := io.feedback_is_br
+  bht.io.update_xored_index_in := io.feedback_xored_index
+  bht.io.update_taken_in := io.feedback_br_taken
+
+  btb.io.index_in := io.pc_to_predict(bpuEntryBits + 1, 2)
+  btb.io.update_valid := io.feedback_is_br && io.feedback_br_taken
+  btb.io.update_index := io.feedback_pc(bpuEntryBits + 1, 2)
+  btb.io.update_target := io.feedback_target_pc
+
+  io.branch_taken := predict_taken_from_bht
+  io.pc_in_btb := btb.io.target_out
+  io.xored_index_out := xored_index
 }
