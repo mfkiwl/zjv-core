@@ -27,8 +27,8 @@ class L2CacheXbar(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
   io.out.req.bits := thisReq.bits
   // bind correct valid and ready signals
   io.out.stall := false.B
-  io.out.req.valid := thisReq.valid // && (state === s_idle)
-  thisReq.ready := io.out.req.ready // && (state === s_idle)
+  io.out.req.valid := thisReq.valid && (state === s_idle)
+  thisReq.ready := io.out.req.ready && (state === s_idle)
 
   io.in.map(_.resp.bits := io.out.resp.bits)
   io.in.map(_.resp.valid := false.B)
@@ -91,12 +91,15 @@ class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
   val s1_lineoffset = Wire(UInt(lineLength.W))
   val s1_wordoffset = Wire(UInt((offsetLength - lineLength).W))
 
-  s1_valid := current_request.req.valid
-  s1_addr := current_request.req.bits.addr
+  when(current_request.req.fire()) {
+    s1_valid := current_request.req.valid
+    s1_addr := current_request.req.bits.addr
+    s1_data := current_request.req.bits.data
+    s1_wen := current_request.req.bits.wen
+    s1_memtype := current_request.req.bits.memtype
+  }
+
   s1_index := s1_addr(indexLength + offsetLength - 1, offsetLength)
-  s1_data := current_request.req.bits.data
-  s1_wen := current_request.req.bits.wen
-  s1_memtype := current_request.req.bits.memtype
   s1_meta := metaArray(s1_index)
   s1_cacheline := dataArray(s1_index)
   s1_tag := s1_addr(xlen - 1, xlen - tagLength)
@@ -172,7 +175,10 @@ class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
         new_meta(access_index).dirty := true.B
         new_meta(access_index).tag := s1_tag
         metaArray.write(s1_index, new_meta)
-        // printf(p"dcache write: newdata=${newdata}\n")
+        // printf(
+        //   p"dcache write: s1_index=${s1_index}, access_index=${access_index}\n"
+        // )
+        // printf(p"\tnewdata=${newdata}\n")
         // printf(p"\tnew_meta=${new_meta}\n")
       }.otherwise {
         val result_data = target_data.data(s1_lineoffset)
@@ -187,7 +193,10 @@ class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
         }
         new_meta(access_index).tag := s1_tag
         metaArray.write(s1_index, new_meta)
-        // printf(p"dcache write: target_data=${target_data}\n")
+        // printf(
+        //   p"dcache read update: s1_index=${s1_index}, access_index=${access_index}\n"
+        // )
+        // printf(p"\ttarget_data=${target_data}\n")
         // printf(p"\tnew_meta=${new_meta}\n")
       }
     }

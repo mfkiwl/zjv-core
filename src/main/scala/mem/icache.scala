@@ -50,7 +50,15 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val s2_wordoffset = Wire(UInt((offsetLength - lineLength).W))
 
   when(!io.in.stall) {
-    when(need_forward) {
+    s2_valid := s1_valid
+    s2_addr := s1_addr
+    s2_index := s1_index
+    s2_data := s1_data
+    s2_wen := s1_wen
+    s2_memtype := s1_memtype
+    s2_meta := metaArray(s1_index)
+    s2_cacheline := dataArray(s1_index)    
+  }.elsewhen(need_forward) {
       s2_valid := false.B
       s2_addr := DontCare
       s2_index := DontCare
@@ -59,17 +67,7 @@ class ICache(implicit val cacheConfig: CacheConfig)
       s2_memtype := DontCare
       s2_meta := DontCare
       s2_cacheline := DontCare
-    }.otherwise {
-      s2_valid := s1_valid
-      s2_addr := s1_addr
-      s2_index := s1_index
-      s2_data := s1_data
-      s2_wen := s1_wen
-      s2_memtype := s1_memtype
-      s2_meta := metaArray(s1_index)
-      s2_cacheline := dataArray(s1_index)
     }
-  }
   
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
   s2_lineoffset := s2_addr(offsetLength - 1, offsetLength - lineLength)
@@ -91,13 +89,13 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val read_address = Cat(s2_tag, s2_index, 0.U(offsetLength.W))
   val mem_valid = state === s_memReadResp && io.mem.resp.valid
   val request_satisfied = hit || mem_valid
-  val hazard = s1_valid && s2_valid && s1_index === s2_index
+  val hazard = s2_valid && s2_wen && s1_index === s2_index
   stall := s2_valid && !request_satisfied // wait for data or hazard
   need_forward := hazard && request_satisfied
 
   io.in.resp.valid := s2_valid && request_satisfied
   io.in.resp.bits.data := result
-  io.in.req.ready := !stall // && !need_forward
+  io.in.req.ready := !stall && !need_forward
 
   io.mem.stall := false.B
   io.mem.req.valid := s2_valid && (state === s_memReadReq || state === s_memReadResp)
