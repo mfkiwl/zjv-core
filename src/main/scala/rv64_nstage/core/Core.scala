@@ -2,7 +2,6 @@ package rv64_nstage.core
 
 import chisel3._
 import chisel3.util._
-import common._
 import rv64_nstage.control.ControlPath
 import device.MemIO
 import rv64_nstage.register.InterruptIO
@@ -24,6 +23,8 @@ trait phvntomParams {
 class CoreIO extends Bundle with phvntomParams {
   val imem = Flipped(new MemIO)
   val dmem = Flipped(new MemIO)
+  val immu = Flipped(new MemIO)
+  val dmmu = Flipped(new MemIO)
   val int = new InterruptIO
 }
 
@@ -35,5 +36,7 @@ class Core extends Module with phvntomParams {
   dpath.io.ctrl <> cpath.io
   dpath.io.imem <> io.imem
   dpath.io.dmem <> io.dmem
+  dpath.io.immu <> io.immu
+  dpath.io.dmmu <> io.dmmu
   dpath.io.int  <> io.int
 }

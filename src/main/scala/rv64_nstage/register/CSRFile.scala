@@ -98,6 +98,11 @@ object CSR {
   val minstret =    0xb02.U(12.W)
 }
 
+object SATP {
+  val Bare    = 0.U(4.W)
+  val Sv39    = 8.U(4.W)
+}
+
 object Exception {
   val InstAddrMisaligned = 0x0.U(4.W)
   val InstAccessFault = 0x1.U(4.W) // TODO
@@ -268,6 +273,9 @@ class CSRFileIO extends Bundle with phvntomParams {
   val is_ret_out = Output(Bool())
   val tvec_out = Output(UInt(xlen.W))
   val epc_out = Output(UInt(xlen.W))
+  val write_satp = Output(Bool())
+  val satp_val = Output(UInt(xlen.W))
+  val current_p = Output(UInt(2.W))
 }
 
 class CSRFile extends Module with phvntomParams {
@@ -318,6 +326,10 @@ class CSRFile extends Module with phvntomParams {
   val mipr_seip = RegInit(false.B)
   val mipr_stip = RegInit(false.B)
   val mipr_ssip = RegInit(false.B)
+  // SATP
+  val satpr_mode = RegInit(UInt(4.W), SATP.Bare)
+  val satpr_asid = RegInit(UInt(16.W), 0.U)
+  val satpr_ppn = RegInit(UInt(44.W), 0.U)
 
   // [--------- Machine Mode Registers in CSR --------]
   val mepcr = RegInit(0.U(xlen.W))
@@ -377,7 +389,7 @@ class CSRFile extends Module with phvntomParams {
     mipr_stip, Fill(3, 0.U), mipr_ssip, false.B
   )
   val stvecr = RegInit(0.U(xlen.W))
-  val satpr = RegInit(0.U(xlen.W))
+  val satpr = Cat(satpr_mode, satpr_asid, satpr_ppn)
   val sepcr = RegInit(0.U(xlen.W))
   val scauser = Cat(scauser_int, 0.U((xlen - 5).W), scauser_cause)
   val stvalr = RegInit(0.U(xlen.W))
@@ -590,6 +602,9 @@ class CSRFile extends Module with phvntomParams {
   }.elsewhen(io.which_reg === CSR.sie) {
     io.rdata := sier
     csr_not_exists := false.B
+  }.elsewhen(io.which_reg === CSR.sip) {
+    io.rdata := sipr
+    csr_not_exists := false.B
   }.elsewhen(io.which_reg === CSR.scounteren) {
     io.rdata := scounterenr
     csr_not_exists := false.B
@@ -732,30 +747,36 @@ class CSRFile extends Module with phvntomParams {
         }.elsewhen(io.cen) {
           mimpidr := mimpidr & (~io.wdata)
         }
-      }.elsewhen(io.which_reg === CSR.mie) {
+      }.elsewhen(io.which_reg === CSR.mie || io.which_reg === CSR.sie) {
         when(io.wen) {
-          mier_meie := io.wdata(11)
+          when(io.which_reg === CSR.mie) {
+            mier_meie := io.wdata(11)
+            mier_mtie := io.wdata(7)
+            mier_msie := io.wdata(3)
+          }
           mier_seie := io.wdata(9)
-          mier_mtie := io.wdata(7)
           mier_stie := io.wdata(5)
-          mier_msie := io.wdata(3)
           mier_ssie := io.wdata(1)
         }.elsewhen(io.sen) {
-          mier_meie := mier_meie | io.wdata(11)
+          when(io.which_reg === CSR.mie) {
+            mier_meie := mier_meie | io.wdata(11)
+            mier_mtie := mier_mtie | io.wdata(7)
+            mier_msie := mier_msie | io.wdata(3)
+          }
           mier_seie := mier_seie | io.wdata(9)
-          mier_mtie := mier_mtie | io.wdata(7)
           mier_stie := mier_stie | io.wdata(5)
-          mier_msie := mier_msie | io.wdata(3)
           mier_ssie := mier_ssie | io.wdata(1)
         }.elsewhen(io.cen) {
-          mier_meie := mier_meie & ~io.wdata(11)
+          when(io.which_reg === CSR.mie) {
+            mier_meie := mier_meie & ~io.wdata(11)
+            mier_mtie := mier_mtie & ~io.wdata(7)
+            mier_msie := mier_msie & ~io.wdata(3)
+          }
           mier_seie := mier_seie & ~io.wdata(9)
-          mier_mtie := mier_mtie & ~io.wdata(7)
           mier_stie := mier_stie & ~io.wdata(5)
-          mier_msie := mier_msie & ~io.wdata(3)
           mier_ssie := mier_ssie & ~io.wdata(1)
         }
-      }.elsewhen(io.which_reg === CSR.mip) {
+      }.elsewhen(io.which_reg === CSR.mip || io.which_reg === CSR.sip) {
         when(io.wen) {
           mipr_seip := io.wdata(9)
           mipr_stip := io.wdata(5)
@@ -769,46 +790,50 @@ class CSRFile extends Module with phvntomParams {
           mipr_stip := mipr_stip & ~io.wdata(5)
           mipr_ssip := mipr_ssip & ~io.wdata(1)
         }
-      }.elsewhen(io.which_reg === CSR.mstatus) {
+      }.elsewhen(io.which_reg === CSR.mstatus || io.which_reg === CSR.sstatus) {
         when(io.wen) {
-          mstatusr_sd := io.wdata(xlen - 1)
-          mstatusr_mbe := io.wdata(37)
-          mstatusr_sbe := io.wdata(36)
-          mstatusr_tsr := io.wdata(22)
-          mstatusr_tw := io.wdata(21)
-          mstatusr_tvm := io.wdata(20)
+          when(io.which_reg === CSR.mstatus) {
+            mstatusr_sd := io.wdata(xlen - 1)
+            mstatusr_mbe := io.wdata(37)
+            mstatusr_sbe := io.wdata(36)
+            mstatusr_tsr := io.wdata(22)
+            mstatusr_tw := io.wdata(21)
+            mstatusr_tvm := io.wdata(20)
+            mstatusr_mprv := io.wdata(17)
+            if(!only_M) {
+              mstatusr_mpp := io.wdata(12, 11)
+            }
+            mstatusr_mpie := io.wdata(7)
+            mstatusr_mie := io.wdata(3)
+          }
           mstatusr_mxr := io.wdata(19)
           mstatusr_sum := io.wdata(18)
-          mstatusr_mprv := io.wdata(17)
           mstatusr_xs := io.wdata(16, 15)
-          if(!only_M) {
-            mstatusr_mpp := io.wdata(12, 11)
-          }
           mstatusr_spp := io.wdata(8)
-          mstatusr_mpie := io.wdata(7)
           mstatusr_ube := io.wdata(6)
           mstatusr_spie := io.wdata(5)
-          mstatusr_mie := io.wdata(3)
           mstatusr_sie := io.wdata(1)
         }.elsewhen(io.sen) {
-          mstatusr_sd := mstatusr(xlen - 1) | io.wdata(xlen - 1)
-          mstatusr_mbe := mstatusr(37) | io.wdata(37)
-          mstatusr_sbe := mstatusr(36) | io.wdata(36)
-          mstatusr_tsr := mstatusr(22) | io.wdata(22)
-          mstatusr_tw := mstatusr(21) | io.wdata(21)
-          mstatusr_tvm := mstatusr(20) | io.wdata(20)
+          when(io.which_reg === CSR.mstatus) {
+            mstatusr_sd := mstatusr(xlen - 1) | io.wdata(xlen - 1)
+            mstatusr_mbe := mstatusr(37) | io.wdata(37)
+            mstatusr_sbe := mstatusr(36) | io.wdata(36)
+            mstatusr_tsr := mstatusr(22) | io.wdata(22)
+            mstatusr_tw := mstatusr(21) | io.wdata(21)
+            mstatusr_tvm := mstatusr(20) | io.wdata(20)
+            mstatusr_mprv := mstatusr(17) | io.wdata(17)
+            if(!only_M) {
+              mstatusr_mpp := mstatusr(12, 11) | io.wdata(12, 11)
+            }
+            mstatusr_mpie := mstatusr(7) | io.wdata(7)
+            mstatusr_mie := mstatusr(3) | io.wdata(3)
+          }
           mstatusr_mxr := mstatusr(19) | io.wdata(19)
           mstatusr_sum := mstatusr(18) | io.wdata(18)
-          mstatusr_mprv := mstatusr(17) | io.wdata(17)
           mstatusr_xs := mstatusr(16, 15) | io.wdata(16, 15)
-          if(!only_M) {
-            mstatusr_mpp := mstatusr(12, 11) | io.wdata(12, 11)
-          }
           mstatusr_spp := mstatusr(8) | io.wdata(8)
-          mstatusr_mpie := mstatusr(7) | io.wdata(7)
           mstatusr_ube := mstatusr(6) | io.wdata(6)
           mstatusr_spie := mstatusr(5) | io.wdata(5)
-          mstatusr_mie := mstatusr(3) | io.wdata(3)
           mstatusr_sie := mstatusr(1) | io.wdata(1)
         }.elsewhen(io.cen) {
           mstatusr_sd := mstatusr(xlen - 1) & ~io.wdata(xlen - 1)
@@ -838,6 +863,44 @@ class CSRFile extends Module with phvntomParams {
           stvecr := stvecr | io.wdata
         }.elsewhen(io.cen) {
           stvecr := stvecr & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.scause) {
+        when(io.wen) {
+          scauser_cause := io.wdata(3, 0)
+        }.elsewhen(io.sen) {
+          scauser_cause := scauser_cause | io.wdata(3, 0)
+        }.elsewhen(io.cen) {
+          scauser_cause := scauser_cause & (~io.wdata(3, 0))
+        }
+      }.elsewhen(io.which_reg === CSR.sepc) {
+        when(io.wen) {
+          sepcr := io.wdata
+        }.elsewhen(io.sen) {
+          sepcr := sepcr | io.wdata
+        }.elsewhen(io.cen) {
+          sepcr := sepcr & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.stval) {
+        when(io.wen) {
+          stvalr := io.wdata
+        }.elsewhen(io.sen) {
+          stvalr := stvalr | io.wdata
+        }.elsewhen(io.cen) {
+          stvalr := stvalr & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.satp) {
+        when(io.wen) {
+          satpr_mode := io.wdata(63, 60)
+          satpr_asid := io.wdata(59, 44)
+          satpr_ppn := io.wdata(43, 0)
+        }.elsewhen(io.sen) {
+          satpr_mode := satpr_mode | io.wdata(63, 60)
+          satpr_asid := satpr_asid | io.wdata(59, 44)
+          satpr_ppn := satpr_ppn | io.wdata(43, 0)
+        }.elsewhen(io.cen) {
+          satpr_mode := satpr_mode & (~io.wdata(63, 60))
+          satpr_asid := satpr_asid & (~io.wdata(59, 44))
+          satpr_ppn := satpr_ppn & (~io.wdata(43, 0))
         }
       }.elsewhen(io.which_reg === CSR.tselect) {
         when(io.wen) {
@@ -875,6 +938,10 @@ class CSRFile extends Module with phvntomParams {
     }
   }
 
+  io.write_satp := io.which_reg === CSR.satp && (io.wen || io.cen || io.sen)
+  io.satp_val := satpr
+  io.current_p := current_p
+
   if(diffTest) {
     BoringUtils.addSource(mcycler, "difftestmcycler")
   }
@@ -903,8 +970,12 @@ class CSRIO extends Bundle with phvntomParams {
   val expt = Output(Bool())
   val int = Output(Bool())
   val ret = Output(Bool())
+  val write_satp = Output(Bool())
   val evec = Output(UInt(xlen.W))
   val epc = Output(UInt(xlen.W))
+  val pc_plus = Output(UInt(xlen.W))
+  val satp_val = Output(UInt(xlen.W))
+  val current_p = Output(UInt(2.W))
   // Interrupt
   val tim_int = Input(Bool())
   val soft_int = Input(Bool())
@@ -953,4 +1024,8 @@ class CSR extends Module with phvntomParams {
   io.epc := csr_regfile.io.epc_out
   io.ret := csr_regfile.io.is_ret_out
   io.stall_req := false.B
+  io.write_satp := csr_regfile.io.write_satp
+  io.pc_plus := io.pc + 4.U(3.W)
+  io.satp_val := csr_regfile.io.satp_val
+  io.current_p := csr_regfile.io.current_p
 }

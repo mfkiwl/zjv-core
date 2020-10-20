@@ -93,7 +93,7 @@ class DCache(implicit val cacheConfig: CacheConfig)
   val mem_request_satisfied = hit || mem_valid
   val mmio_request_satisfied = state === s_mmioResp && io.mmio.resp.valid
   val request_satisfied = mem_request_satisfied || mmio_request_satisfied
-  val hazard = s1_valid && s2_valid && s1_index === s2_index
+  val hazard = s2_valid && s2_wen && s1_index === s2_index
   stall := s2_valid && !request_satisfied // wait for data or hazard
   need_forward := hazard && mem_request_satisfied
 
@@ -156,7 +156,7 @@ class DCache(implicit val cacheConfig: CacheConfig)
   when(s2_valid) {
     when(s2_wen) {
       when(mem_request_satisfied) {
-        val newdata = Wire(new CacheLineData)
+        val new_data = Wire(new CacheLineData)
         val filled_data = WireInit(UInt(blockBits.W), 0.U(blockBits.W))
         val offset = s2_wordoffset << 3
         val mask = WireInit(UInt(blockBits.W), 0.U)
@@ -194,11 +194,11 @@ class DCache(implicit val cacheConfig: CacheConfig)
             mask := Fill(32, 1.U(1.W)) << offset
           }
         }
-        newdata := target_data
-        newdata.data(
+        new_data := target_data
+        new_data.data(
           s2_lineoffset
         ) := (mask & filled_data) | (~mask & target_data.data(s2_lineoffset))
-        val writeData = VecInit(Seq.fill(nWays)(newdata))
+        val writeData = VecInit(Seq.fill(nWays)(new_data))
         dataArray.write(s2_index, writeData, access_vec.asBools)
         val new_meta = Wire(Vec(nWays, new MetaData))
         new_meta := policy.update_meta(s2_meta, access_index)
@@ -209,7 +209,7 @@ class DCache(implicit val cacheConfig: CacheConfig)
         // printf(
         //   p"dcache write: mask=${Hexadecimal(mask)}, filled_data=${Hexadecimal(filled_data)}, s2_index=0x${Hexadecimal(s2_index)}\n"
         // )
-        // printf(p"\tnewdata=${newdata}\n")
+        // printf(p"\tnew_data=${new_data}\n")
         // printf(p"\tnew_meta=${new_meta}\n")
       }
     }.otherwise {
@@ -217,45 +217,45 @@ class DCache(implicit val cacheConfig: CacheConfig)
         val result_data = target_data.data(s2_lineoffset)
         val offset = s2_wordoffset << 3
         val mask = WireInit(UInt(blockBits.W), 0.U)
-        val realdata = WireInit(UInt(blockBits.W), 0.U)
+        val real_data = WireInit(UInt(blockBits.W), 0.U)
         val mem_result = WireInit(UInt(blockBits.W), 0.U)
         switch(s2_memtype) {
           is(memXXX) { mem_result := result_data }
           is(memByte) {
             mask := Fill(8, 1.U(1.W)) << offset
-            realdata := (result_data & mask) >> offset
-            mem_result := Cat(Fill(56, realdata(7)), realdata(7, 0))
+            real_data := (result_data & mask) >> offset
+            mem_result := Cat(Fill(56, real_data(7)), real_data(7, 0))
           }
           is(memHalf) {
             mask := Fill(16, 1.U(1.W)) << offset
-            realdata := (result_data & mask) >> offset
-            mem_result := Cat(Fill(48, realdata(15)), realdata(15, 0))
+            real_data := (result_data & mask) >> offset
+            mem_result := Cat(Fill(48, real_data(15)), real_data(15, 0))
           }
           is(memWord) {
             mask := Fill(32, 1.U(1.W)) << offset
-            realdata := (result_data & mask) >> offset
-            mem_result := Cat(Fill(32, realdata(31)), realdata(31, 0))
+            real_data := (result_data & mask) >> offset
+            mem_result := Cat(Fill(32, real_data(31)), real_data(31, 0))
           }
           is(memDouble) { mem_result := result_data }
           is(memByteU) {
             mask := Fill(8, 1.U(1.W)) << offset
-            realdata := (result_data & mask) >> offset
-            mem_result := Cat(Fill(56, 0.U), realdata(7, 0))
+            real_data := (result_data & mask) >> offset
+            mem_result := Cat(Fill(56, 0.U), real_data(7, 0))
           }
           is(memHalfU) {
             mask := Fill(16, 1.U(1.W)) << offset
-            realdata := (result_data & mask) >> offset
-            mem_result := Cat(Fill(48, 0.U), realdata(15, 0))
+            real_data := (result_data & mask) >> offset
+            mem_result := Cat(Fill(48, 0.U), real_data(15, 0))
           }
           is(memWordU) {
             mask := Fill(32, 1.U(1.W)) << offset
-            realdata := (result_data & mask) >> offset
-            mem_result := Cat(Fill(32, 0.U), realdata(31, 0))
+            real_data := (result_data & mask) >> offset
+            mem_result := Cat(Fill(32, 0.U), real_data(31, 0))
           }
         }
         result := Mux(ismmio, io.mmio.resp.bits.data, mem_result)
         // printf(
-        //   p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
+        //   p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
         // )
         when(!ismmio) {
           val writeData = VecInit(Seq.fill(nWays)(target_data))
@@ -278,42 +278,42 @@ class DCache(implicit val cacheConfig: CacheConfig)
     }
   }
 
-  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  // printf(
-  //   "stall=%d, state=%d, ismmio=%d, hit=%d, result=%x\n",
-  //   stall,
-  //   state,
-  //   ismmio,
-  //   hit,
-  //   result
-  // )
-  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  // printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-  // printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
-  // printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
-  // printf(
-  //   "s2_tag=%x, s2_lineoffset=%x, s2_wordoffset=%x\n",
-  //   s2_tag,
-  //   s2_lineoffset,
-  //   s2_wordoffset
-  // )
-  // printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
-  // printf(
-  //   p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
-  // )
-  // printf(p"s2_cacheline=${s2_cacheline}\n")
-  // printf(p"s2_meta=${s2_meta}\n")
-  // // printf(p"cacheline_data=${cacheline_data}\n")
-  // // printf(p"cacheline_meta=${cacheline_meta}\n")
-  // // printf(p"dataArray(s2_index)=${dataArray(s2_index)}\n")
-  // // printf(p"metaArray(s2_index)=${metaArray(s2_index)}\n")
-  // // printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
-  // // printf(p"fetched_vec=${fetched_vec}\n")
-  // printf(p"----------${cacheName} io.in----------\n")
-  // printf(p"${io.in}\n")
-  // printf(p"----------${cacheName} io.mem----------\n")
-  // printf(p"${io.mem}\n")
-  // // printf(p"----------${cacheName} io.mmio----------\n")
-  // // printf(p"${io.mmio}\n")
-  // printf("-----------------------------------------------\n")
+  printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  printf(
+    "stall=%d, state=%d, ismmio=%d, hit=%d, result=%x\n",
+    stall,
+    state,
+    ismmio,
+    hit,
+    result
+  )
+  printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+  printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
+  printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
+  printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
+  printf(
+    "s2_tag=%x, s2_lineoffset=%x, s2_wordoffset=%x\n",
+    s2_tag,
+    s2_lineoffset,
+    s2_wordoffset
+  )
+  printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
+  printf(
+    p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
+  )
+  printf(p"s2_cacheline=${s2_cacheline}\n")
+  printf(p"s2_meta=${s2_meta}\n")
+  // printf(p"cacheline_data=${cacheline_data}\n")
+  // printf(p"cacheline_meta=${cacheline_meta}\n")
+  // printf(p"dataArray(s2_index)=${dataArray(s2_index)}\n")
+  // printf(p"metaArray(s2_index)=${metaArray(s2_index)}\n")
+  // printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
+  // printf(p"fetched_vec=${fetched_vec}\n")
+  printf(p"----------${cacheName} io.in----------\n")
+  printf(p"${io.in}\n")
+  printf(p"----------${cacheName} io.mem----------\n")
+  printf(p"${io.mem}\n")
+  // printf(p"----------${cacheName} io.mmio----------\n")
+  // printf(p"${io.mmio}\n")
+  printf("-----------------------------------------------\n")
 }

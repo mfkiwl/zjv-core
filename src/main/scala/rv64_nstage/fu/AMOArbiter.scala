@@ -10,6 +10,7 @@ class AMOArbiterIO extends Bundle with phvntomParams {
   val exception_or_int = Input(Bool())
   // AMO and basic informations from RegExeMem1
   val amo_op = Input(UInt(amoBits.W))
+  val early_amo_op = Input(UInt(amoBits.W))
   val dmem_valid = Input(Bool())
   val dmem_data = Input(UInt(xlen.W))
   val reg_val = Input(UInt(xlen.W))
@@ -29,9 +30,9 @@ class AMOArbiter extends Module with phvntomParams {
   val amo_alu = Module(new AMOALU)
 
   val s_idle = 0.U(3.W)
-  val s_read = 1.U(3.W)
-  val s_amo  = 2.U(3.W)
-  val s_write = 3.U(3.W)
+  val s_amo  = 1.U(3.W)
+  val s_write = 2.U(3.W)
+  val s_write_wait = 3.U(3.W)
   val s_finish = 4.U(3.W)
 
   val state = RegInit(UInt(s_idle.getWidth.W), s_idle)
@@ -42,13 +43,7 @@ class AMOArbiter extends Module with phvntomParams {
 
   state := next_state
   when(state === s_idle) {
-    when(io.amo_op.orR && !io.exception_or_int) {
-      next_state := s_read
-    }.otherwise {
-      next_state := state
-    }
-  }.elsewhen(state === s_read) {
-    when(io.dmem_valid) {
+    when(io.amo_op.orR && !io.exception_or_int && io.dmem_valid) {
       next_state := s_amo
     }.otherwise {
       next_state := state
@@ -56,6 +51,8 @@ class AMOArbiter extends Module with phvntomParams {
   }.elsewhen(state === s_amo) {
     next_state := s_write
   }.elsewhen(state === s_write) {
+    next_state := s_write_wait
+  }.elsewhen(state === s_write_wait) {
     when(io.dmem_valid) {
       next_state := s_finish
     }.otherwise {
@@ -74,7 +71,7 @@ class AMOArbiter extends Module with phvntomParams {
     amo_res := amo_alu.io.ret
   }
 
-  when(state === s_read && next_state === s_amo) {
+  when(next_state === s_amo) {
     mem_val := io.dmem_data
   }
 
@@ -86,6 +83,8 @@ class AMOArbiter extends Module with phvntomParams {
   io.stall_req := next_state =/= s_idle && next_state =/= s_finish
   io.mem_val_out := mem_val
   io.force_mem_val_out := last_stall_req && !io.stall_req
+
+//  printf("--------- state %x, valid %x, read_in %x, write_now %x, write_what %x\n", state, io.dmem_valid, io.dmem_data, io.write_now, io.write_what)
 }
 
 class ReservationIO extends Bundle with phvntomParams {
@@ -96,7 +95,6 @@ class ReservationIO extends Bundle with phvntomParams {
   val compare_is_word = Input(Bool())
   val compare_addr = Input(UInt(xlen.W))
   val flush = Input(Bool())
-  val sc_mem_resp = Input(Bool())
   val succeed = Output(Bool())
 }
 
@@ -106,14 +104,16 @@ class Reservation extends Module with phvntomParams {
   val empty = RegInit(Bool(), true.B)
   val addr = RegInit(UInt(xlen.W), 0.U)
   val is_word = RegInit(Bool(), false.B)
-//printf("----? addr %x, t1 %x, t2 %x\n", addr, addr, io.compare_addr)
+
   when(io.push) {
     empty := false.B
     addr := io.push_addr
     is_word := io.push_is_word
-  }.elsewhen(io.compare && (io.sc_mem_resp || !io.succeed) || io.flush) {
+  }.elsewhen(io.compare || io.flush) {
     empty := true.B
   }
+
+//  printf("compare %x; succeed %x\n", io.compare, io.succeed)
 
   io.succeed := !empty && (addr === io.compare_addr && is_word === io.compare_is_word) && io.compare
 }

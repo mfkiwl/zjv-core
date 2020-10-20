@@ -57,18 +57,18 @@ class ICache(implicit val cacheConfig: CacheConfig)
     s2_wen := s1_wen
     s2_memtype := s1_memtype
     s2_meta := metaArray(s1_index)
-    s2_cacheline := dataArray(s1_index)    
+    s2_cacheline := dataArray(s1_index)
   }.elsewhen(need_forward) {
-      s2_valid := false.B
-      s2_addr := DontCare
-      s2_index := DontCare
-      s2_data := DontCare
-      s2_wen := DontCare
-      s2_memtype := DontCare
-      s2_meta := DontCare
-      s2_cacheline := DontCare
-    }
-  
+    s2_valid := false.B
+    s2_addr := DontCare
+    s2_index := DontCare
+    s2_data := DontCare
+    s2_wen := DontCare
+    s2_memtype := DontCare
+    s2_meta := DontCare
+    s2_cacheline := DontCare
+  }
+
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
   s2_lineoffset := s2_addr(offsetLength - 1, offsetLength - lineLength)
   s2_wordoffset := s2_addr(offsetLength - lineLength - 1, 0)
@@ -184,33 +184,33 @@ class ICache(implicit val cacheConfig: CacheConfig)
     }
   }
 
-  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  // printf("stall=%d, state=%d, hit=%d, result=%x\n", stall, state, hit, result)
-  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  // printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-  // printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
-  // printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
+  printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  printf("stall=%d, state=%d, hit=%d, result=%x\n", stall, state, hit, result)
+  printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+  printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
+  printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
+  printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
+  printf(
+    "s2_tag=%x, s2_lineoffset=%x, s2_wordoffset=%x\n",
+    s2_tag,
+    s2_lineoffset,
+    s2_wordoffset
+  )
+  printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
+  printf(
+    p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
+  )
+  printf(p"s2_cacheline=${s2_cacheline}\n")
+  printf(p"s2_meta=${s2_meta}\n")
   // printf(
-  //   "s2_tag=%x, s2_lineoffset=%x, s2_wordoffset=%x\n",
-  //   s2_tag,
-  //   s2_lineoffset,
-  //   s2_wordoffset
+  //   p"cacheline_data=${cacheline_data}, cacheline_meta=${cacheline_meta}\n"
   // )
-  // printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
   // printf(
-  //   p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
+  //   p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
   // )
-  // printf(p"s2_cacheline=${s2_cacheline}\n")
-  // printf(p"s2_meta=${s2_meta}\n")
-  // // printf(
-  // //   p"cacheline_data=${cacheline_data}, cacheline_meta=${cacheline_meta}\n"
-  // // )
-  // // printf(
-  // //   p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
-  // // )
-  // printf(p"----------${cacheName} io.in----------\n")
-  // printf(p"${io.in}\n")
-  // printf(p"----------${cacheName} io.mem----------\n")
-  // printf(p"${io.mem}\n")
-  // printf("-----------------------------------------------\n")
+  printf(p"----------${cacheName} io.in----------\n")
+  printf(p"${io.in}\n")
+  printf(p"----------${cacheName} io.mem----------\n")
+  printf(p"${io.mem}\n")
+  printf("-----------------------------------------------\n")
 }
