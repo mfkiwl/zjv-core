@@ -85,7 +85,7 @@ class BTBIO extends Bundle with phvntomParams {
 class BTB extends Module with phvntomParams {
   val io = IO(new BTBIO)
 
-  val btb_entries = RegInit(VecInit(Seq.fill(1 << bpuEntryBits)(0.U)))
+  val btb_entries = RegInit(VecInit(Seq.fill(1 << bpuEntryBits)("h80000000".U)))
 
   when(io.update_valid) {
     btb_entries(io.update_index) := io.update_target
@@ -121,6 +121,9 @@ class BPU extends Module with phvntomParams {
   val bht = Module(new BHT)
   val btb = Module(new BTB)
 
+//  printf("fb_pc %x, fb_xored_in %x, fb_is_br_inst %x, fb_tar_pc %x, fb_br_tk %x\n", io.feedback_pc,
+//  io.feedback_xored_index, io.feedback_is_br, io.feedback_target_pc, io.feedback_br_taken)
+
   val history_from_pht = pht.io.history_out
   val predict_taken_from_bht = bht.io.predit_taken
   val xored_index = history_from_pht ^ io.pc_to_predict(bpuEntryBits + 1, 2)
@@ -141,7 +144,7 @@ class BPU extends Module with phvntomParams {
   btb.io.update_index := io.feedback_pc(bpuEntryBits + 1, 2)
   btb.io.update_target := io.feedback_target_pc
 
-  io.branch_taken := predict_taken_from_bht
+  io.branch_taken := false.B // predict_taken_from_bht
   io.pc_in_btb := btb.io.target_out
   io.xored_index_out := xored_index
 }

@@ -97,7 +97,11 @@ class DataPath extends Module with phvntomParams {
   val rs1 = WireInit(UInt(xlen.W), 0.U)
   val rs2 = WireInit(UInt(xlen.W), 0.U)
   val misprediction = WireInit(Bool(), false.B)
+  val predict_taken_but_not = WireInit(Bool(), false.B)
+  val predict_not_but_taken = WireInit(Bool(), false.B)
   val wrong_target = WireInit(Bool(), false.B)
+  val predict_taken_but_not_br = WireInit(Bool(), false.B)
+  val jump_flush = WireInit(Bool(), false.B)
 
   // Mem Signals
   val mem_addr_misaligned = WireInit(Bool(), false.B)
@@ -130,8 +134,7 @@ class DataPath extends Module with phvntomParams {
   pc_gen.io.tvec := csr.io.evec
   pc_gen.io.pc_plus := (reg_dtlb_mem1.io.bsrio.pc_out + 4.U(3.W))
   pc_gen.io.branch_jump := br_jump_flush
-  pc_gen.io.branch_pc := Mux((!branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out &&
-    reg_id_exe.io.iiio.inst_info_out.brType.orR),
+  pc_gen.io.branch_pc := Mux(predict_taken_but_not || (predict_taken_but_not_br && !jump_flush),
     (reg_id_exe.io.bsrio.pc_out + 4.U), alu.io.out)
   pc_gen.io.inst_addr_misaligned := inst_addr_misaligned
 
@@ -167,7 +170,8 @@ class DataPath extends Module with phvntomParams {
   stall_req_if1_atomic := immu.io.stall_req
 
   reg_if1_if2.io.bsrio.stall := stall_if1_if2
-  reg_if1_if2.io.bsrio.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
+  reg_if1_if2.io.bsrio.flush_one := (br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush ||
+    i_fence_flush || s_fence_flush)
   reg_if1_if2.io.bsrio.bubble_in := stall_req_if1_atomic
   reg_if1_if2.io.bsrio.pc_in := pc_gen.io.pc_out
   reg_if1_if2.io.bsrio.last_stage_atomic_stall_req := stall_req_if1_atomic
@@ -249,11 +253,15 @@ class DataPath extends Module with phvntomParams {
   feedback_target_pc := alu.io.out
   feedback_br_taken := branch_cond.io.branch
 
-  misprediction := ((branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out) ||
-    (!branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out && reg_id_exe.io.iiio.inst_info_out.brType.orR))
+  predict_taken_but_not_br := !reg_id_exe.io.iiio.inst_info_out.brType.orR && reg_id_exe.io.bpio.predict_taken_out
+  predict_not_but_taken := branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out
+  predict_taken_but_not := (!branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out &&
+    reg_id_exe.io.iiio.inst_info_out.brType.orR)
+  misprediction := predict_not_but_taken || predict_taken_but_not
   wrong_target := branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out && alu.io.out =/= reg_id_exe.io.bpio.target_out
-  br_jump_flush := ((misprediction || wrong_target ||
-    reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump) && !scheduler.io.stall_req)
+  jump_flush := reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump
+  br_jump_flush := ((misprediction || wrong_target || predict_taken_but_not_br ||
+    jump_flush) && !scheduler.io.stall_req)
   inst_addr_misaligned := alu.io.out(1) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
 
   scheduler.io.is_bubble := reg_id_exe.io.bsrio.bubble_out
@@ -566,6 +574,8 @@ class DataPath extends Module with phvntomParams {
       printf("PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", pc_gen.io.pc_out(15, 0), reg_if1_if2.io.bsrio.pc_out(15, 0), reg_if2_id.io.bsrio.pc_out(15, 0), reg_id_exe.io.bsrio.pc_out(15, 0), reg_exe_dtlb.io.bsrio.pc_out(15, 0), reg_dtlb_mem1.io.bsrio.pc_out(15, 0), reg_mem1_mem2.io.bsrio.pc_out(15, 0), reg_mem2_wb.io.bsrio.pc_out(15, 0))
       printf("Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", BUBBLE(15, 0), BUBBLE(15, 0), reg_if2_id.io.instio.inst_out(15, 0), reg_id_exe.io.instio.inst_out(15, 0), reg_exe_dtlb.io.instio.inst_out(15, 0), reg_dtlb_mem1.io.instio.inst_out(15, 0), reg_mem1_mem2.io.instio.inst_out(15, 0), reg_mem2_wb.io.instio.inst_out(15, 0))
       printf("Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, reg_if1_if2.io.bsrio.bubble_out, reg_if2_id.io.bsrio.bubble_out, reg_id_exe.io.bsrio.bubble_out, reg_exe_dtlb.io.bsrio.bubble_out, reg_dtlb_mem1.io.bsrio.bubble_out, reg_mem1_mem2.io.bsrio.bubble_out, reg_mem2_wb.io.bsrio.bubble_out)
+      printf("Take\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", bpu.io.branch_taken, reg_if1_if2.io.bpio.predict_taken_out, reg_if2_id.io.bpio.predict_taken_out, reg_id_exe.io.bpio.predict_taken_out, 0.U, 0.U, 0.U, 0.U)
+      printf("Tar\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", bpu.io.pc_in_btb(15, 0), reg_if1_if2.io.bpio.target_out(15, 0), reg_if2_id.io.bpio.target_out(15, 0), reg_id_exe.io.bpio.target_out(15, 0), 0.U, 0.U, 0.U, 0.U)
     }
 //       printf("alu %x, mem %x, csr %x, ioin %x\n", reg_mem2_wb.io.alu_val_out, reg_mem2_wb.io.mem_val_out, reg_mem2_wb.io.csr_val_out, scheduler.io.rd_from_wb)
     //    printf("------> compare %x, succeed %x, push %x\n", reservation.io.compare, reservation.io.succeed, reservation.io.push)

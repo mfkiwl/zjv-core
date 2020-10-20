@@ -50,7 +50,7 @@ class PcGen extends Module with phvntomParams {
   }.elsewhen(io.branch_jump && !io.inst_addr_misaligned) {
     pc_for_restore := io.branch_pc
   }.elsewhen(!last_stall && io.stall) {
-    pc_for_restore := pc + 4.U
+    pc_for_restore := Mux(io.predict_jump, io.predict_jump_target, pc + 4.U)
   }
 
   when(!io.stall) {
@@ -66,10 +66,8 @@ class PcGen extends Module with phvntomParams {
       pc := Cat(io.branch_pc(xlen - 1, 1), Fill(1, 0.U))
     }.elsewhen(last_stall) {
       pc := Cat(pc_for_restore(xlen - 1, 1), Fill(1, 0.U))
-    }.elsewhen(io.predict_jump) {
-      pc := io.predict_jump_target
     }.otherwise {
-      pc := pc + 4.U
+      pc := Mux(io.predict_jump, io.predict_jump_target, pc + 4.U)
     }
   }
 
