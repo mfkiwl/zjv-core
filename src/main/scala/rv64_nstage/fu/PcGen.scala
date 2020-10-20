@@ -15,6 +15,9 @@ class PcGenIO extends Bundle with phvntomParams {
   val flush_cache_tlb = Input(Bool())
   val epc = Input(UInt(xlen.W))
   val tvec = Input(UInt(xlen.W))
+  // Prediction
+  val predict_jump = Input(Bool())
+  val predict_jump_target = Input(UInt(xlen.W))
   // Branch and Jump
   val branch_jump = Input(Bool())
   val branch_pc = Input(UInt(xlen.W))
@@ -63,6 +66,8 @@ class PcGen extends Module with phvntomParams {
       pc := Cat(io.branch_pc(xlen - 1, 1), Fill(1, 0.U))
     }.elsewhen(last_stall) {
       pc := Cat(pc_for_restore(xlen - 1, 1), Fill(1, 0.U))
+    }.elsewhen(io.predict_jump) {
+      pc := io.predict_jump_target
     }.otherwise {
       pc := pc + 4.U
     }
