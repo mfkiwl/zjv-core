@@ -262,7 +262,7 @@ class DataPath extends Module with phvntomParams {
     "hdeadbeef".U,
     Seq(
       wbALU -> reg_exe_dtlb.io.alu_val_out,
-      wbPC -> reg_exe_dtlb.io.pc_out
+      wbPC -> (reg_exe_dtlb.io.pc_out + 4.U)
     )
   )
   scheduler.io.rd_fen_from_mem1 := reg_dtlb_mem1.io.inst_info_out.fwd_stage <= fwdMem1
@@ -271,7 +271,7 @@ class DataPath extends Module with phvntomParams {
     "hdeadbeef".U,
     Seq(
       wbALU -> reg_dtlb_mem1.io.alu_val_out,
-      wbPC -> reg_dtlb_mem1.io.pc_out
+      wbPC -> (reg_dtlb_mem1.io.pc_out + 4.U)
     )
   )
   scheduler.io.rd_fen_from_mem2 := reg_mem1_mem2.io.inst_info_out.fwd_stage <= fwdMem2
@@ -281,7 +281,7 @@ class DataPath extends Module with phvntomParams {
     Seq(
       wbALU -> reg_mem1_mem2.io.alu_val_out,
       wbCSR -> reg_mem1_mem2.io.csr_val_out,
-      wbPC -> reg_mem1_mem2.io.pc_out
+      wbPC -> (reg_mem1_mem2.io.pc_out + 4.U)
     )
   )
   scheduler.io.rd_fen_from_wb := reg_mem2_wb.io.inst_info_out.fwd_stage <= fwdWb
@@ -293,7 +293,7 @@ class DataPath extends Module with phvntomParams {
       wbMEM -> reg_mem2_wb.io.mem_val_out,
       wbCSR -> reg_mem2_wb.io.csr_val_out,
       wbCond -> reg_mem2_wb.io.mem_val_out,
-      wbPC -> reg_mem1_mem2.io.pc_out
+      wbPC -> (reg_mem2_wb.io.pc_out + 4.U)
     )
   )
 
@@ -301,8 +301,6 @@ class DataPath extends Module with phvntomParams {
   stall_req_exe_interruptable := scheduler.io.stall_req
   rs1 := scheduler.io.rs1_val
   rs2 := scheduler.io.rs2_val
-
-printf("hello world: alu_val in exe_dtlb %x\n", reg_exe_dtlb.io.alu_val_out)
 
   // Reg EXE DTLB
   reg_exe_dtlb.io.last_stage_atomic_stall_req := stall_req_exe_atomic
