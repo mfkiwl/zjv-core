@@ -84,9 +84,12 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val cacheline_meta = s2_meta(access_index)
   val cacheline_data = s2_cacheline(access_index)
 
-  val s_idle :: s_memReadReq :: s_memReadResp :: Nil = Enum(3)
+  val s_idle :: s_memReadReq :: s_memReadResp :: s_flush :: Nil = Enum(4)
   val state = RegInit(s_idle)
   val read_address = Cat(s2_tag, s2_index, 0.U(offsetLength.W))
+  val flush_counter = Counter(nSets)
+  val flush_finish = flush_counter.value === (nSets - 1).U
+
   val mem_valid = state === s_memReadResp && io.mem.resp.valid
   val request_satisfied = hit || mem_valid
   val hazard = s2_valid && s2_wen && s1_index === s2_index
@@ -96,8 +99,10 @@ class ICache(implicit val cacheConfig: CacheConfig)
   io.in.resp.valid := s2_valid && request_satisfied
   io.in.resp.bits.data := result
   io.in.req.ready := !stall && !need_forward
+  io.in.flush_ready := state =/= s_flush || (state === s_flush && flush_finish)
 
   io.mem.stall := false.B
+  io.mem.flush := false.B
   io.mem.req.valid := s2_valid && (state === s_memReadReq || state === s_memReadResp)
   io.mem.req.bits.addr := read_address
   io.mem.req.bits.data := DontCare
@@ -107,8 +112,10 @@ class ICache(implicit val cacheConfig: CacheConfig)
 
   switch(state) {
     is(s_idle) {
-      when(!hit && s2_valid) {
+      when(!hit && s2_valid && !io.in.flush) {
         state := s_memReadReq
+      }.elsewhen(io.in.flush) {
+        state := s_flush
       }
     }
     is(s_memReadReq) {
@@ -117,6 +124,7 @@ class ICache(implicit val cacheConfig: CacheConfig)
     is(s_memReadResp) {
       when(io.mem.resp.fire()) { state := s_idle }
     }
+    is(s_flush) { when(flush_finish) { state := s_idle } }
   }
 
   when(!s2_valid) { state := s_idle }
@@ -184,33 +192,49 @@ class ICache(implicit val cacheConfig: CacheConfig)
     }
   }
 
-  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  // printf("stall=%d, state=%d, hit=%d, result=%x\n", stall, state, hit, result)
-  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  // printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-  // printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
-  // printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
+  when(state === s_flush) {
+    val new_meta = Wire(Vec(nWays, new MetaData))
+    for (i <- 0 until nWays) {
+      new_meta(i).valid := false.B
+      new_meta(i).meta := DontCare
+      new_meta(i).tag := DontCare
+    }
+    metaArray.write(flush_counter.value, new_meta)
+    flush_counter.inc()
+  }
+
+  printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  printf("stall=%d, need_forward=%d, state=%d, hit=%d, result=%x\n", stall, need_forward, state, hit, result)
+  printf(
+    "flush_counter.value=%x, flush_finish=%d\n",
+    flush_counter.value,
+    flush_finish
+  )
+  printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+  printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
+  printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
+  printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
+  printf(
+    "s2_tag=%x, s2_lineoffset=%x, s2_wordoffset=%x\n",
+    s2_tag,
+    s2_lineoffset,
+    s2_wordoffset
+  )
+  printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
+  printf(
+    p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
+  )
+  printf(p"s2_cacheline=${s2_cacheline}\n")
+  printf(p"s2_meta=${s2_meta}\n")
   // printf(
-  //   "s2_tag=%x, s2_lineoffset=%x, s2_wordoffset=%x\n",
-  //   s2_tag,
-  //   s2_lineoffset,
-  //   s2_wordoffset
+  //   p"cacheline_data=${cacheline_data}, cacheline_meta=${cacheline_meta}\n"
   // )
-  // printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
   // printf(
-  //   p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
+  //   p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
   // )
-  // printf(p"s2_cacheline=${s2_cacheline}\n")
-  // printf(p"s2_meta=${s2_meta}\n")
-  // // printf(
-  // //   p"cacheline_data=${cacheline_data}, cacheline_meta=${cacheline_meta}\n"
-  // // )
-  // // printf(
-  // //   p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
-  // // )
-  // printf(p"----------${cacheName} io.in----------\n")
-  // printf(p"${io.in}\n")
-  // printf(p"----------${cacheName} io.mem----------\n")
-  // printf(p"${io.mem}\n")
-  // printf("-----------------------------------------------\n")
+  printf(p"----------${cacheName} io.in----------\n")
+  printf(p"${io.in}\n")
+  printf(p"----------${cacheName} io.mem----------\n")
+  printf(p"${io.mem}\n")
+  printf("-----------------------------------------------\n")
 }

@@ -100,8 +100,10 @@ class DCache(implicit val cacheConfig: CacheConfig)
   io.in.resp.valid := s2_valid && request_satisfied
   io.in.resp.bits.data := result
   io.in.req.ready := !stall && !need_forward
+  io.in.flush_ready := true.B
 
   io.mem.stall := false.B
+  io.mem.flush := false.B
   io.mem.req.valid := s2_valid && (state === s_memReadReq || state === s_memReadResp || state === s_memWriteReq || state === s_memWriteResp)
   io.mem.req.bits.addr := Mux(
     state === s_memWriteReq || state === s_memWriteResp,
@@ -114,6 +116,7 @@ class DCache(implicit val cacheConfig: CacheConfig)
   io.mem.resp.ready := s2_valid && (state === s_memReadResp || state === s_memWriteResp)
 
   io.mmio.stall := false.B
+  io.mmio.flush := false.B
   io.mmio.req.valid := s2_valid && (state === s_mmioReq || state === s_mmioResp)
   io.mmio.req.bits.addr := s2_addr
   io.mmio.req.bits.data := s2_data

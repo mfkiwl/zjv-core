@@ -135,6 +135,7 @@ class DataPath extends Module with phvntomParams {
   immu.io.is_load := false.B
   immu.io.is_store := false.B
   io.immu.stall := false.B
+  io.immu.flush := false.B
   io.immu.resp.ready := true.B
   io.immu.req.bits.addr := immu.io.cache_req_addr
   io.immu.req.bits.data := DontCare
@@ -157,7 +158,7 @@ class DataPath extends Module with phvntomParams {
   reg_if1_if2.io.next_stage_flush_req := false.B
 
   // TODO parallel visiting of RAM and TLB
-  // io.imem.flush := i_fence_flush || s_fence_flush
+  io.imem.flush := i_fence_flush || s_fence_flush
   io.imem.stall := stall_if1_if2
   io.imem.req.bits.addr := immu.io.pa
   io.imem.req.bits.data := DontCare
@@ -167,7 +168,7 @@ class DataPath extends Module with phvntomParams {
   io.imem.resp.ready := true.B
 
   inst_if2 := io.imem.resp.bits.data
-  stall_req_if2_atomic := !io.imem.req.ready
+  stall_req_if2_atomic := !io.imem.req.ready || !io.imem.flush_ready
 
   // Reg IF2 ID
   reg_if2_id.io.last_stage_atomic_stall_req := stall_req_if2_atomic
@@ -331,6 +332,7 @@ class DataPath extends Module with phvntomParams {
   dmmu.io.is_load := reg_exe_dtlb.io.inst_info_out.memType.orR && reg_exe_dtlb.io.inst_info_out.wbSelect === wbMEM
   dmmu.io.is_store := reg_exe_dtlb.io.inst_info_out.memType.orR && reg_exe_dtlb.io.inst_info_out.wbSelect =/= wbMEM
   io.dmmu.stall := false.B
+  io.dmmu.flush := false.B
   io.dmmu.resp.ready := true.B
   io.dmmu.req.bits.addr := dmmu.io.cache_req_addr
   io.dmmu.req.bits.data := DontCare
@@ -431,6 +433,7 @@ class DataPath extends Module with phvntomParams {
   reg_mem1_mem2.io.comp_res_in := (!reservation.io.succeed).asUInt
 
   io.dmem.stall := !io.dmem.req.ready
+  io.dmem.flush := false.B
   io.dmem.req.bits.addr := Mux(amo_arbiter.io.write_now, reg_mem1_mem2.io.alu_val_out, reg_dtlb_mem1.io.alu_val_out)
   io.dmem.req.bits.data := Mux(amo_arbiter.io.write_now, amo_arbiter.io.write_what, reg_dtlb_mem1.io.mem_wdata_out)
   io.dmem.req.valid := Mux(reservation.io.compare, reservation.io.succeed,
@@ -543,7 +546,7 @@ class DataPath extends Module with phvntomParams {
       printf("Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", BUBBLE(15, 0), BUBBLE(15, 0), reg_if2_id.io.inst_out(15, 0), reg_id_exe.io.inst_out(15, 0), reg_exe_dtlb.io.inst_out(15, 0), reg_dtlb_mem1.io.inst_out(15, 0), reg_mem1_mem2.io.inst_out(15, 0), reg_mem2_wb.io.inst_out(15, 0))
       printf("Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, reg_if1_if2.io.bubble_out, reg_if2_id.io.bubble_out, reg_id_exe.io.bubble_out, reg_exe_dtlb.io.bubble_out, reg_dtlb_mem1.io.bubble_out, reg_mem1_mem2.io.bubble_out, reg_mem2_wb.io.bubble_out)
     }
-       printf("alu %x, mem %x, csr %x, ioin %x\n", reg_mem2_wb.io.alu_val_out, reg_mem2_wb.io.mem_val_out, reg_mem2_wb.io.csr_val_out, scheduler.io.rd_from_wb)
+    // printf("alu %x, mem %x, csr %x, ioin %x\n", reg_mem2_wb.io.alu_val_out, reg_mem2_wb.io.mem_val_out, reg_mem2_wb.io.csr_val_out, scheduler.io.rd_from_wb)
     //    printf("------> compare %x, succeed %x, push %x\n", reservation.io.compare, reservation.io.succeed, reservation.io.push)
 
     //    printf("-------> exit flush %x, br_flush %x, pco %x, if_pco %x, \n", expt_int_flush, br_jump_flush, pc_gen.io.pc_out, reg_if2_id.io.pc_out)
