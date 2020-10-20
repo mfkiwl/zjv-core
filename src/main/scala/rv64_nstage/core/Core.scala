@@ -16,6 +16,9 @@ trait phvntomParams {
   val rtThread      = true
   val only_M        = true
   val validVABits   = 39
+  val bpuEntryBits  = 10
+  val historyBits   = 5
+  val predictorBits = 2 // TODO Do NOT Modify
 }
 
 

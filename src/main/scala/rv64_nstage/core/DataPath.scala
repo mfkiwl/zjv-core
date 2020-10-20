@@ -257,16 +257,31 @@ class DataPath extends Module with phvntomParams {
   scheduler.io.rs1_from_reg := reg_file.io.rs1_data
   scheduler.io.rs2_from_reg := reg_file.io.rs2_data
   scheduler.io.rd_fen_from_dtlb := reg_exe_dtlb.io.inst_info_out.fwd_stage <= fwdMem1
-  scheduler.io.rd_from_dtlb := reg_exe_dtlb.io.alu_val_out
+  scheduler.io.rd_from_dtlb := MuxLookup(
+    reg_exe_dtlb.io.inst_info_out.wbSelect,
+    "hdeadbeef".U,
+    Seq(
+      wbALU -> reg_exe_dtlb.io.alu_val_out,
+      wbPC -> reg_exe_dtlb.io.pc_out
+    )
+  )
   scheduler.io.rd_fen_from_mem1 := reg_dtlb_mem1.io.inst_info_out.fwd_stage <= fwdMem1
-  scheduler.io.rd_from_mem1 := reg_dtlb_mem1.io.alu_val_out
+  scheduler.io.rd_from_mem1 := MuxLookup(
+    reg_dtlb_mem1.io.inst_info_out.wbSelect,
+    "hdeadbeef".U,
+    Seq(
+      wbALU -> reg_dtlb_mem1.io.alu_val_out,
+      wbPC -> reg_dtlb_mem1.io.pc_out
+    )
+  )
   scheduler.io.rd_fen_from_mem2 := reg_mem1_mem2.io.inst_info_out.fwd_stage <= fwdMem2
   scheduler.io.rd_from_mem2 := MuxLookup(
     reg_mem1_mem2.io.inst_info_out.wbSelect,
     "hdeadbeef".U,
     Seq(
       wbALU -> reg_mem1_mem2.io.alu_val_out,
-      wbCSR -> reg_mem1_mem2.io.csr_val_out
+      wbCSR -> reg_mem1_mem2.io.csr_val_out,
+      wbPC -> reg_mem1_mem2.io.pc_out
     )
   )
   scheduler.io.rd_fen_from_wb := reg_mem2_wb.io.inst_info_out.fwd_stage <= fwdWb
@@ -277,7 +292,8 @@ class DataPath extends Module with phvntomParams {
       wbALU -> reg_mem2_wb.io.alu_val_out,
       wbMEM -> reg_mem2_wb.io.mem_val_out,
       wbCSR -> reg_mem2_wb.io.csr_val_out,
-      wbCond -> reg_mem2_wb.io.mem_val_out
+      wbCond -> reg_mem2_wb.io.mem_val_out,
+      wbPC -> reg_mem1_mem2.io.pc_out
     )
   )
 
