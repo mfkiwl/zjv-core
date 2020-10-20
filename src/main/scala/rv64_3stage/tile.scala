@@ -54,7 +54,7 @@ class Tile extends Module with phvntomParams with projectConfig {
 
   // uart
   val uart = Module(new AXI4UART)
-  uart.io.extra.get.offset := mmioBus.io.offset
+  // uart.io.extra.get.offset := mmioBus.io.offset
 
   // xbar
   val mmio_device = List(poweroff, clint, uart)

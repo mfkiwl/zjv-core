@@ -12,9 +12,9 @@ class AXI4RAM(memByte: Int, name: String = "ram")
   // def index(addr: UInt) = (addr & offsetMask.U) >> log2Ceil(xlen / 8)
   // def inRange(idx: UInt) = idx < (memByte / 8).U
 
-  val wIdx =
-    waddr + (writeBeatCnt << 3) // TODO parameterize this right shift to log2Ceil(log2Ceil(xlen))
-  val rIdx = raddr + (readBeatCnt << 3)
+  val offset = log2Ceil(bitWidth)
+  val wIdx = waddr + (writeBeatCnt << offset)
+  val rIdx = raddr + (readBeatCnt << offset)
   val wen = io.in.w.fire() // && inRange(wIdx)
 
   val mem = Module(new SimMem)

@@ -12,10 +12,11 @@ trait phvntomParams {
   val regNum        = 32
   val regWidth      = log2Ceil(regNum)
   val diffTest      = true
-  val pipeTrace     = false
+  val pipeTrace     = true
   val rtThread      = true
   val only_M        = true
   val validVABits   = 39
+  val hasL2Cache    = true
   val bpuEntryBits  = 10
   val historyBits   = 5
   val predictorBits = 2 // TODO Do NOT Modify

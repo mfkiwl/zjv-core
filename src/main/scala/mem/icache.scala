@@ -25,7 +25,7 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val s1_valid = WireInit(Bool(), false.B)
   val s1_addr = Wire(UInt(xlen.W))
   val s1_index = Wire(UInt(indexLength.W))
-  val s1_data = Wire(UInt(xlen.W))
+  val s1_data = Wire(UInt(blockBits.W))
   val s1_wen = WireInit(Bool(), false.B)
   val s1_memtype = Wire(UInt(xlen.W))
 
@@ -40,7 +40,7 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val s2_valid = RegInit(Bool(), false.B)
   val s2_addr = RegInit(UInt(xlen.W), 0.U)
   val s2_index = RegInit(UInt(indexLength.W), 0.U)
-  val s2_data = RegInit(UInt(xlen.W), 0.U)
+  val s2_data = RegInit(UInt(blockBits.W), 0.U)
   val s2_wen = RegInit(Bool(), false.B)
   val s2_memtype = RegInit(UInt(xlen.W), 0.U)
   val s2_meta = Reg(Vec(nWays, new MetaData))
@@ -77,19 +77,19 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val hit_index = PriorityEncoder(hitVec)
   val victim_index = policy.choose_victim(s2_meta)
   val victim_vec = UIntToOH(victim_index)
-  val cacheline_meta = Mux1H(hitVec, s2_meta)
-  val cacheline_data = Mux1H(hitVec, s2_cacheline)
   val hit = hitVec.orR
-  val result = Wire(UInt(xlen.W))
+  val result = Wire(UInt(blockBits.W))
   val access_index = Mux(hit, hit_index, victim_index)
   val access_vec = UIntToOH(access_index)
+  val cacheline_meta = s2_meta(access_index)
+  val cacheline_data = s2_cacheline(access_index)
 
   val s_idle :: s_memReadReq :: s_memReadResp :: Nil = Enum(3)
   val state = RegInit(s_idle)
   val read_address = Cat(s2_tag, s2_index, 0.U(offsetLength.W))
   val mem_valid = state === s_memReadResp && io.mem.resp.valid
   val request_satisfied = hit || mem_valid
-  val hazard = s1_valid && s2_valid && s1_index === s2_index
+  val hazard = s2_valid && s2_wen && s1_index === s2_index
   stall := s2_valid && !request_satisfied // wait for data or hazard
   need_forward := hazard && request_satisfied
 
@@ -124,7 +124,7 @@ class ICache(implicit val cacheConfig: CacheConfig)
   val fetched_data = io.mem.resp.bits.data
   val fetched_vec = Wire(new CacheLineData)
   for (i <- 0 until nLine) {
-    fetched_vec.data(i) := fetched_data((i + 1) * xlen - 1, i * xlen)
+    fetched_vec.data(i) := fetched_data((i + 1) * blockBits - 1, i * blockBits)
   }
 
   val target_data = Mux(hit, cacheline_data, fetched_vec)
@@ -133,8 +133,8 @@ class ICache(implicit val cacheConfig: CacheConfig)
     when(request_satisfied) {
       val result_data = target_data.data(s2_lineoffset)
       val offset = s2_wordoffset << 3
-      val mask = WireInit(UInt(xlen.W), 0.U)
-      val realdata = WireInit(UInt(xlen.W), 0.U)
+      val mask = WireInit(UInt(blockBits.W), 0.U)
+      val realdata = WireInit(UInt(blockBits.W), 0.U)
       switch(s2_memtype) {
         is(memXXX) { result := result_data }
         is(memByte) {

@@ -19,7 +19,7 @@ class SimUART extends BlackBox with phvntomParams {
 }
 
 class UARTIO extends Bundle with phvntomParams {
-  val offset = Input(UInt(xlen.W))
+  // val offset = Input(UInt(xlen.W))
 }
 
 class AXI4UART(name: String = "uart") extends AXI4Slave(new UARTIO, name) with AXI4Parameters {

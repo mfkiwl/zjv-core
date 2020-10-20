@@ -112,14 +112,6 @@ class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   // printf(p"w_state = ${w_state}, woutSelVec = ${woutSelVec}, woutSelIdx = ${woutSelIdx}, wreqInvalidAddr = ${wreqInvalidAddr}\n")
   // printf(p"woutSel: \n${woutSel}\n")
   // printf("-----------Xbar1toN Debug Done-----------\n")
-
-  // // when(!(!io.in.req.valid || routSelVec.asUInt.orR) || !(!(io.in.req.valid && routSelVec.asUInt.andR))){
-  // //   Debug(){
-  // //     printf("crossbar access bad addr %x, time %d\n", addr, GTimer())
-  // //   }
-  // // }
-  // // assert(!io.in.req.valid || routSelVec.asUInt.orR, "address decode error, bad addr = 0x%x\n", addr)
-  // // assert(!(io.in.req.valid && routSelVec.asUInt.andR), "address decode error, bad addr = 0x%x\n", addr)
 }
 
 class CrossbarNto1(n: Int) extends Module {
@@ -127,68 +119,6 @@ class CrossbarNto1(n: Int) extends Module {
     val in = Flipped(Vec(n, new AXI4Bundle))
     val out = new AXI4Bundle
   })
-
-  // if (n > 1) {
-  //   val arbIdBits = log2Ceil(n)
-
-  //   // val ar_arb = Module(new Arbiter(new AXI4BundleAR, n)) // or RRArbiter
-  //   val aw_arb = Module(new Arbiter(new AXI4BundleAW, n)) // or RRArbiter
-
-  //   // val out_r_arb_id = io.out.r.bits.id(arbIdBits - 1, 0)
-  //   val out_b_arb_id = io.out.b.bits.id(arbIdBits - 1, 0)
-
-  //   val w_chosen = Reg(UInt(arbIdBits.W))
-  //   val w_done = RegInit(true.B)
-
-  //   when(aw_arb.io.out.fire()) {
-  //     w_chosen := aw_arb.io.chosen
-  //     w_done := false.B
-  //   }
-
-  //   when(io.out.w.fire() && io.out.w.bits.last) {
-  //     w_done := true.B
-  //   }
-
-  //   for (i <- 0 until n) {
-  //     // val m_ar = io.in(i).ar
-  //     val m_aw = io.in(i).aw
-  //     // val m_r = io.in(i).r
-  //     val m_b = io.in(i).b
-  //     // val a_ar = ar_arb.io.in(i)
-  //     val a_aw = aw_arb.io.in(i)
-  //     val m_w = io.in(i).w
-
-  //     // a_ar <> m_ar
-  //     // a_ar.bits.id := Cat(m_ar.bits.id, i.U(arbIdBits.W))
-
-  //     a_aw <> m_aw
-  //     a_aw.bits.id := Cat(m_aw.bits.id, i.U(arbIdBits.W))
-
-  //     // m_r.valid := io.out.r.valid && out_r_arb_id === i.U
-  //     // m_r.bits := io.out.r.bits
-  //     // m_r.bits.id := io.out.r.bits.id >> arbIdBits.U
-
-  //     m_b.valid := io.out.b.valid && out_b_arb_id === i.U
-  //     m_b.bits := io.out.b.bits
-  //     m_b.bits.id := io.out.b.bits.id >> arbIdBits.U
-
-  //     m_w.ready := io.out.w.ready && w_chosen === i.U && !w_done
-  //   }
-
-  //   // io.out.r.ready := io.in(out_r_arb_id).r.ready
-  //   io.out.b.ready := io.in(out_b_arb_id).b.ready
-
-  //   io.out.w.bits := io.in(w_chosen).w.bits
-  //   io.out.w.valid := io.in(w_chosen).w.valid && !w_done
-
-  //   // io.out.ar <> ar_arb.io.out
-
-  //   io.out.aw.bits <> aw_arb.io.out.bits
-  //   io.out.aw.valid := aw_arb.io.out.valid && w_done
-  //   aw_arb.io.out.ready := io.out.aw.ready && w_done
-
-  //   // printf("out_r_arb_id = %d, out_b_arb_id = %d\n", out_r_arb_id, out_b_arb_id)
-  // } else { io.out <> io.in.head }
 
   val s_idle :: s_readResp :: s_writeResp :: Nil = Enum(3)
   val r_state = RegInit(s_idle)
@@ -216,13 +146,11 @@ class CrossbarNto1(n: Int) extends Module {
       when(thisReq_r.fire()) {
         inflightSrc_r := inputArb_r.io.chosen
         when(thisReq_r.valid) { r_state := s_readResp }
-        // .elsewhen (thisReq_r.bits.isWriteLast() || thisReq_r.bits.isWriteSingle()) { r_state := s_writeResp }
       }
     }
     is(s_readResp) {
       when(io.out.r.fire() && io.out.r.bits.last) { r_state := s_idle }
     }
-    // is (s_writeResp) { when (io.out.resp.fire()) { state := s_idle } }
   }
 
   val w_state = RegInit(s_idle)
