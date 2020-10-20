@@ -24,6 +24,10 @@ class PTWalkerIO extends Bundle with phvntomParams {
   val flush_all = Input(Bool()) // TODO flush TLB, do nothing now
   val satp_val = Input(UInt(xlen.W))
   val current_p = Input(UInt(2.W))
+  // Protection
+  val is_inst = Input(Bool())
+  val is_load = Input(Bool())
+  val is_store = Input(Bool())
   // Output
   val stall_req = Output(Bool())
   val pa = Output(UInt(xlen.W))
@@ -93,7 +97,7 @@ class PTWalker extends Module with phvntomParams {
   }
 
   def pass_pmp_pma(last_pte: UInt): Bool = {
-    // TODO
+    // TODO Currently this is done out of MMU
     true.B
   }
 
