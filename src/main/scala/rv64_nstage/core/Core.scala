@@ -17,6 +17,9 @@ trait phvntomParams {
   val only_M        = true
   val validVABits   = 39
   val hasL2Cache    = true
+  val bpuEntryBits  = 10
+  val historyBits   = 5
+  val predictorBits = 2 // TODO Do NOT Modify
 }
 
 

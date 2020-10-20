@@ -110,32 +110,32 @@ int main(int argc, char** argv)
          engine.sim_set_mip();     // TODO only mtip for now
          engine.sim_step(1);
          int_total_cnt++;
-//          if (int_total_cnt > 10000) {
-//             printf("Total Int Cnt is %d!\n", int_total_cnt);
-//             exit(0);
-//          }
+          if (int_total_cnt > 100) {
+             printf("Total Int Cnt is %d!\n", int_total_cnt);
+             exit(0);
+          }
       }
       if (startTest && engine.emu_difftest_valid()) {
          bubble_cnt = 0;
          engine.sim_step(1);
 
 
-         fprintf(stderr, "emu|sim \x1b[34mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
-         for (int i = 0; i < REG_G_NUM; i++) {
-            if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
-               fprintf(stderr, "\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
-            else
-               fprintf(stderr, "[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
-            if (i % 3 == 2)
-               fprintf(stderr, "\n");
-         }
-         if (REG_G_NUM % 3 != 0)
-            fprintf(stderr, "\n");
+      //   fprintf(stderr, "emu|sim \x1b[34mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
+      //   for (int i = 0; i < REG_G_NUM; i++) {
+      //      if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
+      //         fprintf(stderr, "\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+      //      else
+      //         fprintf(stderr, "[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+      //      if (i % 3 == 2)
+      //         fprintf(stderr, "\n");
+      //   }
+      //   if (REG_G_NUM % 3 != 0)
+      //      fprintf(stderr, "\n");
 
-         fprintf(stderr, "zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
-         if (REG_G_NUM % 3 != 0)
-            fprintf(stderr, "\n");
-         fprintf(stderr, "\n");
+      //   fprintf(stderr, "zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+      //   if (REG_G_NUM % 3 != 0)
+      //      fprintf(stderr, "\n");
+      //   fprintf(stderr, "\n");
 
       if(((engine.emu_get_pc() != engine.sim_get_pc()) ||
             (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ))) {
