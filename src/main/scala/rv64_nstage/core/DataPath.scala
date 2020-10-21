@@ -353,8 +353,6 @@ class DataPath extends Module with phvntomParams {
   rs1 := scheduler.io.rs1_val
   rs2 := scheduler.io.rs2_val
 
-  printf("In Datapath Exe: RS1fwd %x, RS2fwd %x\n", rs1, rs2)
-
   // Reg EXE DTLB
   reg_exe_dtlb.io.bsrio.last_stage_atomic_stall_req := stall_req_exe_atomic
   reg_exe_dtlb.io.bsrio.next_stage_atomic_stall_req := stall_req_dtlb_atomic
