@@ -113,7 +113,7 @@ int main(int argc, char** argv)
          engine.sim_set_mip();     // TODO only mtip for now
          engine.sim_step(1);
          int_total_cnt++;
-          if (int_total_cnt > 20) {
+          if (int_total_cnt > 50) {
              fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS with IPC %f ] ==========\x1b[0m\n", argv[1], 1.0 * sim_cnt / engine.trace_count);
              printf("Total Int Cnt is %d!\n", int_total_cnt);
              //sleep(5);

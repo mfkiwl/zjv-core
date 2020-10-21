@@ -145,6 +145,7 @@ class DataPath extends Module with phvntomParams {
   bpu.io.feedback_is_br := feedback_is_br
   bpu.io.feedback_target_pc := feedback_target_pc
   bpu.io.feedback_br_taken := feedback_br_taken
+  bpu.io.stall_update := scheduler.io.stall_req
 
   // IMMU
   inst_af := !is_legal_addr(pc_gen.io.pc_out) || immu.io.af // TODO
@@ -249,17 +250,19 @@ class DataPath extends Module with phvntomParams {
 
   feedback_pc := reg_id_exe.io.bsrio.pc_out
   feedback_xored_index := reg_id_exe.io.bpio.xored_index_out
-  feedback_is_br := reg_id_exe.io.iiio.inst_info_out.brType.orR && !scheduler.io.stall_req
+  feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || jump_flush) && !scheduler.io.stall_req
   feedback_target_pc := alu.io.out
-  feedback_br_taken := branch_cond.io.branch
+  feedback_br_taken := branch_cond.io.branch || jump_flush
 
-  predict_taken_but_not_br := !reg_id_exe.io.iiio.inst_info_out.brType.orR && reg_id_exe.io.bpio.predict_taken_out
+  predict_taken_but_not_br := (!reg_id_exe.io.iiio.inst_info_out.brType.orR &&
+    reg_id_exe.io.iiio.inst_info_out.pcSelect =/= pcJump && reg_id_exe.io.bpio.predict_taken_out)
   predict_not_but_taken := branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out
   predict_taken_but_not := (!branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out &&
     reg_id_exe.io.iiio.inst_info_out.brType.orR)
   misprediction := predict_not_but_taken || predict_taken_but_not
   wrong_target := branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out && alu.io.out =/= reg_id_exe.io.bpio.target_out
-  jump_flush := reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump
+  jump_flush := reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump && (!reg_id_exe.io.bpio.predict_taken_out ||
+    alu.io.out =/= reg_id_exe.io.bpio.target_out)
   br_jump_flush := ((misprediction || wrong_target || predict_taken_but_not_br ||
     jump_flush) && !scheduler.io.stall_req)
   inst_addr_misaligned := alu.io.out(1) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)

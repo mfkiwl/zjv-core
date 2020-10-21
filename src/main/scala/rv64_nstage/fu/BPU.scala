@@ -32,6 +32,7 @@ class BHTIO extends Bundle with phvntomParams {
   val xored_index_in = Input(UInt(bpuEntryBits.W))
   val predit_taken = Output(Bool())
   // Update History
+  val stall_update = Input(Bool())
   val update_valid = Input(Bool())
   val update_xored_index_in = Input(UInt(bpuEntryBits.W))
   val update_taken_in = Input(Bool())
@@ -48,23 +49,27 @@ class BHT extends Module with phvntomParams {
   val bht_entries = RegInit(VecInit(Seq.fill(1 << bpuEntryBits)(s_nt)))
   val bht_chosen = bht_entries(io.update_xored_index_in)
 
-  when(io.update_valid) {
-    when(io.update_taken_in) {
-      when(bht_chosen === s_nt) {
-        bht_entries(io.update_xored_index_in) := w_nt
-      }.elsewhen(bht_chosen === w_nt) {
-        bht_entries(io.update_xored_index_in) := w_tk
-      }.elsewhen(bht_chosen === w_tk) {
-        bht_entries(io.update_xored_index_in) := s_tk
+  when(!io.stall_update) {
+    when(io.update_valid) {
+      when(io.update_taken_in) {
+        when(bht_chosen === s_nt) {
+          bht_entries(io.update_xored_index_in) := w_nt
+        }.elsewhen(bht_chosen === w_nt) {
+          bht_entries(io.update_xored_index_in) := w_tk
+        }.elsewhen(bht_chosen === w_tk) {
+          bht_entries(io.update_xored_index_in) := s_tk
+        }
+      }.otherwise {
+        when(bht_chosen === s_tk) {
+          bht_entries(io.update_xored_index_in) := w_tk
+        }.elsewhen(bht_chosen === w_tk) {
+          bht_entries(io.update_xored_index_in) := w_nt
+        }.elsewhen(bht_chosen === w_nt) {
+          bht_entries(io.update_xored_index_in) := s_nt
+        }
       }
     }.otherwise {
-      when(bht_chosen === s_tk) {
-        bht_entries(io.update_xored_index_in) := w_tk
-      }.elsewhen(bht_chosen === w_tk) {
-        bht_entries(io.update_xored_index_in) := w_nt
-      }.elsewhen(bht_chosen === w_nt) {
-        bht_entries(io.update_xored_index_in) := s_nt
-      }
+      bht_entries(io.update_xored_index_in) := s_nt
     }
   }
 
@@ -101,6 +106,7 @@ class BPUIO extends Bundle with phvntomParams {
   val pc_in_btb = Output(UInt(xlen.W))
   val xored_index_out = Output(UInt(bpuEntryBits.W))
   // Modify Data from BRANCH
+  val stall_update = Input(Bool())
   val feedback_pc = Input(UInt(xlen.W))
   val feedback_xored_index = Input(UInt(bpuEntryBits.W))
   val feedback_is_br = Input(Bool())
@@ -117,34 +123,35 @@ class BPUIO extends Bundle with phvntomParams {
 class BPU extends Module with phvntomParams {
   val io = IO(new BPUIO)
 
-  val pht = Module(new PHT)
+//  val pht = Module(new PHT)
   val bht = Module(new BHT)
   val btb = Module(new BTB)
 
-//  printf("fb_pc %x, fb_xored_in %x, fb_is_br_inst %x, fb_tar_pc %x, fb_br_tk %x\n", io.feedback_pc,
-//  io.feedback_xored_index, io.feedback_is_br, io.feedback_target_pc, io.feedback_br_taken)
+//  printf("pc %x, predict_tkn %x, tar_pc %x\n", io.pc_to_predict,
+//  io.branch_taken, io.pc_in_btb)
 
-  val history_from_pht = pht.io.history_out
+//  val history_from_pht = pht.io.history_out
   val predict_taken_from_bht = bht.io.predit_taken
-  val xored_index = history_from_pht ^ io.pc_to_predict(bpuEntryBits + 1, 2)
+  val xored_index = io.pc_to_predict(bpuEntryBits + 1, 2) // ^ history_from_pht
 
   // TODO Here, we do not care C Extension for now
-  pht.io.index_in := io.pc_to_predict(bpuEntryBits + 1, 2)
-  pht.io.update_valid := io.feedback_is_br
-  pht.io.update_index_in := io.feedback_pc(bpuEntryBits + 1, 2)
-  pht.io.update_taken_in := io.feedback_br_taken
+//  pht.io.index_in := io.pc_to_predict(bpuEntryBits + 1, 2)
+//  pht.io.update_valid := io.feedback_is_br
+//  pht.io.update_index_in := io.feedback_pc(bpuEntryBits + 1, 2)
+//  pht.io.update_taken_in := io.feedback_br_taken
 
   bht.io.xored_index_in := xored_index
   bht.io.update_valid := io.feedback_is_br
   bht.io.update_xored_index_in := io.feedback_xored_index
   bht.io.update_taken_in := io.feedback_br_taken
+  bht.io.stall_update := io.stall_update
 
   btb.io.index_in := io.pc_to_predict(bpuEntryBits + 1, 2)
   btb.io.update_valid := io.feedback_is_br && io.feedback_br_taken
   btb.io.update_index := io.feedback_pc(bpuEntryBits + 1, 2)
   btb.io.update_target := io.feedback_target_pc
 
-  io.branch_taken := false.B // predict_taken_from_bht
+  io.branch_taken := predict_taken_from_bht
   io.pc_in_btb := btb.io.target_out
   io.xored_index_out := xored_index
 }
