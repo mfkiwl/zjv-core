@@ -26,7 +26,7 @@ class PlicIO(val nrIntr: Int, val nrHart: Int) extends Bundle {
   val meip = Output(Vec(nrHart, Bool()))
 }
 
-class AXI4PLIC(nrIntr: Int, nrHart: Int) extends AXI4Slave(new PlicIO(nrIntr, nrHart)) {
+class AXI4PLIC(nrIntr: Int = 1, nrHart: Int = 1) extends AXI4Slave(new PlicIO(nrIntr, nrHart)) {
   require(nrIntr < 1024)
   require(nrHart <= 15872)
   val addressSpaceSize = 0x4000000

@@ -81,16 +81,22 @@ class Tile extends Module with phvntomParams with projectConfig {
   val msipSync = clint.io.extra.get.msip
   core.io.int.msip := msipSync
   core.io.int.mtip := mtipSync
-  core.io.int.meip := false.B
-  core.io.int.seip := false.B
   BoringUtils.addSource(mtipSync, "mtip")
   BoringUtils.addSource(msipSync, "msip")
+
+  // plic
+  val plic = Module(new AXI4PLIC)
+  plic.io.extra.get.intrVec := 1.U(1.W)
+  val meipSync = plic.io.extra.get.meip(0)
+  core.io.int.meip := meipSync
+  core.io.int.seip := false.B
+  printf("Here is the output of PLIC meip %x\n", meipSync)
 
   // uart
   val uart = Module(new AXI4UART)
 
   // xbar
-  val mmio_device = List(poweroff, clint, uart)
+  val mmio_device = List(poweroff, clint, uart, plic)
   val mmioBus = Module(new Uncache(mname = "mmio uncache"))
   val mmioxbar = Module(new Crossbar1toN(AddressSpace.mmio))
   // val xbar = Module(new AXI4Xbar(2, addrSpace))
