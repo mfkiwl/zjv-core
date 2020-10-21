@@ -8,7 +8,7 @@ import bus._
 import device._
 import utils._
 
-class ICache(implicit val cacheConfig: CacheConfig)
+class ICacheForward(implicit val cacheConfig: CacheConfig)
     extends Module
     with CacheParameters {
   val io = IO(new CacheIO)
@@ -203,38 +203,38 @@ class ICache(implicit val cacheConfig: CacheConfig)
     flush_counter.inc()
   }
 
-  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  // printf("stall=%d, need_forward=%d, state=%d, hit=%d, result=%x\n", stall, need_forward, state, hit, result)
+  printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  printf("stall=%d, need_forward=%d, state=%d, hit=%d, result=%x\n", stall, need_forward, state, hit, result)
+  printf(
+    "flush_counter.value=%x, flush_finish=%d\n",
+    flush_counter.value,
+    flush_finish
+  )
+  printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+  printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
+  printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
+  printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
+  printf(
+    "s2_tag=%x, s2_lineoffset=%x, s2_wordoffset=%x\n",
+    s2_tag,
+    s2_lineoffset,
+    s2_wordoffset
+  )
+  printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
+  printf(
+    p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
+  )
+  printf(p"s2_cacheline=${s2_cacheline}\n")
+  printf(p"s2_meta=${s2_meta}\n")
   // printf(
-  //   "flush_counter.value=%x, flush_finish=%d\n",
-  //   flush_counter.value,
-  //   flush_finish
+  //   p"cacheline_data=${cacheline_data}, cacheline_meta=${cacheline_meta}\n"
   // )
-  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  // printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-  // printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
-  // printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
   // printf(
-  //   "s2_tag=%x, s2_lineoffset=%x, s2_wordoffset=%x\n",
-  //   s2_tag,
-  //   s2_lineoffset,
-  //   s2_wordoffset
+  //   p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
   // )
-  // printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
-  // printf(
-  //   p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
-  // )
-  // printf(p"s2_cacheline=${s2_cacheline}\n")
-  // printf(p"s2_meta=${s2_meta}\n")
-  // // printf(
-  // //   p"cacheline_data=${cacheline_data}, cacheline_meta=${cacheline_meta}\n"
-  // // )
-  // // printf(
-  // //   p"dataArray(s1_index)=${dataArray(s1_index)},metaArray(s1_index)=${metaArray(s1_index)}\n"
-  // // )
-  // printf(p"----------${cacheName} io.in----------\n")
-  // printf(p"${io.in}\n")
-  // printf(p"----------${cacheName} io.mem----------\n")
-  // printf(p"${io.mem}\n")
-  // printf("-----------------------------------------------\n")
+  printf(p"----------${cacheName} io.in----------\n")
+  printf(p"${io.in}\n")
+  printf(p"----------${cacheName} io.mem----------\n")
+  printf(p"${io.mem}\n")
+  printf("-----------------------------------------------\n")
 }

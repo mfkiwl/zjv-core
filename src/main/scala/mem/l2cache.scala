@@ -13,13 +13,13 @@ class L2CacheXbar(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
     with CacheParameters {
   val io = IO(new Bundle {
     val in = Vec(n_sources, new MemIO(blockBits))
-    val out = Flipped(new MemIO(lineBits))
+    val out = Flipped(new MemIO(blockBits))
   })
 
   val s_idle :: s_readResp :: s_writeResp :: Nil = Enum(3)
   val state = RegInit(s_idle)
 
-  val inputArb = Module(new Arbiter(new MemReq(lineBits), n_sources))
+  val inputArb = Module(new Arbiter(new MemReq(blockBits), n_sources))
   (inputArb.io.in zip io.in.map(_.req)).map { case (arb, in) => arb <> in }
   val thisReq = inputArb.io.out
   val inflightSrc = Reg(UInt(log2Up(n_sources).W))
@@ -180,7 +180,7 @@ class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
         new_meta(access_index).tag := s1_tag
         metaArray.write(s1_index, new_meta)
         // printf(
-        //   p"dcache write: s1_index=${s1_index}, access_index=${access_index}\n"
+        //   p"l2cache write: s1_index=${s1_index}, access_index=${access_index}\n"
         // )
         // printf(p"\tnewdata=${newdata}\n")
         // printf(p"\tnew_meta=${new_meta}\n")
@@ -198,7 +198,7 @@ class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
         new_meta(access_index).tag := s1_tag
         metaArray.write(s1_index, new_meta)
         // printf(
-        //   p"dcache read update: s1_index=${s1_index}, access_index=${access_index}\n"
+        //   p"l2cache read update: s1_index=${s1_index}, access_index=${access_index}\n"
         // )
         // printf(p"\ttarget_data=${target_data}\n")
         // printf(p"\tnew_meta=${new_meta}\n")
