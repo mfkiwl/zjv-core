@@ -39,7 +39,7 @@ class Tile extends Module with phvntomParams with projectConfig {
         CacheConfig(
           name = "l2cache",
           blockBits = dcache.lineBits,
-          totalSize = 512
+          totalSize = 2
         )
       )
     )
@@ -90,13 +90,13 @@ class Tile extends Module with phvntomParams with projectConfig {
   val meipSync = plic.io.extra.get.meip(0)
   core.io.int.meip := meipSync
   core.io.int.seip := false.B
-  printf("Here is the output of PLIC meip %x\n", meipSync)
+//  printf("Here is the output of PLIC meip %x\n", meipSync)
 
   // uart
   val uart = Module(new AXI4UART)
 
   // xbar
-  val mmio_device = List(poweroff, clint, uart, plic)
+  val mmio_device = List(poweroff, clint, plic, uart)
   val mmioBus = Module(new Uncache(mname = "mmio uncache"))
   val mmioxbar = Module(new Crossbar1toN(AddressSpace.mmio))
   // val xbar = Module(new AXI4Xbar(2, addrSpace))

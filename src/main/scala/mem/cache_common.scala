@@ -14,7 +14,7 @@ case class CacheConfig (
     blockBits: Int = 64, // size for each block in cache line
     ways: Int = 4, // set associativity
     lines: Int = 4, // number of `xlen`-bit blocks in each cache line
-    totalSize: Int = 32, // K Bytes
+    totalSize: Int = 1, // K Bytes
     replacementPolicy: String = "lru" // lru, random not implemented
 )
 

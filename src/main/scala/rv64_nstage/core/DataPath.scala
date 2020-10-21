@@ -352,6 +352,8 @@ class DataPath extends Module with phvntomParams {
   rs1 := scheduler.io.rs1_val
   rs2 := scheduler.io.rs2_val
 
+  printf("In Datapath Exe: RS1fwd %x, RS2fwd %x\n", rs1, rs2)
+
   // Reg EXE DTLB
   reg_exe_dtlb.io.bsrio.last_stage_atomic_stall_req := stall_req_exe_atomic
   reg_exe_dtlb.io.bsrio.next_stage_atomic_stall_req := stall_req_dtlb_atomic
@@ -576,6 +578,8 @@ class DataPath extends Module with phvntomParams {
       printf("Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", stall_pc, stall_if1_if2, stall_if2_id, stall_id_exe, stall_exe_dtlb, stall_dtlb_mem1, stall_mem1_mem2, stall_mem2_wb)
       printf("PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", pc_gen.io.pc_out(15, 0), reg_if1_if2.io.bsrio.pc_out(15, 0), reg_if2_id.io.bsrio.pc_out(15, 0), reg_id_exe.io.bsrio.pc_out(15, 0), reg_exe_dtlb.io.bsrio.pc_out(15, 0), reg_dtlb_mem1.io.bsrio.pc_out(15, 0), reg_mem1_mem2.io.bsrio.pc_out(15, 0), reg_mem2_wb.io.bsrio.pc_out(15, 0))
       printf("Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", BUBBLE(15, 0), BUBBLE(15, 0), reg_if2_id.io.instio.inst_out(15, 0), reg_id_exe.io.instio.inst_out(15, 0), reg_exe_dtlb.io.instio.inst_out(15, 0), reg_dtlb_mem1.io.instio.inst_out(15, 0), reg_mem1_mem2.io.instio.inst_out(15, 0), reg_mem2_wb.io.instio.inst_out(15, 0))
+      printf("AluO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, 0.U, 0.U, alu.io.out(15, 0), reg_exe_dtlb.io.aluio.alu_val_out(15, 0), reg_dtlb_mem1.io.aluio.alu_val_out(15, 0), reg_mem1_mem2.io.aluio.alu_val_out(15, 0), reg_mem2_wb.io.aluio.alu_val_out(15, 0))
+      printf("MemO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, 0.U, 0.U, 0.U, 0.U, 0.U, io.dmem.resp.bits.data(15, 0), reg_mem2_wb.io.memio.mem_val_out(15, 0))
       printf("Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, reg_if1_if2.io.bsrio.bubble_out, reg_if2_id.io.bsrio.bubble_out, reg_id_exe.io.bsrio.bubble_out, reg_exe_dtlb.io.bsrio.bubble_out, reg_dtlb_mem1.io.bsrio.bubble_out, reg_mem1_mem2.io.bsrio.bubble_out, reg_mem2_wb.io.bsrio.bubble_out)
       printf("Take\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", bpu.io.branch_taken, reg_if1_if2.io.bpio.predict_taken_out, reg_if2_id.io.bpio.predict_taken_out, reg_id_exe.io.bpio.predict_taken_out, 0.U, 0.U, 0.U, 0.U)
       printf("Tar\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", bpu.io.pc_in_btb(15, 0), reg_if1_if2.io.bpio.target_out(15, 0), reg_if2_id.io.bpio.target_out(15, 0), reg_id_exe.io.bpio.target_out(15, 0), 0.U, 0.U, 0.U, 0.U)
