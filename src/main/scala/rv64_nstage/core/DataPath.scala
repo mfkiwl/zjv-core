@@ -159,6 +159,7 @@ class DataPath extends Module with phvntomParams {
   immu.io.is_load := false.B
   immu.io.is_store := false.B
   io.immu.stall := false.B
+  io.immu.flush := false.B
   io.immu.resp.ready := true.B
   io.immu.req.bits.addr := immu.io.cache_req_addr
   io.immu.req.bits.data := DontCare
@@ -185,7 +186,7 @@ class DataPath extends Module with phvntomParams {
   reg_if1_if2.io.bpio.xored_index_in := bpu.io.xored_index_out
 
   // TODO parallel visiting of RAM and TLB
-  // io.imem.flush := i_fence_flush || s_fence_flush
+  io.imem.flush := i_fence_flush || s_fence_flush
   io.imem.stall := stall_if1_if2
   io.imem.req.bits.addr := immu.io.pa
   io.imem.req.bits.data := DontCare
@@ -383,6 +384,7 @@ class DataPath extends Module with phvntomParams {
   dmmu.io.is_load := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR && reg_exe_dtlb.io.iiio.inst_info_out.wbSelect === wbMEM
   dmmu.io.is_store := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR && reg_exe_dtlb.io.iiio.inst_info_out.wbSelect =/= wbMEM
   io.dmmu.stall := false.B
+  io.dmmu.flush := false.B
   io.dmmu.resp.ready := true.B
   io.dmmu.req.bits.addr := dmmu.io.cache_req_addr
   io.dmmu.req.bits.data := DontCare
@@ -477,6 +479,7 @@ class DataPath extends Module with phvntomParams {
   reg_mem1_mem2.io.csrio.comp_res_in := (!reservation.io.succeed).asUInt
   reg_mem1_mem2.io.csrio.af_in := csr.io.expt && csr.io.inst_access_fault
 
+  io.dmem.flush := false.B
   io.dmem.stall := !io.dmem.req.ready
   io.dmem.req.bits.addr := Mux(amo_arbiter.io.write_now, reg_mem1_mem2.io.aluio.alu_val_out, reg_dtlb_mem1.io.aluio.alu_val_out)
   io.dmem.req.bits.data := Mux(amo_arbiter.io.write_now, amo_arbiter.io.write_what, reg_dtlb_mem1.io.aluio.mem_wdata_out)

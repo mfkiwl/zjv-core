@@ -27,11 +27,13 @@ class L2CacheXbar(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
   io.out.req.bits := thisReq.bits
   // bind correct valid and ready signals
   io.out.stall := false.B
+  io.out.flush := false.B
   io.out.req.valid := thisReq.valid && (state === s_idle)
   thisReq.ready := io.out.req.ready && (state === s_idle)
 
   io.in.map(_.resp.bits := io.out.resp.bits)
   io.in.map(_.resp.valid := false.B)
+  io.in.map(_.flush_ready := true.B)
   (io.in(inflightSrc).resp, io.out.resp) match {
     case (l, r) => {
       l.valid := r.valid
@@ -128,8 +130,10 @@ class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
   current_request.resp.valid := s1_valid && request_satisfied
   current_request.resp.bits.data := result
   current_request.req.ready := state === s_idle
+  current_request.flush_ready := true.B
 
   io.mem.stall := false.B
+  io.mem.flush := false.B
   io.mem.req.valid := s1_valid && (state === s_memReadReq || state === s_memReadResp || state === s_memWriteReq || state === s_memWriteResp)
   io.mem.req.bits.addr := Mux(
     state === s_memWriteReq || state === s_memWriteResp,
