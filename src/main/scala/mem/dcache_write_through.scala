@@ -100,7 +100,7 @@ class DCacheWriteThrough(implicit val cacheConfig: CacheConfig)
     mem_read_request_satisfied || mem_write_request_satisfied
   val mmio_request_satisfied = state === s_mmioResp && io.mmio.resp.valid
   val request_satisfied = mem_request_satisfied || mmio_request_satisfied
-  val hazard = s2_valid && s2_wen && s1_index === s2_index
+  val hazard = s2_valid && (s2_wen || !hit) && s1_index === s2_index
   stall := s2_valid && !request_satisfied // wait for data or hazard
   need_forward := hazard && mem_request_satisfied
 

@@ -56,8 +56,8 @@ class DCache(implicit val cacheConfig: CacheConfig)
     s2_data := s1_data
     s2_wen := s1_wen
     s2_memtype := s1_memtype
-    s2_meta := metaArray(s1_index)
-    s2_cacheline := dataArray(s1_index)
+    s2_meta := metaArray.read(s1_index)
+    s2_cacheline := dataArray.read(s1_index)
   }.elsewhen(need_forward) {
     s2_valid := false.B
     s2_addr := DontCare
@@ -85,15 +85,16 @@ class DCache(implicit val cacheConfig: CacheConfig)
   val cacheline_meta = s2_meta(access_index)
   val cacheline_data = s2_cacheline(access_index)
 
-  val s_idle :: s_memReadReq :: s_memReadResp :: s_memWriteReq :: s_memWriteResp :: s_mmioReq :: s_mmioResp :: Nil = Enum(7)
+  val s_idle :: s_memReadReq :: s_memReadResp :: s_memWriteReq :: s_memWriteResp :: s_mmioReq :: s_mmioResp :: Nil =
+    Enum(7)
   val state = RegInit(s_idle)
   val read_address = Cat(s2_addr(xlen - 1, offsetLength), 0.U(offsetLength.W))
   val write_address = Cat(cacheline_meta.tag, s2_index, 0.U(offsetLength.W))
-  val mem_valid = state === s_memReadResp && io.mem.resp.valid  
+  val mem_valid = state === s_memReadResp && io.mem.resp.valid
   val mem_request_satisfied = hit || mem_valid
   val mmio_request_satisfied = state === s_mmioResp && io.mmio.resp.valid
   val request_satisfied = mem_request_satisfied || mmio_request_satisfied
-  val hazard = s2_valid && s2_wen && s1_index === s2_index
+  val hazard = s2_valid && (s2_wen || !hit) && s1_index === s2_index
   stall := s2_valid && !request_satisfied // wait for data or hazard
   need_forward := hazard && mem_request_satisfied
 
@@ -261,8 +262,10 @@ class DCache(implicit val cacheConfig: CacheConfig)
         //   p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
         // )
         when(!ismmio) {
-          val writeData = VecInit(Seq.fill(nWays)(target_data))
-          dataArray.write(s2_index, writeData, access_vec.asBools)
+          when(!hit) {
+            val writeData = VecInit(Seq.fill(nWays)(target_data))
+            dataArray.write(s2_index, writeData, access_vec.asBools)
+          }
           val new_meta = Wire(Vec(nWays, new MetaData))
           new_meta := policy.update_meta(s2_meta, access_index)
           new_meta(access_index).valid := true.B
@@ -306,12 +309,12 @@ class DCache(implicit val cacheConfig: CacheConfig)
   // )
   // printf(p"s2_cacheline=${s2_cacheline}\n")
   // printf(p"s2_meta=${s2_meta}\n")
-  // // printf(p"cacheline_data=${cacheline_data}\n")
-  // // printf(p"cacheline_meta=${cacheline_meta}\n")
+  // printf(p"cacheline_data=${cacheline_data}\n")
+  // printf(p"cacheline_meta=${cacheline_meta}\n")
   // // printf(p"dataArray(s2_index)=${dataArray(s2_index)}\n")
   // // printf(p"metaArray(s2_index)=${metaArray(s2_index)}\n")
-  // // printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
-  // // printf(p"fetched_vec=${fetched_vec}\n")
+  // printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
+  // printf(p"fetched_vec=${fetched_vec}\n")
   // printf(p"----------${cacheName} io.in----------\n")
   // printf(p"${io.in}\n")
   // printf(p"----------${cacheName} io.mem----------\n")
