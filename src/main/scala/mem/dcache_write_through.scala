@@ -18,8 +18,8 @@ class DCacheWriteThrough(implicit val cacheConfig: CacheConfig)
   val dataArray = Mem(nSets, Vec(nWays, new CacheLineData))
   val stall = Wire(Bool())
   val need_forward = Wire(Bool())
-  // val forward_meta = Wire(Vec(nWays, new MetaData))
-  // val forward_data = Wire(Vec(nWays, new CacheLineData))
+  val write_meta = Wire(Vec(nWays, new MetaData))
+  val write_data = Wire(Vec(nWays, new CacheLineData))
 
   /* stage1 signals */
   val s1_valid = WireInit(Bool(), false.B)
@@ -56,17 +56,8 @@ class DCacheWriteThrough(implicit val cacheConfig: CacheConfig)
     s2_data := s1_data
     s2_wen := s1_wen
     s2_memtype := s1_memtype
-    s2_meta := metaArray(s1_index)
-    s2_cacheline := dataArray(s1_index)
-  }.elsewhen(need_forward) {
-    s2_valid := false.B
-    s2_addr := DontCare
-    s2_index := DontCare
-    s2_data := DontCare
-    s2_wen := DontCare
-    s2_memtype := DontCare
-    s2_meta := DontCare
-    s2_cacheline := DontCare
+    s2_meta := Mux(need_forward, write_meta, metaArray.read(s1_index))
+    s2_cacheline := Mux(need_forward, write_data, dataArray.read(s1_index))
   }
 
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
@@ -91,7 +82,6 @@ class DCacheWriteThrough(implicit val cacheConfig: CacheConfig)
   val read_address = Cat(s2_addr(xlen - 1, offsetLength), 0.U(offsetLength.W))
   val write_address =
     Cat(Mux(hit, cacheline_meta.tag, s2_tag), s2_index, 0.U(offsetLength.W))
-  val write_data = Wire(Vec(nWays, new CacheLineData))
   val mem_read_valid = state === s_memReadResp && io.mem.resp.valid
   val mem_write_valid = state === s_memWriteResp && io.mem.resp.valid
   val mem_read_request_satisfied = !s2_wen && (hit || mem_read_valid)
@@ -100,13 +90,13 @@ class DCacheWriteThrough(implicit val cacheConfig: CacheConfig)
     mem_read_request_satisfied || mem_write_request_satisfied
   val mmio_request_satisfied = state === s_mmioResp && io.mmio.resp.valid
   val request_satisfied = mem_request_satisfied || mmio_request_satisfied
-  val hazard = s2_valid && (s2_wen || !hit) && s1_index === s2_index
-  stall := s2_valid && !request_satisfied // wait for data or hazard
+  val hazard = s1_valid && s2_valid && s1_index === s2_index
+  stall := s2_valid && !request_satisfied // wait for data
   need_forward := hazard && mem_request_satisfied
 
   io.in.resp.valid := s2_valid && request_satisfied
   io.in.resp.bits.data := result
-  io.in.req.ready := !stall && !need_forward
+  io.in.req.ready := !stall // && !need_forward
   io.in.flush_ready := true.B
 
   io.mem.stall := false.B
@@ -166,6 +156,7 @@ class DCacheWriteThrough(implicit val cacheConfig: CacheConfig)
   val target_data = Mux(hit, cacheline_data, fetched_vec)
   result := DontCare
   write_data := DontCare
+  write_meta := DontCare
   when(s2_valid) {
     when(s2_wen) {
       when(hit || mem_read_valid) {
@@ -218,19 +209,17 @@ class DCacheWriteThrough(implicit val cacheConfig: CacheConfig)
             write_data(i) := s2_cacheline(i)
           }
         }
-        // val writeData = VecInit(Seq.fill(nWays)(new_data))
         dataArray.write(s2_index, write_data, access_vec.asBools)
-        val new_meta = Wire(Vec(nWays, new MetaData))
-        new_meta := policy.update_meta(s2_meta, access_index)
-        new_meta(access_index).valid := true.B
-        new_meta(access_index).dirty := false.B
-        new_meta(access_index).tag := s2_tag
-        metaArray.write(s2_index, new_meta)
-        // printf(
-        //   p"dcache write: mask=${Hexadecimal(mask)}, filled_data=${Hexadecimal(filled_data)}, s2_index=0x${Hexadecimal(s2_index)}\n"
-        // )
-        // printf(p"\tnew_data=${new_data}\n")
-        // printf(p"\tnew_meta=${new_meta}\n")
+        write_meta := policy.update_meta(s2_meta, access_index)
+        write_meta(access_index).valid := true.B
+        write_meta(access_index).dirty := false.B
+        write_meta(access_index).tag := s2_tag
+        metaArray.write(s2_index, write_meta)
+        printf(
+          p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, filled_data=${Hexadecimal(filled_data)}\n"
+        )
+        printf(p"\twrite_data=${write_data}\n")
+        printf(p"\twrite_meta=${write_meta}\n")
       }
     }.otherwise {
       when(hit || mem_read_valid || mmio_request_satisfied) {
@@ -274,66 +263,74 @@ class DCacheWriteThrough(implicit val cacheConfig: CacheConfig)
           }
         }
         result := Mux(ismmio, io.mmio.resp.bits.data, mem_result)
-        // printf(
-        //   p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
-        // )
+        printf(
+          p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
+        )
         when(!ismmio) {
-          val writeData = VecInit(Seq.fill(nWays)(target_data))
-          dataArray.write(s2_index, writeData, access_vec.asBools)
-          val new_meta = Wire(Vec(nWays, new MetaData))
-          new_meta := policy.update_meta(s2_meta, access_index)
-          new_meta(access_index).valid := true.B
           when(!hit) {
-            new_meta(access_index).dirty := false.B
+            for (i <- 0 until nWays) {
+              when(access_index === i.U) {
+                write_data(i) := target_data
+              }.otherwise {
+                write_data(i) := s2_cacheline(i)
+              }
+            }
+            dataArray.write(s2_index, write_data, access_vec.asBools)
           }
-          new_meta(access_index).tag := s2_tag
-          metaArray.write(s2_index, new_meta)
-          // printf(
-          //   p"dcache write: mask=${Hexadecimal(mask)}, mem_result=${Hexadecimal(mem_result)}, s2_index=0x${Hexadecimal(s2_index)}\n"
-          // )
-          // printf(p"\ttarget_data=${target_data}\n")
-          // printf(p"\tnew_meta=${new_meta}\n")
+          write_meta := policy.update_meta(s2_meta, access_index)
+          write_meta(access_index).valid := true.B
+          when(!hit) {
+            write_meta(access_index).dirty := false.B
+          }
+          write_meta(access_index).tag := s2_tag
+          metaArray.write(s2_index, write_meta)
+          printf(
+            p"dcache write: mask=${Hexadecimal(mask)}, mem_result=${Hexadecimal(mem_result)}, s2_index=0x${Hexadecimal(s2_index)}\n"
+          )
+          printf(p"\twrite_data=${write_data}\n")
+          printf(p"\twrite_meta=${write_meta}\n")
         }
       }
     }
   }
 
-  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  // printf(
-  //   "stall=%d, state=%d, ismmio=%d, hit=%d, result=%x\n",
-  //   stall,
-  //   state,
-  //   ismmio,
-  //   hit,
-  //   result
-  // )
-  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  // printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-  // printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
-  // printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
-  // printf(
-  //   "s2_tag=%x, s2_lineoffset=%x, s2_wordoffset=%x\n",
-  //   s2_tag,
-  //   s2_lineoffset,
-  //   s2_wordoffset
-  // )
-  // printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
-  // printf(
-  //   p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
-  // )
-  // printf(p"s2_cacheline=${s2_cacheline}\n")
-  // printf(p"s2_meta=${s2_meta}\n")
-  // printf(p"cacheline_data=${cacheline_data}\n")
-  // printf(p"cacheline_meta=${cacheline_meta}\n")
-  // printf(p"dataArray(s2_index)=${dataArray(s2_index)}\n")
-  // printf(p"metaArray(s2_index)=${metaArray(s2_index)}\n")
-  // printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
-  // printf(p"fetched_vec=${fetched_vec}\n")
-  // printf(p"----------${cacheName} io.in----------\n")
-  // printf(p"${io.in}\n")
-  // printf(p"----------${cacheName} io.mem----------\n")
-  // printf(p"${io.mem}\n")
-  // // printf(p"----------${cacheName} io.mmio----------\n")
-  // // printf(p"${io.mmio}\n")
-  // printf("-----------------------------------------------\n")
+  printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  printf(
+    "stall=%d, need_forward=%d, state=%d, ismmio=%d, hit=%d, result=%x\n",
+    stall,
+    need_forward,
+    state,
+    ismmio,
+    hit,
+    result
+  )
+  printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+  printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
+  printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
+  printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
+  printf(
+    "s2_tag=%x, s2_lineoffset=%x, s2_wordoffset=%x\n",
+    s2_tag,
+    s2_lineoffset,
+    s2_wordoffset
+  )
+  printf(p"hitVec=${hitVec}, access_index=${access_index}\n")
+  printf(
+    p"victim_index=${victim_index}, victim_vec=${victim_vec}, access_vec = ${access_vec}\n"
+  )
+  printf(p"s2_cacheline=${s2_cacheline}\n")
+  printf(p"s2_meta=${s2_meta}\n")
+  printf(p"cacheline_data=${cacheline_data}\n")
+  printf(p"cacheline_meta=${cacheline_meta}\n")
+  printf(p"dataArray(s2_index)=${dataArray(s2_index)}\n")
+  printf(p"metaArray(s2_index)=${metaArray(s2_index)}\n")
+  printf(p"fetched_data=${Hexadecimal(fetched_data)}\n")
+  printf(p"fetched_vec=${fetched_vec}\n")
+  printf(p"----------${cacheName} io.in----------\n")
+  printf(p"${io.in}\n")
+  printf(p"----------${cacheName} io.mem----------\n")
+  printf(p"${io.mem}\n")
+  // printf(p"----------${cacheName} io.mmio----------\n")
+  // printf(p"${io.mmio}\n")
+  printf("-----------------------------------------------\n")
 }
