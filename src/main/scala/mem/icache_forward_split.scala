@@ -8,18 +8,18 @@ import bus._
 import device._
 import utils._
 
-class ICacheSync(implicit val cacheConfig: CacheConfig)
+class ICacheForwardSplit(implicit val cacheConfig: CacheConfig)
     extends Module
     with CacheParameters {
   val io = IO(new CacheIO)
 
   // Module Used
-  val metaArray = SyncReadMem(nSets, Vec(nWays, new MetaData))
-  val dataArray = SyncReadMem(nSets, Vec(nWays, new CacheLineData))
+  val metaArray = List.fill(nWays)(Mem(nSets, new MetaData))
+  val dataArray = List.fill(nWays)(Mem(nSets, new CacheLineData))
   val stall = Wire(Bool())
   val need_forward = Wire(Bool())
-  // val forward_meta = Wire(Vec(nWays, new MetaData))
-  // val forward_data = Wire(Vec(nWays, new CacheLineData))
+  val write_meta = Wire(Vec(nWays, new MetaData))
+  val write_data = Wire(Vec(nWays, new CacheLineData))
 
   /* stage1 signals */
   val s1_valid = WireInit(Bool(), false.B)
@@ -56,17 +56,17 @@ class ICacheSync(implicit val cacheConfig: CacheConfig)
     s2_data := s1_data
     s2_wen := s1_wen
     s2_memtype := s1_memtype
-    s2_meta := metaArray(s1_index)
-    s2_cacheline := dataArray(s1_index)
-  }.elsewhen(need_forward) {
-    s2_valid := false.B
-    s2_addr := DontCare
-    s2_index := DontCare
-    s2_data := DontCare
-    s2_wen := DontCare
-    s2_memtype := DontCare
-    s2_meta := DontCare
-    s2_cacheline := DontCare
+    when(need_forward) {
+      s2_meta := write_meta
+      s2_cacheline := write_data
+    }.otherwise {
+      for (i <- 0 until nWays) {
+        s2_meta(i) := metaArray(i).read(s1_index)
+        s2_cacheline(i) := dataArray(i).read(s1_index)
+      }
+    }
+    // s2_meta := Mux(need_forward, write_meta, metaArray.read(s1_index))
+    // s2_cacheline := Mux(need_forward, write_data, dataArray.read(s1_index))
   }
 
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
@@ -92,13 +92,13 @@ class ICacheSync(implicit val cacheConfig: CacheConfig)
 
   val mem_valid = state === s_memReadResp && io.mem.resp.valid
   val request_satisfied = hit || mem_valid
-  val hazard = s2_valid && s2_wen && s1_index === s2_index
-  stall := s2_valid && !request_satisfied // wait for data or hazard
+  val hazard = s1_valid && s2_valid && s1_index === s2_index
+  stall := s2_valid && !request_satisfied // wait for data
   need_forward := hazard && request_satisfied
 
   io.in.resp.valid := s2_valid && request_satisfied
   io.in.resp.bits.data := result
-  io.in.req.ready := !stall && !need_forward
+  io.in.req.ready := !stall // && !need_forward
   io.in.flush_ready := state =/= s_flush || (state === s_flush && flush_finish)
 
   io.mem.stall := false.B
@@ -127,8 +127,6 @@ class ICacheSync(implicit val cacheConfig: CacheConfig)
     is(s_flush) { when(flush_finish) { state := s_idle } }
   }
 
-  when(!s2_valid) { state := s_idle }
-
   val fetched_data = io.mem.resp.bits.data
   val fetched_vec = Wire(new CacheLineData)
   for (i <- 0 until nLine) {
@@ -137,58 +135,69 @@ class ICacheSync(implicit val cacheConfig: CacheConfig)
 
   val target_data = Mux(hit, cacheline_data, fetched_vec)
   result := DontCare
+  write_data := DontCare
+  write_meta := DontCare
   when(s2_valid) {
     when(request_satisfied) {
       val result_data = target_data.data(s2_lineoffset)
       val offset = s2_wordoffset << 3
       val mask = WireInit(UInt(blockBits.W), 0.U)
-      val realdata = WireInit(UInt(blockBits.W), 0.U)
+      val real_data = WireInit(UInt(blockBits.W), 0.U)
       switch(s2_memtype) {
         is(memXXX) { result := result_data }
         is(memByte) {
           mask := Fill(8, 1.U(1.W)) << offset
-          realdata := (result_data & mask) >> offset
-          result := Cat(Fill(56, realdata(7)), realdata(7, 0))
+          real_data := (result_data & mask) >> offset
+          result := Cat(Fill(56, real_data(7)), real_data(7, 0))
         }
         is(memHalf) {
           mask := Fill(16, 1.U(1.W)) << offset
-          realdata := (result_data & mask) >> offset
-          result := Cat(Fill(48, realdata(15)), realdata(15, 0))
+          real_data := (result_data & mask) >> offset
+          result := Cat(Fill(48, real_data(15)), real_data(15, 0))
         }
         is(memWord) {
           mask := Fill(32, 1.U(1.W)) << offset
-          realdata := (result_data & mask) >> offset
-          result := Cat(Fill(32, realdata(31)), realdata(31, 0))
+          real_data := (result_data & mask) >> offset
+          result := Cat(Fill(32, real_data(31)), real_data(31, 0))
         }
         is(memDouble) { result := result_data }
         is(memByteU) {
           mask := Fill(8, 1.U(1.W)) << offset
-          realdata := (result_data & mask) >> offset
-          result := Cat(Fill(56, 0.U), realdata(7, 0))
+          real_data := (result_data & mask) >> offset
+          result := Cat(Fill(56, 0.U), real_data(7, 0))
         }
         is(memHalfU) {
           mask := Fill(16, 1.U(1.W)) << offset
-          realdata := (result_data & mask) >> offset
-          result := Cat(Fill(48, 0.U), realdata(15, 0))
+          real_data := (result_data & mask) >> offset
+          result := Cat(Fill(48, 0.U), real_data(15, 0))
         }
         is(memWordU) {
           mask := Fill(32, 1.U(1.W)) << offset
-          realdata := (result_data & mask) >> offset
-          result := Cat(Fill(32, 0.U), realdata(31, 0))
+          real_data := (result_data & mask) >> offset
+          result := Cat(Fill(32, 0.U), real_data(31, 0))
         }
       }
-      val writeData = VecInit(Seq.fill(nWays)(target_data))
-      dataArray.write(s2_index, writeData, access_vec.asBools)
-      val new_meta = Wire(Vec(nWays, new MetaData))
-      new_meta := policy.update_meta(s2_meta, access_index)
-      new_meta(access_index).valid := true.B
-      new_meta(access_index).tag := s2_tag
-      metaArray.write(s2_index, new_meta)
+      for (i <- 0 until nWays) {
+        when(access_index === i.U) {
+          write_data(i) := target_data
+          dataArray(i).write(s2_index, target_data)
+        }.otherwise {
+          write_data(i) := s2_cacheline(i)
+        }
+      }
+      // dataArray.write(s2_index, write_data, access_vec.asBools)
+      write_meta := policy.update_meta(s2_meta, access_index)
+      write_meta(access_index).valid := true.B
+      write_meta(access_index).tag := s2_tag
+      // metaArray.write(s2_index, write_meta)
+      for (i <- 0 until nWays) {
+        metaArray(i).write(s2_index, write_meta(i))
+      }
       // printf(
-      //   p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, realdata=${Hexadecimal(realdata)}\n"
+      //   p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
       // )
-      // printf(p"\ttarget_data=${target_data}\n")
-      // printf(p"\tnew_meta=${new_meta}\n")
+      // printf(p"\twrite_data=${write_data}\n")
+      // printf(p"\twrite_meta=${write_meta}\n")
     }
   }
 
@@ -199,12 +208,22 @@ class ICacheSync(implicit val cacheConfig: CacheConfig)
       new_meta(i).meta := DontCare
       new_meta(i).tag := DontCare
     }
-    metaArray.write(flush_counter.value, new_meta)
+    // metaArray.write(flush_counter.value, new_meta)
+    for (i <- 0 until nWays) {
+      metaArray(i).write(s2_index, write_meta(i))
+    }
     flush_counter.inc()
   }
 
   // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  // printf("stall=%d, need_forward=%d, state=%d, hit=%d, result=%x\n", stall, need_forward, state, hit, result)
+  // printf(
+  //   "stall=%d, need_forward=%d, state=%d, hit=%d, result=%x\n",
+  //   stall,
+  //   need_forward,
+  //   state,
+  //   hit,
+  //   result
+  // )
   // printf(
   //   "flush_counter.value=%x, flush_finish=%d\n",
   //   flush_counter.value,
