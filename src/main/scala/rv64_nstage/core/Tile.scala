@@ -23,7 +23,7 @@ class Tile extends Module with phvntomParams with projectConfig {
 
   // mem path
   val icache = Module(
-    new ICache()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false))
+    new ICacheForward()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false))
   )
   val dcache = Module(new DCache()(CacheConfig(name = "dcache")))
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
