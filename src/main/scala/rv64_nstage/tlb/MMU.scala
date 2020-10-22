@@ -5,6 +5,7 @@ import chisel3.util._
 import rv64_nstage.core.phvntomParams
 import utils._
 import rv64_nstage.register.SATP
+import rv64_nstage.register.CSR
 
 // TODO This should be an Arbiter when TLB is setup
 // The privilege Mode should flow with the pipeline because
@@ -24,6 +25,9 @@ class PTWalkerIO extends Bundle with phvntomParams {
   val flush_all = Input(Bool()) // TODO flush TLB, do nothing now
   val satp_val = Input(UInt(xlen.W))
   val current_p = Input(UInt(2.W))
+  val is_mem = Input(Bool())
+  val force_s_mode = Input(Bool())
+  val sum = Input(UInt(1.W))
   // Protection
   val is_inst = Input(Bool())
   val is_load = Input(Bool())
@@ -40,7 +44,7 @@ class PTWalkerIO extends Bundle with phvntomParams {
   val cache_resp_rdata = Input(UInt(xlen.W))
 }
 
-class PTWalker extends Module with phvntomParams {
+class PTWalker(name: String) extends Module with phvntomParams {
   val io = IO(new PTWalkerIO)
 
   val s_idle = 0.U(2.W)
@@ -93,12 +97,16 @@ class PTWalker extends Module with phvntomParams {
   }
 
   def misaligned_spage(lev: UInt, last_pte: UInt): Bool = {
-    Mux(lev === 0.U, false.B, Mux(lev === 1.U, !(last_pte(18, 10).orR), !(last_pte(27, 10).orR)))
+    Mux(lev === 0.U, false.B, Mux(lev === 1.U, last_pte(18, 10).orR, last_pte(27, 10).orR))
   }
 
   def pass_pmp_pma(last_pte: UInt): Bool = {
     // TODO Currently this is done out of MMU
     true.B
+  }
+
+  def sum_is_zero_fault(sum: UInt, force_s_mode: Bool, current_p: UInt, last_pte: UInt): Bool = {
+    Mux(sum === 1.U, false.B, Mux(current_p === CSR.PRV_S || force_s_mode, last_pte(4), false.B))
   }
 
   // TODO ***CAUTION***
@@ -127,9 +135,19 @@ class PTWalker extends Module with phvntomParams {
     last_pte := final_pa
   }
 
+  if (name == "dmmu") {
+    printf("DMMU\tstate %x\t\tpf %x\t\tva %x\t\tpa %x\n", state, page_fault, io.va, io.pa)
+    printf("\tLevel %x\t\taxi_respv %x\taxi_pte %x\tstall_req %x\n", lev, axi_valid, axi_rdata, io.stall_req)
+    printf("\tpte_valid %x\tis_final %x\tchk_prt_pass %x\t\t\tnot_misa %x\t\tsum_pass %x\t\t last_pte %x\n", is_pte_valid(axi_rdata),
+      is_final_pte(axi_rdata), pass_protection_check(last_pte), !misaligned_spage(lev, last_pte),
+      !sum_is_zero_fault(io.sum, io.force_s_mode, io.current_p, last_pte), last_pte)
+    printf("\n")
+  }
+
   // Combinational Logic
   when(state === s_idle) {
-    when(!io.valid || satp_mode === SATP.Bare) {
+    when(!io.valid || satp_mode === SATP.Bare || (io.current_p === CSR.PRV_M &&
+      (!io.is_mem || !io.force_s_mode))) {
       next_state := s_idle
       page_fault := false.B
     }.otherwise {
@@ -147,7 +165,7 @@ class PTWalker extends Module with phvntomParams {
         when(is_final_pte(axi_rdata)) {
           page_fault := false.B
           next_state := s_check
-        }.elsewhen(lev =/= 0.U) {
+        }.elsewhen(lev === 0.U) {
           page_fault := true.B
           next_state := s_idle
         }.otherwise {
@@ -164,7 +182,7 @@ class PTWalker extends Module with phvntomParams {
     }
   }.elsewhen(state === s_check) {
     when(pass_protection_check(last_pte)) {
-      when(misaligned_spage(lev, last_pte) || !pass_pmp_pma(last_pte)) {
+      when(misaligned_spage(lev, last_pte) || !pass_pmp_pma(last_pte) || sum_is_zero_fault(io.sum, io.force_s_mode, io.current_p, last_pte)) {
         page_fault := true.B
         next_state := s_idle
       }.otherwise {
@@ -183,7 +201,8 @@ class PTWalker extends Module with phvntomParams {
   io.pf := page_fault
   io.af := false.B
   io.stall_req := next_state =/= s_idle
-  io.pa := Mux(state === s_idle && (!io.valid || satp_mode === SATP.Bare), io.va, last_pte)
+  io.pa := Mux((state === s_idle && (!io.valid || satp_mode === SATP.Bare || io.current_p === CSR.PRV_M) ||
+    io.pf), io.va, last_pte)
 
   io.cache_req_valid := valid_access
   io.cache_req_addr := pte_addr

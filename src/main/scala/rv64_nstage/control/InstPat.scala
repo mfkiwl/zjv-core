@@ -75,6 +75,7 @@ object ISA extends phvntomParams {
   def CSRRCI        = BitPat("b?????????????????111?????1110011")
 
   // RV32/64 Privilage
+  def WFI           = BitPat("b00010000010100000000000001110011")
   def MRET          = BitPat("b00110000001000000000000001110011")
   def SRET          = BitPat("b00010000001000000000000001110011")
   def URET          = BitPat("b00000000001000000000000001110011")

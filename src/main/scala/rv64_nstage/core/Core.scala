@@ -14,7 +14,7 @@ trait phvntomParams {
   val diffTest      = true
   val pipeTrace     = false
   val rtThread      = true
-  val only_M        = true
+  val only_M        = false
   val validVABits   = 39
   val hasL2Cache    = true
   val bpuEntryBits  = 8

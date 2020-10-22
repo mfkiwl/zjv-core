@@ -2,7 +2,7 @@
 
 sim_t* dtengine_t::sim_init(std::string elfpath) {
     const char* isa = "RV64IMA";
-    const char* priv = "M";
+    const char* priv = "MSU";
     const char* varch = "vlen:128,elen:64,slen:128";
     size_t nprocs = 1;
     bool halted = false;
@@ -65,6 +65,11 @@ void dtengine_t::sim_reset(uint cycle) {
 
 void dtengine_t::sim_step(uint step) {
     spike->difftest_continue(1);
+    sim_get_state();
+}
+
+void dtengine_t::sim_checkINT() {
+    spike->difftest_checkINT();
     sim_get_state();
 }
 
@@ -162,8 +167,28 @@ unsigned long dtengine_t::emu_get_inst() {
     return emu_state.inst;
 }
 
+unsigned long dtengine_t::emu_get_mstatus() {
+    return zjv->io_difftest_mstatusr;
+}
+
+unsigned long dtengine_t::emu_get_priv() {
+    return zjv->io_difftest_privilege;
+}
+
 unsigned long dtengine_t::sim_get_pc() {
     return sim_state.pc;
+}
+
+unsigned long dtengine_t::sim_get_mstatus() {
+    return sim_state.mstatus;
+}
+
+unsigned long dtengine_t::sim_get_satp() {
+    return sim_state.satp;
+}
+
+unsigned long dtengine_t::sim_get_priv() {
+    return sim_state.privilege;
 }
 
 unsigned long dtengine_t::emu_get_int() {
@@ -172,10 +197,6 @@ unsigned long dtengine_t::emu_get_int() {
 
 void dtengine_t::sim_sync_cycle() {
     spike->sync_cycle();
-}
-
-void dtengine_t::sim_set_mip() {
-    spike->set_mip();
 }
 
 bool dtengine_t::is_finish() {

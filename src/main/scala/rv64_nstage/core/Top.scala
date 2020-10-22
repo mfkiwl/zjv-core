@@ -16,6 +16,8 @@ class DiffTestIO extends Bundle with phvntomParams {
   val tick = Output(Bool())
   val int = Output(Bool())
   val mcycler = Output(UInt(xlen.W))
+  val mstatusr = Output(UInt(xlen.W))
+  val privilege = Output(UInt(2.W))
 }
 
 class TopIO extends Bundle with phvntomParams {
@@ -38,6 +40,8 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.csr_cmd, "difftestCSRCmd")
   BoringUtils.addSink(difftest.int, "difftestInt")
   BoringUtils.addSink(difftest.mcycler, "difftestmcycler")
+  BoringUtils.addSink(difftest.mstatusr, "difftestmstatusr")
+  BoringUtils.addSink(difftest.privilege, "difftestprivilege")
 
   val poweroff = WireInit(0.U(xlen.W))
   BoringUtils.addSink(poweroff, "poweroff")
@@ -46,8 +50,6 @@ class Top extends Module with phvntomParams {
   val msip = WireInit(false.B)
   BoringUtils.addSink(mtip, "mtip")
   BoringUtils.addSink(msip, "msip")
-
-  
 
   io.difftest := difftest
   io.poweroff := poweroff
