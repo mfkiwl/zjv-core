@@ -463,9 +463,9 @@ class DataPath extends Module with phvntomParams {
   error_ret_flush := csr.io.ret
   write_satp_flush := csr.io.write_satp
   i_fence_flush := (reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushI ||
-    reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushAll)
+    reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushAll) && !expt_int_flush
   s_fence_flush := (reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushAll ||
-    reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushTLB)
+    reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushTLB) && !expt_int_flush
 
   // TODO af is ONLY for Difftest
   // REG MEM1 MEM2

@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.util._
 import rv64_nstage.control._
 import rv64_nstage.core._
+import rv64_nstage.control.ISA._
 
 import chisel3.util.experimental.BoringUtils
 
@@ -261,6 +262,8 @@ class CSRFileIO extends Bundle with phvntomParams {
   val is_ecall = Input(Bool())
   val is_bpoint = Input(Bool())
   val bad_addr = Input(UInt(xlen.W))
+  val is_wfi = Input(Bool())
+  val is_sfence = Input(Bool())
   // Exception Return
   val is_mret = Input(Bool())
   val is_sret = Input(Bool())
@@ -431,6 +434,9 @@ class CSRFile extends Module with phvntomParams {
   val expt_judger = Module(new ExceptionJudger)
   val csr_not_exists = WireInit(false.B)
   val bad_csr_access = WireInit(false.B)
+  val tw_wfi_illegal = mstatusr_tw && io.is_wfi
+  val tvm_sfence_illegal = mstatusr_tvm && (io.is_sfence || (io.which_reg === CSR.satp && (io.cen || io.wen || io.sen)))
+  val tsr_sret_illegal = mstatusr_tsr && io.is_sret
   val bad_csr_m = current_p < CSR.PRV_M
   val bad_csr_s = current_p < CSR.PRV_S
   val expt_vec = Wire(Vec(16, Bool()))
@@ -439,7 +445,8 @@ class CSRFile extends Module with phvntomParams {
   expt_vec(Exception.EcallM) := current_p === CSR.PRV_M && io.is_ecall
   expt_vec(Exception.EcallS) := current_p === CSR.PRV_S && io.is_ecall
   expt_vec(Exception.EcallU) := current_p === CSR.PRV_U && io.is_ecall
-  expt_vec(Exception.IllegalInst) := (io.illegal_inst || ((csr_not_exists || bad_csr_access) &&
+  expt_vec(Exception.IllegalInst) := (io.illegal_inst || tw_wfi_illegal || tvm_sfence_illegal || tsr_sret_illegal ||
+    ((csr_not_exists || bad_csr_access) &&
     (io.wen || io.cen || io.sen)))
   expt_vec(Exception.InstAccessFault) := io.inst_af
   expt_vec(Exception.InstAddrMisaligned) := io.inst_ma
@@ -675,7 +682,7 @@ class CSRFile extends Module with phvntomParams {
     bad_csr_access := bad_csr_m
   }
 
-//  printf("mip1 %x, mie1 %x, globalen1 %x\n", mipr_ssip, mier_ssie, int_enable_vec(1))
+//  printf("mstatusr_tvm %x, privilege %x\n", mstatusr_tvm, current_p)
 //  printf("IN CSR sum %x, mprv %x, mpp %x, mxr %x, privlege %x\n", mstatusr_sum, mstatusr_mprv, mstatusr_mpp, mstatusr_mxr, current_p)
 
   // Write CSR File
@@ -1094,6 +1101,8 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.is_store := io.is_store
   csr_regfile.io.is_ecall := io.inst === "b00000000000000000000000001110011".U
   csr_regfile.io.is_bpoint := io.inst === "b00000000000100000000000001110011".U
+  csr_regfile.io.is_wfi := io.inst === "b00010000010100000000000001110011".U
+  csr_regfile.io.is_sfence := io.inst(31, 25) === "b0001001".U && io.inst(14, 0) === "b000000001110011".U
   csr_regfile.io.int_pend.msip := io.soft_int
   csr_regfile.io.int_pend.meip := io.external_int
   csr_regfile.io.int_pend.mtip := io.tim_int

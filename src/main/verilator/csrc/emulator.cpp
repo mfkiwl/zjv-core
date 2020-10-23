@@ -135,7 +135,7 @@ int main(int argc, char** argv)
 //            fprintf(stderr, "\n");
 //         fprintf(stderr, "\n");
 
-//      fprintf(stderr, "sim satp: %016lX, priv: %016lX\n",  engine.sim_get_satp(), engine.sim_get_priv());
+//      fprintf(stderr, "sim priv: %016lX, emu priv: %016lX\n",  engine.sim_get_priv(), engine.emu_get_priv());
 
       if(((engine.emu_get_pc() != engine.sim_get_pc()) ||
 //          (engine.emu_get_mstatus() != engine.sim_get_mstatus()) ||
