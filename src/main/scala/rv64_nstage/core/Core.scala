@@ -20,14 +20,16 @@ trait phvntomParams {
   val bpuEntryBits  = 8
   val historyBits   = 4 // TODO >= 4
   val predictorBits = 2 // TODO Do NOT Modify
+  val cachiLine     = 4
+  val cachiBlock    = 64
 }
 
 
 class CoreIO extends Bundle with phvntomParams {
   val imem = Flipped(new MemIO)
   val dmem = Flipped(new MemIO)
-  val immu = Flipped(new MemIO)
-  val dmmu = Flipped(new MemIO)
+  val immu = Flipped(new MemIO(cachiLine * cachiBlock))
+  val dmmu = Flipped(new MemIO(cachiLine * cachiBlock))
   val int = new InterruptIO
 }
 

@@ -11,13 +11,14 @@ import rv64_nstage.fu._
 import rv64_nstage.register._
 import rv64_nstage.tlb._
 import utils._
+import mem._
 
 class DataPathIO extends Bundle with phvntomParams {
   val ctrl = Flipped(new ControlPathIO)
   val imem = Flipped(new MemIO)
   val dmem = Flipped(new MemIO)
-  val immu = Flipped(new MemIO)
-  val dmmu = Flipped(new MemIO)
+  val immu = Flipped(new MemIO(cachiLine * cachiBlock))
+  val dmmu = Flipped(new MemIO(cachiLine * cachiBlock))
   val int = Flipped(Flipped(new InterruptIO))
 }
 
@@ -171,6 +172,7 @@ class DataPath extends Module with phvntomParams {
   io.immu.req.bits.memtype := memDouble
   immu.io.cache_resp_rdata := io.immu.resp.bits.data
   immu.io.cache_resp_valid := io.immu.resp.valid
+  immu.io.cache_req_ready := io.immu.req.ready
 
   stall_req_if1_atomic := immu.io.stall_req
 
@@ -397,6 +399,7 @@ class DataPath extends Module with phvntomParams {
   io.dmmu.req.bits.memtype := memDouble
   dmmu.io.cache_resp_rdata := io.dmmu.resp.bits.data
   dmmu.io.cache_resp_valid := io.dmmu.resp.valid
+  dmmu.io.cache_req_ready := io.dmmu.req.ready
 
   stall_req_dtlb_atomic := dmmu.io.stall_req
 
@@ -594,7 +597,7 @@ class DataPath extends Module with phvntomParams {
       printf("Tar\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", bpu.io.pc_in_btb(15, 0), reg_if1_if2.io.bpio.target_out(15, 0), reg_if2_id.io.bpio.target_out(15, 0), reg_id_exe.io.bpio.target_out(15, 0), 0.U, 0.U, 0.U, 0.U)
       printf("\n")
     }
-//       printf("alu %x, mem %x, csr %x, ioin %x\n", reg_mem2_wb.io.alu_val_out, reg_mem2_wb.io.mem_val_out, reg_mem2_wb.io.csr_val_out, scheduler.io.rd_from_wb)
+
     //    printf("------> compare %x, succeed %x, push %x\n", reservation.io.compare, reservation.io.succeed, reservation.io.push)
 
     //    printf("-------> exit flush %x, br_flush %x, pco %x, if_pco %x, \n", expt_int_flush, br_jump_flush, pc_gen.io.pc_out, reg_if2_id.io.pc_out)

@@ -23,9 +23,9 @@ class Tile extends Module with phvntomParams with projectConfig {
 
   // mem path
   val icache = Module(
-    new ICache()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false))
+    new ICacheForward()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false))
   )
-  val dcache = Module(new DCache()(CacheConfig(name = "dcache")))
+  val dcache = Module(new DCacheWriteThrough()(CacheConfig(name = "dcache")))
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
 
   core.io.imem <> icache.io.in
@@ -55,8 +55,8 @@ class Tile extends Module with phvntomParams with projectConfig {
   } else {
     val icacheBus = Module(new DUncache(icache.lineBits, "inst uncache"))
     val dcacheBus = Module(new DUncache(dcache.lineBits, "mem uncache"))
-    val immuBus = Module(new DUncache)
-    val dmmuBus = Module(new DUncache)
+    val immuBus = Module(new DUncache(icache.lineBits))
+    val dmmuBus = Module(new DUncache(dcache.lineBits))
     val mem_source = List(icacheBus, dcacheBus, immuBus, dmmuBus)
     val memxbar = Module(new CrossbarNto1(mem_source.length))
     icache.io.mem <> icacheBus.io.in

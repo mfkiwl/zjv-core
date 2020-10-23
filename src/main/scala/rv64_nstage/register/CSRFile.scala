@@ -105,19 +105,19 @@ object SATP {
 
 object Exception {
   val InstAddrMisaligned = 0x0.U(4.W)
-  val InstAccessFault = 0x1.U(4.W) // TODO
-  val IllegalInst = 0x2.U(4.W) // TODO
-  val Breakpoint = 0x3.U(4.W) // TODO
+  val InstAccessFault = 0x1.U(4.W)
+  val IllegalInst = 0x2.U(4.W)
+  val Breakpoint = 0x3.U(4.W)
   val LoadAddrMisaligned = 0x4.U(4.W)
-  val LoadAccessFault = 0x5.U(4.W) // TODO
+  val LoadAccessFault = 0x5.U(4.W)
   val StoreAddrMisaligned = 0x6.U(4.W)
-  val StoreAccessFault = 0x7.U(4.W) // TODO
-  val EcallU = 0x8.U(4.W) // TODO
-  val EcallS = 0x9.U(4.W) // TODO
-  val EcallM = 0xb.U(4.W) // TODO
-  val InstPageFault = 0xc.U(4.W) // TODO
-  val LoadPageFault = 0xd.U(4.W) // TODO
-  val StorePageFault = 0xf.U(4.W) // TODO
+  val StoreAccessFault = 0x7.U(4.W)
+  val EcallU = 0x8.U(4.W)
+  val EcallS = 0x9.U(4.W)
+  val EcallM = 0xb.U(4.W)
+  val InstPageFault = 0xc.U(4.W)
+  val LoadPageFault = 0xd.U(4.W)
+  val StorePageFault = 0xf.U(4.W)
   val exceptionBits = InstAddrMisaligned.getWidth
 }
 
