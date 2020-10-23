@@ -8,74 +8,15 @@ import bus._
 import device._
 import utils._
 
-class L2CacheXbar(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
-    extends Module
-    with CacheParameters {
-  val io = IO(new Bundle {
-    val in = Vec(n_sources, new MemIO(blockBits))
-    val out = Flipped(new MemIO(blockBits))
-  })
-
-  val s_idle :: s_readResp :: s_writeResp :: Nil = Enum(3)
-  val state = RegInit(s_idle)
-
-  val inputArb = Module(new Arbiter(new MemReq(blockBits), n_sources))
-  (inputArb.io.in zip io.in.map(_.req)).map { case (arb, in) => arb <> in }
-  val thisReq = inputArb.io.out
-  val inflightSrc = Reg(UInt(log2Up(n_sources).W))
-
-  io.out.req.bits := thisReq.bits
-  // bind correct valid and ready signals
-  io.out.stall := false.B
-  io.out.flush := false.B
-  io.out.req.valid := thisReq.valid && (state === s_idle)
-  thisReq.ready := io.out.req.ready && (state === s_idle)
-
-  io.in.map(_.resp.bits := DontCare)
-  io.in.map(_.resp.valid := false.B)
-  io.in.map(_.flush_ready := true.B)
-  (io.in(inflightSrc).resp, io.out.resp) match {
-    case (l, r) => {
-      l.valid := r.valid
-      r.ready := l.ready
-      l.bits := r.bits
-    }
-  }
-
-  switch(state) {
-    is(s_idle) {
-      when(thisReq.fire()) {
-        inflightSrc := inputArb.io.chosen
-        when(thisReq.valid) {
-          when(thisReq.bits.wen) { state := s_writeResp }.otherwise {
-            state := s_readResp
-          }
-        }
-      }
-    }
-    is(s_readResp) { when(io.out.resp.fire()) { state := s_idle } }
-    is(s_writeResp) { when(io.out.resp.fire()) { state := s_idle } }
-  }
-
-  // printf(p"[${GTimer()}]: L2CacheXbar Debug Start-----------\n")
-  // printf(p"state=${state},inflightSrc=${inflightSrc}\n")
-  // for (i <- 0 until n_sources) {
-  //   printf(p"----------l2cache io.in(${i})----------\n")
-  //   printf(p"${io.in(i)}\n")
-  // }
-  // printf(p"----------l2cache io.out----------\n")
-  // printf(p"${io.out}\n")
-  // printf("--------------------------------\n")
-}
-
-class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
-    extends Module
+class L2CacheSplit(val n_sources: Int = 1)(implicit
+    val cacheConfig: CacheConfig
+) extends Module
     with CacheParameters {
   val io = IO(new L2CacheIO(n_sources))
 
   // Module Used
-  val metaArray = Mem(nSets, Vec(nWays, new MetaData))
-  val dataArray = Mem(nSets, Vec(nWays, new CacheLineData))
+  val metaArray = List.fill(nWays)(Mem(nSets, new MetaData))
+  val dataArray = List.fill(nWays)(Mem(nSets, new CacheLineData))
   val arbiter = Module(new L2CacheXbar(n_sources))
   for (i <- 0 until n_sources) {
     io.in(i) <> arbiter.io.in(i)
@@ -103,8 +44,10 @@ class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
   }
 
   s1_index := s1_addr(indexLength + offsetLength - 1, offsetLength)
-  s1_meta := metaArray.read(s1_index)
-  s1_cacheline := dataArray.read(s1_index)
+  for (i <- 0 until nWays) {
+    s1_meta(i) := metaArray(i).read(s1_index)
+    s1_cacheline(i) := dataArray(i).read(s1_index)
+  }
   s1_tag := s1_addr(xlen - 1, xlen - tagLength)
   s1_lineoffset := s1_addr(offsetLength - 1, offsetLength - lineLength)
   s1_wordoffset := s1_addr(offsetLength - lineLength - 1, 0)
@@ -176,22 +119,26 @@ class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
         for (i <- 0 until nWays) {
           when(access_index === i.U) {
             write_data(i) := new_data
+            dataArray(i).write(s1_index, new_data)
           }.otherwise {
             write_data(i) := s1_cacheline(i)
           }
         }
-        dataArray.write(s1_index, write_data, access_vec.asBools)
-        val new_meta = Wire(Vec(nWays, new MetaData))
-        new_meta := policy.update_meta(s1_meta, access_index)
-        new_meta(access_index).valid := true.B
-        new_meta(access_index).dirty := true.B
-        new_meta(access_index).tag := s1_tag
-        metaArray.write(s1_index, new_meta)
+        // dataArray.write(s1_index, write_data, access_vec.asBools)
+        val write_meta = Wire(Vec(nWays, new MetaData))
+        write_meta := policy.update_meta(s1_meta, access_index)
+        write_meta(access_index).valid := true.B
+        write_meta(access_index).dirty := true.B
+        write_meta(access_index).tag := s1_tag
+        // metaArray.write(s1_index, new_meta)
+        for (i <- 0 until nWays) {
+          metaArray(i).write(s1_index, write_meta(i))
+        }
         // printf(
         //   p"l2cache write: s1_index=${s1_index}, access_index=${access_index}\n"
         // )
         // printf(p"\tnew_data=${new_data}\n")
-        // printf(p"\tnew_meta=${new_meta}\n")
+        // printf(p"\twrite_meta=${write_meta}\n")
       }.otherwise {
         val result_data = target_data.data(s1_lineoffset)
         val write_data = Wire(Vec(nWays, new CacheLineData))
@@ -201,25 +148,29 @@ class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
           for (i <- 0 until nWays) {
             when(access_index === i.U) {
               write_data(i) := target_data
+              dataArray(i).write(s1_index, target_data)
             }.otherwise {
               write_data(i) := s1_cacheline(i)
             }
           }
-          dataArray.write(s1_index, write_data, access_vec.asBools)
+          // dataArray.write(s1_index, write_data, access_vec.asBools)
         }
-        val new_meta = Wire(Vec(nWays, new MetaData))
-        new_meta := policy.update_meta(s1_meta, access_index)
-        new_meta(access_index).valid := true.B
+        val write_meta = Wire(Vec(nWays, new MetaData))
+        write_meta := policy.update_meta(s1_meta, access_index)
+        write_meta(access_index).valid := true.B
         when(!hit) {
-          new_meta(access_index).dirty := false.B
+          write_meta(access_index).dirty := false.B
         }
-        new_meta(access_index).tag := s1_tag
-        metaArray.write(s1_index, new_meta)
+        write_meta(access_index).tag := s1_tag
+        // metaArray.write(s1_index, new_meta)
+        for (i <- 0 until nWays) {
+          metaArray(i).write(s1_index, write_meta(i))
+        }
         // printf(
         //   p"l2cache read update: s1_index=${s1_index}, access_index=${access_index}\n"
         // )
         // printf(p"\ttarget_data=${target_data}\n")
-        // printf(p"\tnew_meta=${new_meta}\n")
+        // printf(p"\twrite_meta=${write_meta}\n")
       }
     }
   }
