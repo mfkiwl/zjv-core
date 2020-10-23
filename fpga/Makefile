@@ -1,11 +1,11 @@
 include Makefile.check
 
-default: generate_bitstream
+default: generate_project
 
 # STANDALONE ?= false
 
 # vivado project name
-PRJ ?= myproject
+PRJ ?= phvntom
 PRJ_FULL = $(PRJ)-$(BOARD)
 VIVADO_FLAG = -nolog -nojournal -notrace
 
@@ -14,12 +14,12 @@ VIVADO_FLAG = -nolog -nojournal -notrace
 #--------------------------------------------------------------------
 
 PRJ_ROOT = board/$(BOARD)/build/$(PRJ_FULL)
-# XPR_FILE = $(PRJ_ROOT)/$(PRJ_FULL).xpr
-# $(XPR_FILE):
-# 	make -C .. 
-# 	vivado $(VIVADO_FLAG) -mode batch -source board/$(BOARD)/mk.tcl -tclargs $(PRJ_FULL)
+XPR_FILE = $(PRJ_ROOT)/$(PRJ_FULL).xpr
+$(XPR_FILE):
+	make -C .. 
+	vivado $(VIVADO_FLAG) -mode batch -source generate_prj.tcl -tclargs $(PRJ_ROOT) $(BOARD)
 
-# generate_project: $(XPR_FILE)
+generate_project: $(XPR_FILE)
 
 generate_bitstream:
 	vivado $(VIVADO_FLAG) -mode batch -source generate_bit.tcl -tclargs $(PRJ_ROOT) $(BOARD)
@@ -27,7 +27,10 @@ generate_bitstream:
 # bootgen:
 # 	cd boot && hsi $(VIVADO_FLAG) -source mk.tcl -tclargs $(PRJ_FULL)
 
-# vivado: $(XPR_FILE)
-# 	vivado $(VIVADO_FLAG) $(XPR_FILE) &
+vivado: $(XPR_FILE)
+	vivado $(VIVADO_FLAG) $(XPR_FILE) &
 
-.PHONY: default generate_bitstream
+# clean:
+# 	rm -rf $(PRJ_ROOT)
+
+.PHONY: default generate_bitstream generate_project

@@ -25,7 +25,7 @@ class Tile extends Module with phvntomParams with projectConfig {
   val icache = Module(
     new ICacheForwardSplit()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false))
   )
-  val dcache = Module(new DCacheWriteThrough()(CacheConfig(name = "dcache")))
+  val dcache = Module(new DCacheWriteThroughSplit()(CacheConfig(name = "dcache")))
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
 
   core.io.imem <> icache.io.in
@@ -39,7 +39,7 @@ class Tile extends Module with phvntomParams with projectConfig {
         CacheConfig(
           name = "l2cache",
           blockBits = dcache.lineBits,
-          totalSize = 256
+          totalSize = 128
         )
       )
     )

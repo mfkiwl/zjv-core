@@ -74,8 +74,8 @@ class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
   val io = IO(new L2CacheIO(n_sources))
 
   // Module Used
-  val metaArray = Mem(nSets, Vec(nWays, new MetaData))
-  val dataArray = Mem(nSets, Vec(nWays, new CacheLineData))
+  val metaArray = SyncReadMem(nSets, Vec(nWays, new MetaData))
+  val dataArray = SyncReadMem(nSets, Vec(nWays, new CacheLineData))
   val arbiter = Module(new L2CacheXbar(n_sources))
   for (i <- 0 until n_sources) {
     io.in(i) <> arbiter.io.in(i)

@@ -14,8 +14,8 @@ class DCacheWriteThroughSplit(implicit val cacheConfig: CacheConfig)
   val io = IO(new CacheIO)
 
   // Module Used
-  val metaArray = List.fill(nWays)(Mem(nSets, new MetaData))
-  val dataArray = List.fill(nWays)(Mem(nSets, new CacheLineData))
+  val metaArray = List.fill(nWays)(SyncReadMem(nSets, new MetaData))
+  val dataArray = List.fill(nWays)(SyncReadMem(nSets, new CacheLineData))
   val stall = Wire(Bool())
   val need_forward = Wire(Bool())
   val write_meta = Wire(Vec(nWays, new MetaData))
