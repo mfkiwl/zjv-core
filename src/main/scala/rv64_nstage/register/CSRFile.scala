@@ -335,6 +335,19 @@ class CSRFile extends Module with phvntomParams {
   val satpr_mode = RegInit(UInt(4.W), SATP.Bare)
   val satpr_asid = RegInit(UInt(16.W), 0.U)
   val satpr_ppn = RegInit(UInt(44.W), 0.U)
+  // MIDELEG
+  val midelegr_ssip = RegInit(false.B)
+  val midelegr_stip = RegInit(false.B)
+  val midelegr_seip = RegInit(false.B)
+  // MEDELEG
+  // inst_addr_ma + bp + ucall + scall + all_pfs
+  val medelegr_inst_ma = RegInit(false.B)
+  val medelegr_bp = RegInit(false.B)
+  val medelegr_ecall_u = RegInit(false.B)
+  val medelegr_ecall_s = RegInit(false.B)
+  val medelegr_ipf = RegInit(false.B)
+  val medelegr_lpf = RegInit(false.B)
+  val medelegr_spf = RegInit(false.B)
 
   // [--------- Machine Mode Registers in CSR --------]
   val mepcr = RegInit(0.U(xlen.W))
@@ -355,8 +368,12 @@ class CSRFile extends Module with phvntomParams {
     mstatusr_spp, mstatusr_mpie, mstatusr_ube, mstatusr_spie, false.B,
     mstatusr_mie, false.B, mstatusr_sie, false.B
   )
-  val medelegr = RegInit(0.U(xlen.W))
-  val midelegr = RegInit(0.U(xlen.W))
+  val medelegr = Cat(Fill(64 - 16 + 1, 0.U), medelegr_spf, Fill(1, 0.U), medelegr_lpf, medelegr_ipf,
+    Fill(2, 0.U), medelegr_ecall_s, medelegr_ecall_u, Fill(4, 0.U), medelegr_bp, Fill(2, 0.U), medelegr_inst_ma
+  )
+  val midelegr = Cat(Fill(63 - 10 + 1, 0.U), midelegr_seip, Fill(3, 0.U), midelegr_stip,
+    Fill(3, 0.U), midelegr_ssip, Fill(1, 0.U)
+  )
   val misar = Wire(UInt(xlen.W))
   if(only_M) {
     misar := "h8000000000001101".U
@@ -791,19 +808,43 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.mideleg) {
         when(io.wen) {
-          midelegr := io.wdata
+          midelegr_seip := io.wdata(9)
+          midelegr_stip := io.wdata(5)
+          midelegr_ssip := io.wdata(1)
         }.elsewhen(io.sen) {
-          midelegr := midelegr | io.wdata
+          midelegr_seip := midelegr_seip | io.wdata(9)
+          midelegr_stip := midelegr_stip | io.wdata(5)
+          midelegr_ssip := midelegr_ssip | io.wdata(1)
         }.elsewhen(io.cen) {
-          midelegr := midelegr & (~io.wdata)
+          midelegr_seip := midelegr_seip & (~io.wdata(9))
+          midelegr_stip := midelegr_stip & (~io.wdata(5))
+          midelegr_ssip := midelegr_ssip & (~io.wdata(1))
         }
       }.elsewhen(io.which_reg === CSR.medeleg) {
         when(io.wen) {
-          medelegr := io.wdata
+          medelegr_spf := io.wdata(15)
+          medelegr_lpf := io.wdata(13)
+          medelegr_ipf := io.wdata(12)
+          medelegr_ecall_s := io.wdata(9)
+          medelegr_ecall_u := io.wdata(8)
+          medelegr_bp := io.wdata(3)
+          medelegr_inst_ma := io.wdata(0)
         }.elsewhen(io.sen) {
-          medelegr := medelegr | io.wdata
+          medelegr_spf := medelegr_spf | io.wdata(15)
+          medelegr_lpf := medelegr_lpf | io.wdata(13)
+          medelegr_ipf := medelegr_ipf | io.wdata(12)
+          medelegr_ecall_s := medelegr_ecall_s | io.wdata(9)
+          medelegr_ecall_u := medelegr_ecall_u | io.wdata(8)
+          medelegr_bp := medelegr_bp | io.wdata(3)
+          medelegr_inst_ma := medelegr_inst_ma | io.wdata(0)
         }.elsewhen(io.cen) {
-          medelegr := medelegr & (~io.wdata)
+          medelegr_spf := medelegr_spf & (~io.wdata(15))
+          medelegr_lpf := medelegr_lpf & (~io.wdata(13))
+          medelegr_ipf := medelegr_ipf & (~io.wdata(12))
+          medelegr_ecall_s := medelegr_ecall_s & (~io.wdata(9))
+          medelegr_ecall_u := medelegr_ecall_u & (~io.wdata(8))
+          medelegr_bp := medelegr_bp & (~io.wdata(3))
+          medelegr_inst_ma := medelegr_inst_ma & (~io.wdata(0))
         }
       }.elsewhen(io.which_reg === CSR.mie || io.which_reg === CSR.sie) {
         when(io.wen) {
@@ -851,7 +892,6 @@ class CSRFile extends Module with phvntomParams {
       }.elsewhen(io.which_reg === CSR.mstatus || io.which_reg === CSR.sstatus) {
         when(io.wen) {
           when(io.which_reg === CSR.mstatus) {
-            mstatusr_sd := io.wdata(xlen - 1)
             mstatusr_mbe := io.wdata(37)
             mstatusr_sbe := io.wdata(36)
             mstatusr_tsr := io.wdata(22)
@@ -864,16 +904,17 @@ class CSRFile extends Module with phvntomParams {
             mstatusr_mpie := io.wdata(7)
             mstatusr_mie := io.wdata(3)
           }
+          mstatusr_sd := io.wdata(16, 15).orR || io.wdata(14, 13).orR
           mstatusr_mxr := io.wdata(19)
           mstatusr_sum := io.wdata(18)
           mstatusr_xs := io.wdata(16, 15)
+          mstatusr_fs := io.wdata(14, 13)
           mstatusr_spp := io.wdata(8)
           mstatusr_ube := io.wdata(6)
           mstatusr_spie := io.wdata(5)
           mstatusr_sie := io.wdata(1)
         }.elsewhen(io.sen) {
           when(io.which_reg === CSR.mstatus) {
-            mstatusr_sd := mstatusr(xlen - 1) | io.wdata(xlen - 1)
             mstatusr_mbe := mstatusr(37) | io.wdata(37)
             mstatusr_sbe := mstatusr(36) | io.wdata(36)
             mstatusr_tsr := mstatusr(22) | io.wdata(22)
@@ -886,16 +927,17 @@ class CSRFile extends Module with phvntomParams {
             mstatusr_mpie := mstatusr(7) | io.wdata(7)
             mstatusr_mie := mstatusr(3) | io.wdata(3)
           }
+          mstatusr_sd := (mstatusr(16, 15) | io.wdata(16, 15)).orR || (mstatusr(14, 13) | io.wdata(14, 13)).orR
           mstatusr_mxr := mstatusr(19) | io.wdata(19)
           mstatusr_sum := mstatusr(18) | io.wdata(18)
           mstatusr_xs := mstatusr(16, 15) | io.wdata(16, 15)
+          mstatusr_fs := mstatusr(14, 13) | io.wdata(14, 13)
           mstatusr_spp := mstatusr(8) | io.wdata(8)
           mstatusr_ube := mstatusr(6) | io.wdata(6)
           mstatusr_spie := mstatusr(5) | io.wdata(5)
           mstatusr_sie := mstatusr(1) | io.wdata(1)
         }.elsewhen(io.cen) {
           when(io.which_reg === CSR.mstatus) {
-            mstatusr_sd := mstatusr(xlen - 1) & ~io.wdata(xlen - 1)
             mstatusr_mbe := mstatusr(37) & ~io.wdata(37)
             mstatusr_sbe := mstatusr(36) & ~io.wdata(36)
             mstatusr_tsr := mstatusr(22) & ~io.wdata(22)
@@ -908,9 +950,11 @@ class CSRFile extends Module with phvntomParams {
             mstatusr_mpie := mstatusr(7) & ~io.wdata(7)
             mstatusr_mie := mstatusr(3) & ~io.wdata(3)
           }
+          mstatusr_sd := (mstatusr(16, 15) & ~io.wdata(16, 15)).orR || (mstatusr(14, 13) & ~io.wdata(14, 13)).orR
           mstatusr_mxr := mstatusr(19) & ~io.wdata(19)
           mstatusr_sum := mstatusr(18) & ~io.wdata(18)
           mstatusr_xs := mstatusr(16, 15) & ~io.wdata(16, 15)
+          mstatusr_fs := mstatusr(14, 13) & ~io.wdata(14, 13)
           mstatusr_spp := mstatusr(8) & ~io.wdata(8)
           mstatusr_ube := mstatusr(6) & ~io.wdata(6)
           mstatusr_spie := mstatusr(5) & ~io.wdata(5)
@@ -1041,6 +1085,8 @@ class CSRFile extends Module with phvntomParams {
     BoringUtils.addSource(scauser , "difftestscauser")
     BoringUtils.addSource(stvecr  , "diffteststvecr")
     BoringUtils.addSource(mtvecr , "difftestmtvecr")
+    BoringUtils.addSource(midelegr, "difftestmidelegr")
+    BoringUtils.addSource(medelegr, "difftestmedelegr")
   }
 }
 

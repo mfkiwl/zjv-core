@@ -145,9 +145,11 @@ int main(int argc, char** argv)
 //         fprintf(stderr, "\n");
 
 //      fprintf(stderr, "sim priv: %016lX, emu priv: %016lX\n",  engine.sim_get_priv(), engine.emu_get_priv());
+//      fprintf(stderr, "sim idel: %016lX, emu idel: %016lX\n",  engine.sim_get_mideleg(), engine.emu_get_mideleg());
+//      fprintf(stderr, "sim edel: %016lX, emu edel: %016lX\n",  engine.sim_get_medeleg(), engine.emu_get_medeleg());
 
       if(((engine.emu_get_pc() != engine.sim_get_pc()) ||
-//          (engine.emu_get_mstatus() != engine.sim_get_mstatus()) ||
+//          engine.sim_get_mideleg() != engine.emu_get_mideleg() ||
 //          (engine.emu_get_priv() != engine.sim_get_priv()) ||
           (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ))) {
 
@@ -155,15 +157,16 @@ int main(int argc, char** argv)
 
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
             if (engine.emu_get_pc() != engine.sim_get_pc()) {
-               fprintf(stderr, "emu [%x]: mstate %016lx mepc %016lx mtval %016lx mcause %016lx\n",
+               fprintf(stderr, "emu [%x]: mstate %016lx mepc  %016lx mtval %016lx mcause %016lx\n",
                                 engine.emu_get_priv(),
                                 engine.emu_get_mstatus(), engine.emu_get_mepc(), engine.emu_get_mtval(),
                                 engine.emu_get_mcause());
-               fprintf(stderr, "         sstate %016lx sepc %016lx stval %016lx scause %016lx\n",
+               fprintf(stderr, "         sstate %016lx sepc  %016lx stval %016lx scause %016lx\n",
                                 engine.emu_get_sstatus(), engine.emu_get_sepc(), engine.emu_get_stval(),
                                 engine.emu_get_scause());
-               fprintf(stderr, "         mtvec %016lx stvec %016lx\n",
-                                engine.emu_get_mtvec(), engine.emu_get_stvec());
+               fprintf(stderr, "         mtvec %016lx  stvec %016lx mideleg %16lx medeleg %16x\n",
+                                engine.emu_get_mtvec(), engine.emu_get_stvec(), engine.emu_get_mideleg(),
+                                engine.emu_get_medeleg());
                fprintf(stderr, "emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
             }
             else

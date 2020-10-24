@@ -171,6 +171,14 @@ unsigned long dtengine_t::emu_get_mstatus() {
     return zjv->io_difftest_mstatusr;
 }
 
+unsigned long dtengine_t::emu_get_mideleg() {
+    return zjv->io_difftest_midelegr;
+}
+
+unsigned long dtengine_t::emu_get_medeleg() {
+    return zjv->io_difftest_medelegr;
+}
+
 unsigned long dtengine_t::emu_get_priv() {
     return zjv->io_difftest_privilege;
 }
@@ -225,6 +233,14 @@ unsigned long dtengine_t::sim_get_pc() {
 //
 unsigned long dtengine_t::sim_get_priv() {
     return sim_state.priv;
+}
+
+unsigned long dtengine_t::sim_get_mideleg() {
+    return sim_state.mideleg;
+}
+
+unsigned long dtengine_t::sim_get_medeleg() {
+    return sim_state.medeleg;
 }
 
 unsigned long dtengine_t::emu_get_int() {

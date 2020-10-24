@@ -73,7 +73,11 @@ public:
     unsigned long emu_get_stvec();
     unsigned long emu_get_mtvec();
 
+    unsigned long emu_get_mideleg();
+    unsigned long emu_get_medeleg();
 
+    unsigned long sim_get_mideleg();
+    unsigned long sim_get_medeleg();
     unsigned long sim_get_pc();
     unsigned long sim_get_mstatus();
     unsigned long sim_get_priv();

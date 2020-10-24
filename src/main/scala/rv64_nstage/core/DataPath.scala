@@ -152,8 +152,7 @@ class DataPath extends Module with phvntomParams {
   // IMMU
   inst_af := !is_legal_addr(pc_gen.io.pc_out) || immu.io.af // TODO
   inst_pf := immu.io.pf
-  immu.io.keep_val := stall_if1_if2
-  immu.io.valid := !pc_gen.io.last_stall_out
+  immu.io.valid := !stall_if1_if2
   immu.io.is_mem := false.B
   immu.io.force_s_mode := false.B
   immu.io.sum := 0.U
@@ -247,7 +246,7 @@ class DataPath extends Module with phvntomParams {
   alu.io.a := Mux(reg_id_exe.io.iiio.inst_info_out.ASelect === APC, reg_id_exe.io.bsrio.pc_out, rs1)
   alu.io.b := Mux(reg_id_exe.io.iiio.inst_info_out.BSelect === BIMM, imm_ext.io.out, rs2)
 
-  multiplier.io.start := reg_id_exe.io.iiio.inst_info_out.mult && !scheduler.io.stall_req
+  multiplier.io.start := reg_id_exe.io.iiio.inst_info_out.mult && !scheduler.io.stall_req && !stall_exe_dtlb
   multiplier.io.a := rs1
   multiplier.io.b := rs2
   multiplier.io.op := reg_id_exe.io.iiio.inst_info_out.aluType
@@ -380,8 +379,7 @@ class DataPath extends Module with phvntomParams {
   // DMMU
   mem_af := dmmu.io.af || (!is_legal_addr(reg_exe_dtlb.io.aluio.alu_val_out) &&
     reg_exe_dtlb.io.iiio.inst_info_out.memType.orR) // TODO
-  dmmu.io.keep_val := stall_dtlb_mem1
-  dmmu.io.valid := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR
+  dmmu.io.valid := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR && !stall_dtlb_mem1
   dmmu.io.is_mem := true.B
   dmmu.io.force_s_mode := csr.io.force_s_mode_mem
   dmmu.io.sum := csr.io.mstatus_sum

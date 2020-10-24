@@ -21,7 +21,6 @@ import mem._
 //            |           |            |
 //        ||||||||   AXI X Bar   ||||||||||
 class PTWalkerIO extends Bundle with phvntomParams {
-  val keep_val = Input(Bool())
   val valid = Input(Bool())
   val va = Input(UInt(xlen.W))
   val flush_all = Input(Bool()) // TODO flush TLB, do nothing now
@@ -128,7 +127,9 @@ class PTWalker(name: String) extends Module with phvntomParams {
   // Sequential Logic
   state := next_state
   when(state === s_idle) {
-    last_pte := io.va
+    when(next_state =/= s_idle) {
+      last_pte := io.va
+    }
     when(next_state === s_busy) {
       pte_addr := (satp_ppn << l_page_size) + (io.va(38, 30) << l_pte_size)
       lev := level - 1.U
@@ -157,15 +158,17 @@ class PTWalker(name: String) extends Module with phvntomParams {
       //      !sum_is_zero_fault(io.sum, io.force_s_mode, io.current_p, last_pte), last_pte)
       //    printf("\n")
     } else {
-      printf("IMMU\tstate %x\t\tpf %x\t\tva %x\t\tpa %x\tnx_addr %x\n", state, page_fault, io.va, io.pa, io.cache_req_addr)
-      printf("\tLevel %x\t\taxi_respv %x\taxi_pte %x\tstall_req %x\t\treq_valid %x\n", lev, axi_valid, axi_rdata, io.stall_req, valid_access)
-      printf("\tpte_valid %x\tis_final %x\tchk_prt_pass %x\t\t\tnot_misa %x\t\tsum_pass %x\t\t last_pte %x\n", is_pte_valid(axi_rdata),
-        is_final_pte(axi_rdata), pass_protection_check(last_pte, io.is_inst, io.is_load, io.is_store), !misaligned_spage(lev, last_pte),
-        !sum_is_zero_fault(io.sum, io.force_s_mode, io.current_p, last_pte), last_pte)
-      printf("\tall_line %x\n", io.cache_resp_rdata)
-      printf("\n")
+//      printf("IMMU\tstate %x\t\tpf %x\t\tva %x\t\tpa %x\tnx_addr %x\n", state, page_fault, io.va, io.pa, io.cache_req_addr)
+//      printf("\tLevel %x\t\taxi_respv %x\taxi_pte %x\tstall_req %x\t\treq_valid %x\n", lev, axi_valid, axi_rdata, io.stall_req, valid_access)
+//      printf("\tpte_valid %x\tis_final %x\tchk_prt_pass %x\t\t\tnot_misa %x\t\tsum_pass %x\t\t last_pte %x\n", is_pte_valid(axi_rdata),
+//        is_final_pte(axi_rdata), pass_protection_check(last_pte, io.is_inst, io.is_load, io.is_store), !misaligned_spage(lev, last_pte),
+//        !sum_is_zero_fault(io.sum, io.force_s_mode, io.current_p, last_pte), last_pte)
+//      printf("\tall_line %x\n", io.cache_resp_rdata)
+//      printf("\n")
     }
   }
+
+//printf("io.valid %x, ns %x\n", io.valid, next_state)
 
   // Combinational Logic
   when(state === s_idle) {
@@ -225,14 +228,18 @@ class PTWalker(name: String) extends Module with phvntomParams {
       next_state := s_idle
     }
   }.otherwise {
+    when(io.valid) {
+      next_state := s_idle
+    }.otherwise {
+      next_state := s_finish
+    }
     page_fault := false.B
-    next_state := s_idle
   }
 
   io.pf := page_fault
   io.af := false.B
   io.stall_req := next_state =/= s_idle
-  io.pa := Mux((state === s_idle && !io.keep_val) || io.pf, io.va, last_pte)
+  io.pa := Mux(state === s_idle || io.pf, io.va, last_pte)
 //  io.pa := Mux((state === s_idle && (!io.valid || satp_mode === SATP.Bare || io.current_p === CSR.PRV_M) ||
 //    io.pf), io.va, last_pte)
 
