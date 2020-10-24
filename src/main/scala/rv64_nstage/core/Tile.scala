@@ -70,6 +70,9 @@ class Tile extends Module with phvntomParams with projectConfig {
   }
 
   // mmio path
+  // uart
+  val uart = Module(new AXI4UART)
+
   // power off
   val poweroff = Module(new AXI4PowerOff)
   val poweroffSync = poweroff.io.extra.get.poweroff
@@ -86,14 +89,11 @@ class Tile extends Module with phvntomParams with projectConfig {
 
   // plic
   val plic = Module(new AXI4PLIC)
-  plic.io.extra.get.intrVec := 1.U(1.W)
+  plic.io.extra.get.intrVec := uart.io.extra.get.irq
   val meipSync = plic.io.extra.get.meip(0)
   core.io.int.meip := meipSync
   core.io.int.seip := false.B
 //  printf("Here is the output of PLIC meip %x\n", meipSync)
-
-  // uart
-  val uart = Module(new AXI4UART)
 
   // xbar
   val mmio_device = List(poweroff, clint, plic, uart)

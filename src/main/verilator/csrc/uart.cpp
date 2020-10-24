@@ -24,7 +24,7 @@ void init_uart (const std::string file_path) {
 
     std::ofstream init_cmd;
     init_cmd.open (file_path, std::ios::out | std::ios::trunc);
-    init_cmd << "ps\n";
+    init_cmd << "ls\necho zjv\n";
     init_cmd.close();
 
     file_fifo.open(file_path);
@@ -126,4 +126,13 @@ extern "C" void uart_putc(char addr, char data) // write
         break;
     }
     //  printf("In uart_putc: addr = %d, data = %d\n", addr, data);
+}
+
+extern "C"  void uart_irq (char* irq) {
+    if (file_fifo.is_open() && !file_fifo.eof()) {
+        *irq = -1;
+    }
+    else {
+        *irq = 0;
+    }
 }
