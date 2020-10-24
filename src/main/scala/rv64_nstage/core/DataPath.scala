@@ -163,17 +163,7 @@ class DataPath extends Module with phvntomParams {
   immu.io.is_inst := true.B
   immu.io.is_load := false.B
   immu.io.is_store := false.B
-  io.immu.stall := false.B
-  io.immu.flush := false.B
-  io.immu.resp.ready := true.B
-  io.immu.req.bits.addr := immu.io.cache_req_addr
-  io.immu.req.bits.data := DontCare
-  io.immu.req.valid := immu.io.cache_req_valid
-  io.immu.req.bits.wen := false.B
-  io.immu.req.bits.memtype := memDouble
-  immu.io.cache_resp_rdata := io.immu.resp.bits.data
-  immu.io.cache_resp_valid := io.immu.resp.valid
-  immu.io.cache_req_ready := io.immu.req.ready
+  io.immu <> immu.io.mmu
 
   stall_req_if1_atomic := immu.io.stall_req
 
@@ -390,17 +380,7 @@ class DataPath extends Module with phvntomParams {
   dmmu.io.is_inst := false.B
   dmmu.io.is_load := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR && reg_exe_dtlb.io.iiio.inst_info_out.wbSelect === wbMEM
   dmmu.io.is_store := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR && reg_exe_dtlb.io.iiio.inst_info_out.wbSelect =/= wbMEM
-  io.dmmu.stall := false.B
-  io.dmmu.flush := false.B
-  io.dmmu.resp.ready := true.B
-  io.dmmu.req.bits.addr := dmmu.io.cache_req_addr
-  io.dmmu.req.bits.data := DontCare
-  io.dmmu.req.valid := dmmu.io.cache_req_valid
-  io.dmmu.req.bits.wen := false.B
-  io.dmmu.req.bits.memtype := memDouble
-  dmmu.io.cache_resp_rdata := io.dmmu.resp.bits.data
-  dmmu.io.cache_resp_valid := io.dmmu.resp.valid
-  dmmu.io.cache_req_ready := io.dmmu.req.ready
+  io.dmmu <> dmmu.io.mmu
 
   stall_req_dtlb_atomic := dmmu.io.stall_req
 
