@@ -428,7 +428,7 @@ class CSRFile extends Module with phvntomParams {
 
   // Current Privilege Mode and Delegation Information
   val current_p = RegInit(UInt(2.W), CSR.PRV_M)
-  val ideleg = midelegr & mipr
+  val ideleg = midelegr
 
   // Combinational Judger for Interrupt
   val int_judger = Module(new InterruptJudger)
@@ -445,8 +445,8 @@ class CSRFile extends Module with phvntomParams {
   int_judger.io.int_vec := int_vec
   val has_int_comb = int_judger.io.has_int
   val int_num_comb = int_judger.io.int_out
-//  printf("has_int %x, int_num %x, int_out %x\n", has_int_comb, int_num_comb, io.interrupt_out)
 
+//  printf("seip %x, has_int %x, ideleg_se %x, priv %x, sie %x, mie %x, stall %x, bubble %x\n", io.int_pend.seip, io.interrupt_out, ideleg(9), current_p, mstatusr_sie, mstatusr_mie, io.stall, io.bubble)
   // Combinational Judger for Exceptions
   val expt_judger = Module(new ExceptionJudger)
   val csr_not_exists = WireInit(false.B)
@@ -1066,7 +1066,7 @@ class CSRFile extends Module with phvntomParams {
     }
   }
 
-  io.write_satp := io.which_reg === CSR.satp && (io.wen || io.cen || io.sen)
+  io.write_satp := io.which_reg === CSR.satp && (io.wen || io.cen || io.sen) && !io.stall && !io.bubble
   io.satp_val := satpr
   io.current_p := current_p
   io.force_s_mode_mem := mstatusr_mpp === CSR.PRV_S && mstatusr_mprv
@@ -1127,6 +1127,7 @@ class CSRIO extends Bundle with phvntomParams {
   val tim_int = Input(Bool())
   val soft_int = Input(Bool())
   val external_int = Input(Bool())
+  val s_external_int = Input(Bool())
 }
 
 class CSR extends Module with phvntomParams {
@@ -1164,7 +1165,7 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.int_pend.msip := io.soft_int
   csr_regfile.io.int_pend.meip := io.external_int
   csr_regfile.io.int_pend.mtip := io.tim_int
-  csr_regfile.io.int_pend.seip := false.B
+  csr_regfile.io.int_pend.seip := io.s_external_int
 
   io.out := csr_regfile.io.rdata
   io.int := csr_regfile.io.interrupt_out

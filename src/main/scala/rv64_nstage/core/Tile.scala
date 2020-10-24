@@ -90,9 +90,10 @@ class Tile extends Module with phvntomParams with projectConfig {
   // plic
   val plic = Module(new AXI4PLIC)
   plic.io.extra.get.intrVec := uart.io.extra.get.irq
-  val meipSync = plic.io.extra.get.meip(0)
-  core.io.int.meip := meipSync
-  core.io.int.seip := false.B
+  val hart0_meipSync = plic.io.extra.get.meip(0)
+  val hart0_seipSync = plic.io.extra.get.meip(1)
+  core.io.int.meip := hart0_meipSync
+  core.io.int.seip := hart0_seipSync
 //  printf("Here is the output of PLIC meip %x\n", meipSync)
 
   // xbar
