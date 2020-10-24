@@ -157,14 +157,14 @@ int main(int argc, char** argv)
 
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
             if (engine.emu_get_pc() != engine.sim_get_pc()) {
-               fprintf(stderr, "emu [%x]: mstate %016lx mepc  %016lx mtval %016lx mcause %016lx\n",
+               fprintf(stderr, "emu [%lx]: mstate %016lx mepc  %016lx mtval %016lx mcause %016lx\n",
                                 engine.emu_get_priv(),
                                 engine.emu_get_mstatus(), engine.emu_get_mepc(), engine.emu_get_mtval(),
                                 engine.emu_get_mcause());
                fprintf(stderr, "         sstate %016lx sepc  %016lx stval %016lx scause %016lx\n",
                                 engine.emu_get_sstatus(), engine.emu_get_sepc(), engine.emu_get_stval(),
                                 engine.emu_get_scause());
-               fprintf(stderr, "         mtvec %016lx  stvec %016lx mideleg %16lx medeleg %16x\n",
+               fprintf(stderr, "         mtvec %016lx  stvec %016lx mideleg %16lx medeleg %16lx\n",
                                 engine.emu_get_mtvec(), engine.emu_get_stvec(), engine.emu_get_mideleg(),
                                 engine.emu_get_medeleg());
                fprintf(stderr, "emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
