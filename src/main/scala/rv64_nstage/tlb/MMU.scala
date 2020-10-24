@@ -7,6 +7,7 @@ import utils._
 import rv64_nstage.register.SATP
 import rv64_nstage.register.CSR
 import mem._
+import device._
 
 // TODO This should be an Arbiter when TLB is setup
 // The privilege Mode should flow with the pipeline because
@@ -39,11 +40,7 @@ class PTWalkerIO extends Bundle with phvntomParams {
   val pf = Output(Bool())
   val af = Output(Bool()) // TODO PMA PMP to generate access fault
   // Memory Interface
-  val cache_req_ready = Input(Bool())
-  val cache_req_valid = Output(Bool())
-  val cache_req_addr = Output(UInt(xlen.W))
-  val cache_resp_valid = Input(Bool())
-  val cache_resp_rdata = Input(UInt((cachiLine * cachiBlock).W))
+  val mmu = Flipped(new MemIO(cachiLine * cachiBlock))
 }
 
 class PTWalker(name: String) extends Module with phvntomParams {
@@ -62,16 +59,16 @@ class PTWalker(name: String) extends Module with phvntomParams {
   // To AXI Uncache Wrapper
   val pte_addr = RegInit(UInt(xlen.W), 0.U)
   val valid_access = RegInit(Bool(), false.B)
-  val ready_to_receive = io.cache_req_ready
+  val ready_to_receive = io.mmu.req.ready // io.cache_req_ready
 
   // From AXI Uncache Wrapper
-  val axi_valid = io.cache_resp_valid
-  val axi_rdata = MuxLookup(io.cache_req_addr(4, 3), "hdeadbeef".U,
+  val axi_valid = io.mmu.resp.valid // io.cache_resp_valid
+  val axi_rdata = MuxLookup(io.mmu.req.bits.addr(4, 3), "hdeadbeef".U,
     Seq(
-      "b00".U -> io.cache_resp_rdata(63, 0),
-      "b01".U -> io.cache_resp_rdata(2 * 64 - 1, 64),
-      "b10".U -> io.cache_resp_rdata(3 * 64 - 1, 2 * 64),
-      "b11".U -> io.cache_resp_rdata(4 * 64 - 1, 3 * 64)
+      "b00".U -> io.mmu.resp.bits.data(63, 0),
+      "b01".U -> io.mmu.resp.bits.data(2 * 64 - 1, 64),
+      "b10".U -> io.mmu.resp.bits.data(3 * 64 - 1, 2 * 64),
+      "b11".U -> io.mmu.resp.bits.data(4 * 64 - 1, 3 * 64)
     )
   )
   val pte_ppn = axi_rdata(53, 10)
@@ -151,20 +148,20 @@ class PTWalker(name: String) extends Module with phvntomParams {
 
   if(pipeTrace) {
     if (name == "dmmu") {
-      //    printf("DMMU\tstate %x\t\tpf %x\t\tva %x\t\tpa %x\n", state, page_fault, io.va, io.pa)
-      //    printf("\tLevel %x\t\taxi_respv %x\taxi_pte %x\tstall_req %x\n", lev, axi_valid, axi_rdata, io.stall_req)
-      //    printf("\tpte_valid %x\tis_final %x\tchk_prt_pass %x\t\t\tnot_misa %x\t\tsum_pass %x\t\t last_pte %x\n", is_pte_valid(axi_rdata),
-      //      is_final_pte(axi_rdata), pass_protection_check(last_pte, io.is_inst, io.is_load, io.is_store), !misaligned_spage(lev, last_pte),
-      //      !sum_is_zero_fault(io.sum, io.force_s_mode, io.current_p, last_pte), last_pte)
-      //    printf("\n")
+        //  printf("DMMU\tstate %x\t\tpf %x\t\tva %x\t\tpa %x\n", state, page_fault, io.va, io.pa)
+        //  printf("\tLevel %x\t\taxi_respv %x\taxi_pte %x\tstall_req %x\n", lev, axi_valid, axi_rdata, io.stall_req)
+        //  printf("\tpte_valid %x\tis_final %x\tchk_prt_pass %x\t\t\tnot_misa %x\t\tsum_pass %x\t\t last_pte %x\n", is_pte_valid(axi_rdata),
+        //    is_final_pte(axi_rdata), pass_protection_check(last_pte, io.is_inst, io.is_load, io.is_store), !misaligned_spage(lev, last_pte),
+        //    !sum_is_zero_fault(io.sum, io.force_s_mode, io.current_p, last_pte), last_pte)
+        //  printf("\n")
     } else {
-//      printf("IMMU\tstate %x\t\tpf %x\t\tva %x\t\tpa %x\tnx_addr %x\n", state, page_fault, io.va, io.pa, io.cache_req_addr)
-//      printf("\tLevel %x\t\taxi_respv %x\taxi_pte %x\tstall_req %x\t\treq_valid %x\n", lev, axi_valid, axi_rdata, io.stall_req, valid_access)
-//      printf("\tpte_valid %x\tis_final %x\tchk_prt_pass %x\t\t\tnot_misa %x\t\tsum_pass %x\t\t last_pte %x\n", is_pte_valid(axi_rdata),
-//        is_final_pte(axi_rdata), pass_protection_check(last_pte, io.is_inst, io.is_load, io.is_store), !misaligned_spage(lev, last_pte),
-//        !sum_is_zero_fault(io.sum, io.force_s_mode, io.current_p, last_pte), last_pte)
-//      printf("\tall_line %x\n", io.cache_resp_rdata)
-//      printf("\n")
+    //  printf("IMMU\tstate %x\t\tpf %x\t\tva %x\t\tpa %x\tnx_addr %x\n", state, page_fault, io.va, io.pa, io.cache_req_addr)
+    //  printf("\tLevel %x\t\taxi_respv %x\taxi_pte %x\tstall_req %x\t\treq_valid %x\n", lev, axi_valid, axi_rdata, io.stall_req, valid_access)
+    //  printf("\tpte_valid %x\tis_final %x\tchk_prt_pass %x\t\t\tnot_misa %x\t\tsum_pass %x\t\t last_pte %x\n", is_pte_valid(axi_rdata),
+    //    is_final_pte(axi_rdata), pass_protection_check(last_pte, io.is_inst, io.is_load, io.is_store), !misaligned_spage(lev, last_pte),
+    //    !sum_is_zero_fault(io.sum, io.force_s_mode, io.current_p, last_pte), last_pte)
+    //  printf("\tall_line %x\n", io.cache_resp_rdata)
+    //  printf("\n")
     }
   }
 
@@ -243,7 +240,13 @@ class PTWalker(name: String) extends Module with phvntomParams {
 //  io.pa := Mux((state === s_idle && (!io.valid || satp_mode === SATP.Bare || io.current_p === CSR.PRV_M) ||
 //    io.pf), io.va, last_pte)
 
-  io.cache_req_valid := valid_access
-  io.cache_req_addr := pte_addr
+  io.mmu.stall := false.B
+  io.mmu.flush := false.B
+  io.mmu.resp.ready := true.B  
+  io.mmu.req.bits.addr := pte_addr
+  io.mmu.req.bits.data := DontCare
+  io.mmu.req.valid := valid_access
+  io.mmu.req.bits.wen := false.B
+  io.mmu.req.bits.memtype := DontCare
 }
 
