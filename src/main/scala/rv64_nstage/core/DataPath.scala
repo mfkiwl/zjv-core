@@ -110,7 +110,8 @@ class DataPath extends Module with phvntomParams {
 
   // TODO When AS is decided, this should be changed
   def is_legal_addr(addr: UInt): Bool = {
-    addr(addr.getWidth - 1, addr.getWidth / 2) === 0.U
+    //addr(addr.getWidth - 1, addr.getWidth / 2) === 0.U
+    true.B
   }
 
   // Stall Control Logic
@@ -151,6 +152,7 @@ class DataPath extends Module with phvntomParams {
   // IMMU
   inst_af := !is_legal_addr(pc_gen.io.pc_out) || immu.io.af // TODO
   inst_pf := immu.io.pf
+  immu.io.keep_val := stall_if1_if2
   immu.io.valid := !pc_gen.io.last_stall_out
   immu.io.is_mem := false.B
   immu.io.force_s_mode := false.B
@@ -378,6 +380,7 @@ class DataPath extends Module with phvntomParams {
   // DMMU
   mem_af := dmmu.io.af || (!is_legal_addr(reg_exe_dtlb.io.aluio.alu_val_out) &&
     reg_exe_dtlb.io.iiio.inst_info_out.memType.orR) // TODO
+  dmmu.io.keep_val := stall_dtlb_mem1
   dmmu.io.valid := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR
   dmmu.io.is_mem := true.B
   dmmu.io.force_s_mode := csr.io.force_s_mode_mem
@@ -586,7 +589,7 @@ class DataPath extends Module with phvntomParams {
 
     if (pipeTrace) {
       printf("\t\tIF1\tIF2\tID\tEXE\tDTLB\tMEM1\tMEM2\tWB\t\n")
-      printf("Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", 0.U, stall_req_if2_atomic, 0.U, stall_req_exe_atomic || stall_req_exe_interruptable, stall_req_dtlb_atomic, 0.U, stall_req_mem2_atomic, 0.U)
+      printf("Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", stall_req_if1_atomic, stall_req_if2_atomic, 0.U, stall_req_exe_atomic || stall_req_exe_interruptable, stall_req_dtlb_atomic, 0.U, stall_req_mem2_atomic, 0.U)
       printf("Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", stall_pc, stall_if1_if2, stall_if2_id, stall_id_exe, stall_exe_dtlb, stall_dtlb_mem1, stall_mem1_mem2, stall_mem2_wb)
       printf("PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", pc_gen.io.pc_out(15, 0), reg_if1_if2.io.bsrio.pc_out(15, 0), reg_if2_id.io.bsrio.pc_out(15, 0), reg_id_exe.io.bsrio.pc_out(15, 0), reg_exe_dtlb.io.bsrio.pc_out(15, 0), reg_dtlb_mem1.io.bsrio.pc_out(15, 0), reg_mem1_mem2.io.bsrio.pc_out(15, 0), reg_mem2_wb.io.bsrio.pc_out(15, 0))
       printf("Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n", BUBBLE(15, 0), io.imem.resp.bits.data(15, 0), reg_if2_id.io.instio.inst_out(15, 0), reg_id_exe.io.instio.inst_out(15, 0), reg_exe_dtlb.io.instio.inst_out(15, 0), reg_dtlb_mem1.io.instio.inst_out(15, 0), reg_mem1_mem2.io.instio.inst_out(15, 0), reg_mem2_wb.io.instio.inst_out(15, 0))

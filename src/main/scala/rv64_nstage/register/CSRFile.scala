@@ -474,6 +474,9 @@ class CSRFile extends Module with phvntomParams {
   val has_expt_comb = expt_judger.io.has_except
   val expt_num_comb = expt_judger.io.except_out
 
+//  printf("In CSR: ill %x; wfi %x; sfence %x; tsr %x; csr_ne %x; bad_csr_ac %x; wen %x; sen %x; cen %x\n", io.illegal_inst,
+//    tw_wfi_illegal, tvm_sfence_illegal, tsr_sret_illegal, csr_not_exists, bad_csr_access, io.wen, io.sen, io.cen)
+
   // Combinational Logic for Trap-Ret Delegations and Addresses
   val trap_addr = WireInit(0.U(xlen.W))
   val eret_addr = WireInit(0.U(xlen.W))
@@ -1029,6 +1032,15 @@ class CSRFile extends Module with phvntomParams {
     BoringUtils.addSource(mstatusr, "difftestmstatusr")
     BoringUtils.addSource(mcycler, "difftestmcycler")
     BoringUtils.addSource(current_p, "difftestprivilege")
+    BoringUtils.addSource(mepcr   , "difftestmepcr")
+    BoringUtils.addSource(mtvalr  , "difftestmtvalr")
+    BoringUtils.addSource(mcauser , "difftestmcauser")
+    BoringUtils.addSource(sstatusr, "difftestsstatusr")
+    BoringUtils.addSource(sepcr   , "difftestsepcr")
+    BoringUtils.addSource(stvalr  , "diffteststvalr")
+    BoringUtils.addSource(scauser , "difftestscauser")
+    BoringUtils.addSource(stvecr  , "diffteststvecr")
+    BoringUtils.addSource(mtvecr , "difftestmtvecr")
   }
 }
 

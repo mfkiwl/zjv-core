@@ -67,6 +67,13 @@ int main(int argc, char** argv)
    int int_total_cnt = 0;
    long sim_cnt = 0;
 
+//    while (!engine.is_finish()) {
+//          engine.emu_step(1);
+//    }
+//
+//    while (!engine.is_finish()) {
+//          engine.sim_step(1);
+//    }
 
    while (!engine.is_finish()) {
       engine.emu_step(1);
@@ -112,10 +119,12 @@ int main(int argc, char** argv)
       if (startTest && engine.emu_difftest_valid()) {
          bubble_cnt = 0;
       #ifdef ZJV_DEBUG
-         fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+//         fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
       #endif
          engine.sim_step(1);
          sim_cnt++;
+
+//         printf("engine.emu_get_priv() %d, engine.sim_get_priv() %d\n", engine.emu_get_priv(), engine.sim_get_priv());
 
 
 //         fprintf(stderr, "emu|sim \x1b[34mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
@@ -145,20 +154,30 @@ int main(int argc, char** argv)
             faultExitLatency++;
 
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
-            if (engine.emu_get_pc() != engine.sim_get_pc())
+            if (engine.emu_get_pc() != engine.sim_get_pc()) {
+               fprintf(stderr, "emu [%x]: mstate %016lx mepc %016lx mtval %016lx mcause %016lx\n",
+                                engine.emu_get_priv(),
+                                engine.emu_get_mstatus(), engine.emu_get_mepc(), engine.emu_get_mtval(),
+                                engine.emu_get_mcause());
+               fprintf(stderr, "         sstate %016lx sepc %016lx stval %016lx scause %016lx\n",
+                                engine.emu_get_sstatus(), engine.emu_get_sepc(), engine.emu_get_stval(),
+                                engine.emu_get_scause());
+               fprintf(stderr, "         mtvec %016lx stvec %016lx\n",
+                                engine.emu_get_mtvec(), engine.emu_get_stvec());
                fprintf(stderr, "emu|sim \x1b[31mpc: %016lX|%016lx\x1b[0m\n",  engine.emu_get_pc(), engine.sim_get_pc());
+            }
             else
                 fprintf(stderr, "emu|sim pc: %016lX|%016lx\n",  engine.emu_get_pc(), engine.sim_get_pc());
 
-            if (engine.emu_get_mstatus() != engine.sim_get_mstatus())
-                fprintf(stderr, "emu|sim \x1b[31mmstatus: %016lX|%016lx\x1b[0m\n",  engine.emu_get_mstatus(), engine.sim_get_mstatus());
-            else
-                fprintf(stderr, "emu|sim mstatus: %016lX|%016lx\n",  engine.emu_get_mstatus(), engine.sim_get_mstatus());
-
-            if (engine.emu_get_priv() != engine.sim_get_priv())
-                fprintf(stderr, "emu|sim \x1b[31mpriv: %016lX|%016lx\x1b[0m\n",  engine.emu_get_priv(), engine.sim_get_priv());
-            else
-                fprintf(stderr, "emu|sim priv: %016lX|%016lx\n",  engine.emu_get_priv(), engine.sim_get_priv());
+//            if (engine.emu_get_mstatus() != engine.sim_get_mstatus())
+//                fprintf(stderr, "emu|sim \x1b[31mmstatus: %016lX|%016lx\x1b[0m\n",  engine.emu_get_mstatus(), engine.sim_get_mstatus());
+//            else
+//                fprintf(stderr, "emu|sim mstatus: %016lX|%016lx\n",  engine.emu_get_mstatus(), engine.sim_get_mstatus());
+//
+//            if (engine.emu_get_priv() != engine.sim_get_priv())
+//                fprintf(stderr, "emu|sim \x1b[31mpriv: %016lX|%016lx\x1b[0m\n",  engine.emu_get_priv(), engine.sim_get_priv());
+//            else
+//                fprintf(stderr, "emu|sim priv: %016lX|%016lx\n",  engine.emu_get_priv(), engine.sim_get_priv());
 
             for (int i = 0; i < REG_G_NUM; i++) {
                if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
@@ -180,8 +199,8 @@ int main(int argc, char** argv)
         bubble_cnt++;
       }
 
-      if(bubble_cnt > 128) {
-        printf("Too many bubbles.\n");
+      if(bubble_cnt > 256) {
+        printf("Too many bubbles, end at %lx\n", engine.emu_get_pc());
         exit(-1);
       }
       #ifdef ZJV_DEBUG

@@ -18,6 +18,15 @@ class DiffTestIO extends Bundle with phvntomParams {
   val mcycler = Output(UInt(xlen.W))
   val mstatusr = Output(UInt(xlen.W))
   val privilege = Output(UInt(2.W))
+  val mepcr     = Output(UInt(xlen.W))
+  val mtvalr    = Output(UInt(xlen.W))
+  val mcauser   = Output(UInt(xlen.W))
+  val sstatusr  = Output(UInt(xlen.W))
+  val sepcr     = Output(UInt(xlen.W))
+  val stvalr    = Output(UInt(xlen.W))
+  val scauser   = Output(UInt(xlen.W))
+  val stvecr    = Output(UInt(xlen.W))
+  val mtvecr    = Output(UInt(xlen.W))
 }
 
 class TopIO extends Bundle with phvntomParams {
@@ -42,6 +51,16 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.mcycler, "difftestmcycler")
   BoringUtils.addSink(difftest.mstatusr, "difftestmstatusr")
   BoringUtils.addSink(difftest.privilege, "difftestprivilege")
+
+  BoringUtils.addSink(difftest.mepcr   , "difftestmepcr")
+  BoringUtils.addSink(difftest.mtvalr  , "difftestmtvalr")
+  BoringUtils.addSink(difftest.mcauser , "difftestmcauser")
+  BoringUtils.addSink(difftest.sstatusr, "difftestsstatusr")
+  BoringUtils.addSink(difftest.sepcr   , "difftestsepcr")
+  BoringUtils.addSink(difftest.stvalr  , "diffteststvalr")
+  BoringUtils.addSink(difftest.scauser , "difftestscauser")
+  BoringUtils.addSink(difftest.stvecr  , "diffteststvecr")
+  BoringUtils.addSink(difftest.mtvecr  , "difftestmtvecr")
 
   val poweroff = WireInit(0.U(xlen.W))
   BoringUtils.addSink(poweroff, "poweroff")

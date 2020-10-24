@@ -34,7 +34,7 @@ sim_t* dtengine_t::sim_init(std::string elfpath) {
                     diffTest, file_fifo_path);
 
     #ifdef ZJV_DEBUG
-        spike->set_procs_debug(true);
+//        spike->set_procs_debug(true);
     #endif
     
     // spike->run();
@@ -175,20 +175,56 @@ unsigned long dtengine_t::emu_get_priv() {
     return zjv->io_difftest_privilege;
 }
 
+unsigned long dtengine_t::emu_get_mepc() {
+    return zjv->io_difftest_mepcr;
+}
+
+unsigned long dtengine_t::emu_get_mtval() {
+    return zjv->io_difftest_mtvalr;
+}
+
+unsigned long dtengine_t::emu_get_mcause() {
+    return zjv->io_difftest_mcauser;
+}
+
+unsigned long dtengine_t::emu_get_mtvec() {
+    return zjv->io_difftest_mtvecr;
+}
+
+unsigned long dtengine_t::emu_get_stvec() {
+    return zjv->io_difftest_stvecr;
+}
+
+unsigned long dtengine_t::emu_get_sstatus() {
+    return zjv->io_difftest_sstatusr;
+}
+
+unsigned long dtengine_t::emu_get_sepc() {
+    return zjv->io_difftest_sepcr;
+}
+
+unsigned long dtengine_t::emu_get_stval() {
+    return zjv->io_difftest_stvalr;
+}
+
+unsigned long dtengine_t::emu_get_scause() {
+    return zjv->io_difftest_scauser;
+}
+
 unsigned long dtengine_t::sim_get_pc() {
     return sim_state.pc;
 }
 
-unsigned long dtengine_t::sim_get_mstatus() {
-    return sim_state.mstatus;
-}
-
-unsigned long dtengine_t::sim_get_satp() {
-    return sim_state.satp;
-}
-
+//unsigned long dtengine_t::sim_get_mstatus() {
+//    return sim_state.mstatus;
+//}
+//
+//unsigned long dtengine_t::sim_get_satp() {
+//    return sim_state.satp;
+//}
+//
 unsigned long dtengine_t::sim_get_priv() {
-    return sim_state.privilege;
+    return sim_state.priv;
 }
 
 unsigned long dtengine_t::emu_get_int() {

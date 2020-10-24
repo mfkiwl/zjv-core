@@ -63,6 +63,17 @@ public:
     unsigned long emu_get_mstatus();
     unsigned long emu_get_priv();
 
+    unsigned long emu_get_mepc();
+    unsigned long emu_get_mtval();
+    unsigned long emu_get_mcause();
+    unsigned long emu_get_sstatus();
+    unsigned long emu_get_sepc();
+    unsigned long emu_get_stval();
+    unsigned long emu_get_scause();
+    unsigned long emu_get_stvec();
+    unsigned long emu_get_mtvec();
+
+
     unsigned long sim_get_pc();
     unsigned long sim_get_mstatus();
     unsigned long sim_get_priv();
