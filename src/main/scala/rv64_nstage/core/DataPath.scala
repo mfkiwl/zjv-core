@@ -203,7 +203,7 @@ class DataPath extends Module with phvntomParams {
   reg_if2_id.io.instio.inst_in := Mux(reg_if1_if2.io.ifio.inst_af_out, BUBBLE, inst_if2)
   reg_if2_id.io.bsrio.pc_in := reg_if1_if2.io.bsrio.pc_out
   reg_if2_id.io.ifio.inst_af_in := reg_if1_if2.io.ifio.inst_af_out
-  reg_if2_id.io.bsrio.next_stage_flush_req := i_fence_flush
+  reg_if2_id.io.bsrio.next_stage_flush_req := false.B
   reg_if2_id.io.ifio.inst_pf_in := reg_if1_if2.io.ifio.inst_pf_out
   reg_if2_id.io.bpio.predict_taken_in := reg_if1_if2.io.bpio.predict_taken_out
   reg_if2_id.io.bpio.target_in := reg_if1_if2.io.bpio.target_out

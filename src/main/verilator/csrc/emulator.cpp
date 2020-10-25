@@ -67,13 +67,13 @@ int main(int argc, char** argv)
    int int_total_cnt = 0;
    long sim_cnt = 0;
 
-   //  while (!engine.is_finish()) {
-   //        engine.emu_step(1);
-   //  }
+//     while (!engine.is_finish()) {
+//           engine.emu_step(1);
+//     }
 
-   // while (!engine.is_finish()) {
-   //       engine.sim_solo();
-   // }
+//    while (!engine.is_finish()) {
+//          engine.sim_solo();
+//    }
 
    while (!engine.is_finish()) {
       engine.emu_step(1);
@@ -89,7 +89,7 @@ int main(int argc, char** argv)
       #ifdef ZJV_DEBUG
 
 //        fprintf(stderr, "\t\t\t\t [ ROUND %lx %lx ]\n", engine.trace_count, engine.emu_get_mcycle());
-        fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+//        fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
 
       #endif
 
@@ -154,6 +154,7 @@ int main(int argc, char** argv)
           (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ))) {
 
             faultExitLatency++;
+            fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
 
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
             if (engine.emu_get_pc() != engine.sim_get_pc()) {
@@ -202,7 +203,7 @@ int main(int argc, char** argv)
         bubble_cnt++;
       }
 
-      if(bubble_cnt > 256) {
+      if(bubble_cnt > 4096) {
         printf("Too many bubbles, end at %lx\n", engine.emu_get_pc());
         exit(-1);
       }
