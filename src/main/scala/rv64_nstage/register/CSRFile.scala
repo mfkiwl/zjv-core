@@ -52,7 +52,7 @@ object CSR {
   val mideleg =     0x303.U(12.W)
   val mie =         0x304.U(12.W)
   val mtvec =       0x305.U(12.W)
-  val mtcounteren = 0x306.U(12.W)
+  val mcounteren =  0x306.U(12.W)
   val mstatush =    0x310.U(12.W)
   val mtime =       0x701.U(12.W)
   val mtimeh =      0x741.U(12.W)
@@ -387,6 +387,7 @@ class CSRFile extends Module with phvntomParams {
   val mimpidr = RegInit(0.U(xlen.W))
   val mcycler = RegInit(UInt(64.W), 0.U)
   val minstretr = RegInit(0.U(64.W))
+  val mcounterenr = RegInit(0.U(xlen.W))
 
   // [--------- Physical Memory Protection Registers in CSR --------]
   val pmpcfg0r = RegInit(0.U(xlen.W))
@@ -624,6 +625,10 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := mtvalr
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
+  }.elsewhen(io.which_reg === CSR.mcounteren) {
+    io.rdata := mcounterenr
+    csr_not_exists := false.B
+    bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.mhartid) {
     io.rdata := mhartidr
     csr_not_exists := false.B
@@ -805,6 +810,14 @@ class CSRFile extends Module with phvntomParams {
           mimpidr := mimpidr | io.wdata
         }.elsewhen(io.cen) {
           mimpidr := mimpidr & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.mcounteren) {
+        when(io.wen) {
+          mcounterenr := io.wdata
+        }.elsewhen(io.sen) {
+          mcounterenr := mcounterenr | io.wdata
+        }.elsewhen(io.cen) {
+          mcounterenr := mcounterenr & (~io.wdata)
         }
       }.elsewhen(io.which_reg === CSR.mideleg) {
         when(io.wen) {
@@ -1013,6 +1026,14 @@ class CSRFile extends Module with phvntomParams {
           sscratchr := sscratchr | io.wdata
         }.elsewhen(io.cen) {
           sscratchr := sscratchr & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.scounteren) {
+        when(io.wen) {
+          scounterenr := io.wdata
+        }.elsewhen(io.sen) {
+          scounterenr := scounterenr | io.wdata
+        }.elsewhen(io.cen) {
+          scounterenr := scounterenr & (~io.wdata)
         }
       }.elsewhen(io.which_reg === CSR.tselect) {
         when(io.wen) {
