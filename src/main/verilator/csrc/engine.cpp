@@ -64,6 +64,7 @@ void dtengine_t::sim_reset(uint cycle) {
 }
 
 void dtengine_t::sim_solo() {
+    sim_sync_cycle();
     spike->difftest_checkINT();
 }
 
