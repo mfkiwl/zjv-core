@@ -393,7 +393,9 @@ class CSRFile extends Module with phvntomParams {
   val pmpcfg0r = RegInit(0.U(xlen.W))
   val pmpcfg2r = RegInit(0.U(xlen.W))
   val pmpaddr0r = RegInit(0.U(xlen.W))
+  val pmpaddr1r = RegInit(0.U(xlen.W))
   val pmpaddr2r = RegInit(0.U(xlen.W))
+  val pmpaddr3r = RegInit(0.U(xlen.W))
 
   // [--------- Supervisor Mode Registers in CSR --------]
   val sstatusr = Cat(mstatusr_sd, Fill(xlen - 2 - 33, 0.U), mstatusr_uxl, Fill(12, 0.U),
@@ -501,11 +503,12 @@ class CSRFile extends Module with phvntomParams {
   val deleg = Mux(has_int_comb, midelegr, medelegr)
   val deleg_2_s = Mux(has_int_comb, deleg(int_num_comb), deleg(expt_num_comb)) && current_p < CSR.PRV_M
   val eret = io.is_mret || io.is_sret || io.is_uret
+  val check_bit = Mux(deleg_2_s, stvecr(0), mtvecr(0))
   trap_addr := Mux(deleg_2_s, Cat(stvecr(xlen - 1, 2), Fill(2, 0.U)), Cat(mtvecr(xlen - 1, 2), Fill(2, 0.U)))
   eret_addr := Mux(io.is_mret, mepcr, Mux(io.is_sret, sepcr, uepcr))
-
+//printf("In CSR mtvec %x, tveco %x, has_expt %x, exno %x\n", mtvecr, io.tvec_out, has_expt_comb, expt_num_comb)
   // Output Comb Logic
-  io.tvec_out := Mux(mtvecr(0) && has_int_comb, trap_addr + (int_num_comb << 2.U), trap_addr)
+  io.tvec_out := Mux(check_bit && has_int_comb, trap_addr + (int_num_comb << 2.U), trap_addr)
   io.epc_out := eret_addr
   io.expt_or_int_out := !io.stall && !io.bubble && (has_expt_comb || has_int_comb)
   io.interrupt_out := !io.stall && !io.bubble && has_int_comb
@@ -609,8 +612,16 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := pmpaddr0r
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
+  }.elsewhen(io.which_reg === CSR.pmpaddr1) {
+    io.rdata := pmpaddr1r
+    csr_not_exists := false.B
+    bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.pmpaddr2) {
     io.rdata := pmpaddr2r
+    csr_not_exists := false.B
+    bad_csr_access := bad_csr_m
+  }.elsewhen(io.which_reg === CSR.pmpaddr3) {
+    io.rdata := pmpaddr3r
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.pmpcfg0) {
@@ -1069,11 +1080,35 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.pmpaddr0) {
         when(io.wen) {
-          pmpaddr0r := io.wdata
+          pmpaddr0r := Cat(Fill(10, 0.U), io.wdata(53, 0))
         }.elsewhen(io.sen) {
-          pmpaddr0r := pmpaddr0r | io.wdata
+          pmpaddr0r := pmpaddr0r | Cat(Fill(10, 0.U), io.wdata(53, 0))
         }.elsewhen(io.cen) {
-          pmpaddr0r := pmpaddr0r & (~io.wdata)
+          pmpaddr0r := pmpaddr0r & Cat(Fill(10, 0.U), ~io.wdata(53, 0))
+        }
+      }.elsewhen(io.which_reg === CSR.pmpaddr1) {
+        when(io.wen) {
+          pmpaddr1r := Cat(Fill(10, 0.U), io.wdata(53, 0))
+        }.elsewhen(io.sen) {
+          pmpaddr1r := pmpaddr1r | Cat(Fill(10, 0.U), io.wdata(53, 0))
+        }.elsewhen(io.cen) {
+          pmpaddr1r := pmpaddr1r & Cat(Fill(10, 0.U), ~io.wdata(53, 0))
+        }
+      }.elsewhen(io.which_reg === CSR.pmpaddr2) {
+        when(io.wen) {
+          pmpaddr2r := Cat(Fill(10, 0.U), io.wdata(53, 0))
+        }.elsewhen(io.sen) {
+          pmpaddr2r := pmpaddr2r | Cat(Fill(10, 0.U), io.wdata(53, 0))
+        }.elsewhen(io.cen) {
+          pmpaddr2r := pmpaddr2r & Cat(Fill(10, 0.U), ~io.wdata(53, 0))
+        }
+      }.elsewhen(io.which_reg === CSR.pmpaddr3) {
+        when(io.wen) {
+          pmpaddr3r := Cat(Fill(10, 0.U), io.wdata(53, 0))
+        }.elsewhen(io.sen) {
+          pmpaddr3r := pmpaddr3r | Cat(Fill(10, 0.U), io.wdata(53, 0))
+        }.elsewhen(io.cen) {
+          pmpaddr3r := pmpaddr3r & Cat(Fill(10, 0.U), ~io.wdata(53, 0))
         }
       }.elsewhen(io.which_reg === CSR.pmpcfg0) {
         when(io.wen) {

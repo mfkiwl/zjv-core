@@ -471,7 +471,7 @@ class DataPath extends Module with phvntomParams {
   reg_mem1_mem2.io.bsrio.next_stage_flush_req := false.B
   reg_mem1_mem2.io.csrio.compare_in := reservation.io.compare
   reg_mem1_mem2.io.csrio.comp_res_in := (!reservation.io.succeed).asUInt
-  reg_mem1_mem2.io.csrio.af_in := csr.io.expt && csr.io.inst_access_fault
+  reg_mem1_mem2.io.csrio.af_in := csr.io.expt && (csr.io.inst_access_fault || csr.io.inst_page_fault)
 
   io.dmem.flush := false.B
   io.dmem.stall := !io.dmem.req.ready
