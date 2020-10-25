@@ -24,7 +24,7 @@ void init_uart (const std::string file_path) {
 
     std::ofstream init_cmd;
     init_cmd.open (file_path, std::ios::out | std::ios::trunc);
-    init_cmd << "ls\necho zjv\n";
+    init_cmd << "echo zju\necho zjv\n";
     init_cmd.close();
 
     file_fifo.open(file_path);
