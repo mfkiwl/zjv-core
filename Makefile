@@ -34,6 +34,7 @@ VERILATOR_SOURCE 	:= $(sort $(wildcard $(VERILATOR_CSRC_DIR)/*.cpp)) $(sort $(wi
 
 VERILATOR_FLAGS := --cc --exe --top-module Top 	\
 				  --assert --x-assign unique    \
+				  --threads 8                   \
 				  --output-split 20000 -O3    	\
 				  -I$(VERILATOR_VSRC_DIR) 	  	\
 				  -CFLAGS "$(VERILATOR_CXXFLAGS) -DZJV_DEBUG" \

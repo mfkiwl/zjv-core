@@ -194,8 +194,9 @@ class CrossbarNto1(n: Int) extends Module {
   // printf(
   //   p"r_state=${r_state},inflightSrc_r=${inflightSrc_r},w_state=${w_state},inflightSrc_w=${inflightSrc_w}\n"
   // )
-  // printf(p"io.in(0): \n${io.in(0)}\n")
-  // printf(p"io.in(1): \n${io.in(1)}\n")
+  // for (i <- 0 until n) {
+  //   printf(p"io.in(${i}): \n${io.in(i)}\n")
+  // }
   // printf(p"io.out: \n${io.out}\n")
   // printf("--------------------------------\n")
 }

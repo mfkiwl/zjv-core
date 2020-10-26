@@ -94,7 +94,7 @@ class ICacheForward(implicit val cacheConfig: CacheConfig)
 
   io.mem.stall := false.B
   io.mem.flush := false.B
-  io.mem.req.valid := s2_valid && (state === s_memReadReq || state === s_memReadResp)
+  io.mem.req.valid := s2_valid && state === s_memReadReq
   io.mem.req.bits.addr := read_address
   io.mem.req.bits.data := DontCare
   io.mem.req.bits.wen := false.B

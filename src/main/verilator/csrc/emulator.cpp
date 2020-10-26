@@ -202,7 +202,7 @@ int main(int argc, char** argv)
         bubble_cnt++;
       }
 
-      if(bubble_cnt > 256) {
+      if(bubble_cnt > 4096) {
         printf("Too many bubbles, end at %lx\n", engine.emu_get_pc());
         exit(-1);
       }
