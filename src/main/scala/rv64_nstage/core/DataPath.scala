@@ -706,28 +706,32 @@ class DataPath extends Module with phvntomParams {
         reg_mem1_mem2.io.bsrio.bubble_out,
         reg_mem2_wb.io.bsrio.bubble_out
       )
-      printf(
-        "Take\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\n",
-        bpu.io.branch_taken,
-        reg_if1_if2.io.bpio.predict_taken_out,
-        reg_if2_id.io.bpio.predict_taken_out,
-        reg_id_exe.io.bpio.predict_taken_out,
-        0.U,
-        0.U,
-        0.U,
-        0.U
-      )
-      printf(
-        "Tar\t\t%x\t%x\t%x\t%x\t%x\t\t%x\t\t%x\t\t%x\n",
-        bpu.io.pc_in_btb(31, 0),
-        reg_if1_if2.io.bpio.target_out(31, 0),
-        reg_if2_id.io.bpio.target_out(31, 0),
-        reg_id_exe.io.bpio.target_out(31, 0),
-        0.U,
-        0.U,
-        0.U,
-        0.U
-      )
+      if(traceBPU) {
+        printf(
+          "Take\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\n",
+          bpu.io.branch_taken,
+          reg_if1_if2.io.bpio.predict_taken_out,
+          reg_if2_id.io.bpio.predict_taken_out,
+          reg_id_exe.io.bpio.predict_taken_out,
+          0.U,
+          0.U,
+          0.U,
+          0.U
+        )
+        printf(
+          "Tar\t\t%x\t%x\t%x\t%x\t%x\t\t%x\t\t%x\t\t%x\n",
+          bpu.io.pc_in_btb(31, 0),
+          reg_if1_if2.io.bpio.target_out(31, 0),
+          reg_if2_id.io.bpio.target_out(31, 0),
+          reg_id_exe.io.bpio.target_out(31, 0),
+          0.U,
+          0.U,
+          0.U,
+          0.U
+        )
+      }
+      printf("Priv %x\t\tInstAddrO %x\t\tMemAddr0 %x\t\tMemFS %x\n",
+        csr.io.current_p, immu.io.front.pa, dmmu.io.front.pa, csr.io.force_s_mode_mem)
       printf("\n")
     }
 

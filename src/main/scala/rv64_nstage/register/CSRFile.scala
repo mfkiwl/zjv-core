@@ -557,7 +557,7 @@ class CSRFile extends Module with phvntomParams {
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.mip) {
-    io.rdata := Cat(mipr(xlen - 1, 10), seip_for_read, mipr(7, 0))
+    io.rdata := Cat(mipr(xlen - 1, 10), seip_for_read, mipr(8, 0))
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.mcause) {
@@ -739,6 +739,8 @@ class CSRFile extends Module with phvntomParams {
         current_p := CSR.PRV_S
         when(write_tval) {
           stvalr := tval_value
+        }.otherwise {
+          stvalr := 0.U
         }
       }.otherwise {
         when(has_int_comb) {
@@ -755,6 +757,8 @@ class CSRFile extends Module with phvntomParams {
         current_p := CSR.PRV_M
         when(write_tval) {
           mtvalr := tval_value
+        }.otherwise {
+          mtvalr := 0.U
         }
       }
     }.elsewhen(io.is_mret) {
@@ -1122,7 +1126,8 @@ class CSRFile extends Module with phvntomParams {
     }
   }
 
-  io.write_satp := io.which_reg === CSR.satp && (io.wen || io.cen || io.sen) && !io.stall && !io.bubble
+  io.write_satp := (((io.which_reg === CSR.satp || io.which_reg === CSR.mstatus) &&
+    (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
   io.satp_val := satpr
   io.current_p := current_p
   io.force_s_mode_mem := mstatusr_mpp === CSR.PRV_S && mstatusr_mprv

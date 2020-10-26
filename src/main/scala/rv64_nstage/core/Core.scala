@@ -22,6 +22,7 @@ trait phvntomParams {
   val predictorBits = 2 // TODO Do NOT Modify
   val cachiLine     = 4
   val cachiBlock    = 64
+  val traceBPU      = false
 }
 
 

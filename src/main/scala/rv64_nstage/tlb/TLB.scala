@@ -221,5 +221,11 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     printf(p"io.out: ${io.out}\n")
     printf(p"entryArray=${entryArray}\n")
     printf("-----------------------------------------------\n")
+
+    if(mmuConfig.isdmmu)
+      printf("In DMMU nt %x\n", need_translate)
+    else
+      printf("In IMMU nt %x\n", need_translate)
   }
+
 }
