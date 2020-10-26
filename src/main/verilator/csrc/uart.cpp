@@ -37,7 +37,7 @@ static void uart_dequeue(char* data) {
     if (file_fifo.is_open()) {
         if (!file_fifo.eof()) 
             file_fifo.get(*data);
-        else 
+        if (file_fifo.eof()) 
             file_fifo.close();
     }
 }

@@ -58,11 +58,13 @@ class ExeInfoIO extends Bundle with phvntomParams {
 }
 
 class IntMemPfIO extends Bundle with phvntomParams {
+  val s_external_int_in = Input(Bool())
   val external_int_in = Input(Bool())
   val software_int_in = Input(Bool())
   val timer_int_in = Input(Bool())
   val mem_pf_in = Input(Bool())
   val mem_af_in = Input(Bool())
+  val s_external_int_out = Output(Bool())
   val external_int_out = Output(Bool())
   val software_int_out = Output(Bool())
   val timer_int_out = Output(Bool())
@@ -422,6 +424,7 @@ class RegDTLBMem1 extends Module with phvntomParams {
   val mem_wdata = RegInit(UInt(xlen.W), 0.U)
   val soft_int = RegInit(Bool(), false.B)
   val extern_int = RegInit(Bool(), false.B)
+  val s_extern_int = RegInit(Bool(), false.B)
   val timer_int = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
@@ -452,6 +455,7 @@ class RegDTLBMem1 extends Module with phvntomParams {
       soft_int := false.B
       extern_int := false.B
       timer_int := false.B
+      s_extern_int := false.B
     }.otherwise {
       pc := io.bsrio.pc_in
       bubble := false.B
@@ -467,6 +471,7 @@ class RegDTLBMem1 extends Module with phvntomParams {
       soft_int := io.intio.software_int_in
       extern_int := io.intio.external_int_in
       timer_int := io.intio.timer_int_in
+      s_extern_int := io.intio.s_external_int_in
     }
   }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
     pc := 0.U
@@ -483,10 +488,12 @@ class RegDTLBMem1 extends Module with phvntomParams {
     soft_int := false.B
     extern_int := false.B
     timer_int := false.B
+    s_extern_int := false.B
   }.otherwise {
     soft_int := false.B
     extern_int := false.B
     timer_int := false.B
+    s_extern_int := false.B
   }
 
   io.bsrio.bubble_out := bubble
@@ -503,6 +510,7 @@ class RegDTLBMem1 extends Module with phvntomParams {
   io.intio.external_int_out := extern_int
   io.intio.software_int_out := soft_int
   io.intio.timer_int_out := timer_int
+  io.intio.s_external_int_out := s_extern_int
 }
 
 class RegMem1Mem2IO extends Bundle with phvntomParams {

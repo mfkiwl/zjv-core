@@ -48,6 +48,7 @@ public:
     void sim_step(uint step);
     void emu_step(uint step);
     void sim_checkINT();
+    void sim_solo();
 
     dtengine_t(std::string elfpath);
 

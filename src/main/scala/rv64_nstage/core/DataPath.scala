@@ -209,7 +209,7 @@ class DataPath extends Module with phvntomParams {
   )
   reg_if2_id.io.bsrio.pc_in := reg_if1_if2.io.bsrio.pc_out
   reg_if2_id.io.ifio.inst_af_in := reg_if1_if2.io.ifio.inst_af_out
-  reg_if2_id.io.bsrio.next_stage_flush_req := i_fence_flush
+  reg_if2_id.io.bsrio.next_stage_flush_req := false.B
   reg_if2_id.io.ifio.inst_pf_in := reg_if1_if2.io.ifio.inst_pf_out
   reg_if2_id.io.bpio.predict_taken_in := reg_if1_if2.io.bpio.predict_taken_out
   reg_if2_id.io.bpio.target_in := reg_if1_if2.io.bpio.target_out
@@ -426,6 +426,7 @@ class DataPath extends Module with phvntomParams {
   reg_dtlb_mem1.io.intio.timer_int_in := io.int.mtip
   reg_dtlb_mem1.io.intio.software_int_in := io.int.msip
   reg_dtlb_mem1.io.intio.external_int_in := io.int.meip
+  reg_dtlb_mem1.io.intio.s_external_int_in := io.int.seip
   reg_dtlb_mem1.io.ifio.inst_af_in := reg_exe_dtlb.io.ifio.inst_af_out
   reg_dtlb_mem1.io.bsrio.next_stage_flush_req := expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
   reg_dtlb_mem1.io.ifio.inst_pf_in := reg_exe_dtlb.io.ifio.inst_pf_out
@@ -449,6 +450,8 @@ class DataPath extends Module with phvntomParams {
     )
   )
 
+//  printf("ext_int %x, csr_resp %x", io.int.meip, csr.io.int)
+
   csr.io.stall := stall_dtlb_mem1
   csr.io.cmd := reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable
   csr.io.in := reg_dtlb_mem1.io.aluio.alu_val_out
@@ -469,6 +472,7 @@ class DataPath extends Module with phvntomParams {
   csr.io.tim_int := reg_dtlb_mem1.io.intio.timer_int_out
   csr.io.soft_int := reg_dtlb_mem1.io.intio.software_int_out
   csr.io.external_int := reg_dtlb_mem1.io.intio.external_int_out
+  csr.io.s_external_int := reg_dtlb_mem1.io.intio.s_external_int_out
 
   expt_int_flush := csr.io.expt
   error_ret_flush := csr.io.ret
@@ -497,7 +501,7 @@ class DataPath extends Module with phvntomParams {
   reg_mem1_mem2.io.bsrio.next_stage_flush_req := false.B
   reg_mem1_mem2.io.csrio.compare_in := reservation.io.compare
   reg_mem1_mem2.io.csrio.comp_res_in := (!reservation.io.succeed).asUInt
-  reg_mem1_mem2.io.csrio.af_in := csr.io.expt && csr.io.inst_access_fault
+  reg_mem1_mem2.io.csrio.af_in := csr.io.expt && (csr.io.inst_access_fault || csr.io.inst_page_fault)
 
   io.dmem.flush := false.B
   io.dmem.stall := !io.dmem.req.ready
