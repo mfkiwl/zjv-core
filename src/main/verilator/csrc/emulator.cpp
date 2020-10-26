@@ -104,8 +104,8 @@ int main(int argc, char** argv)
       }
 
 
-      if(engine.emu_get_int()) {
-         engine.sim_checkINT();
+      if(engine.emu_get_interrupt()) {
+         engine.sim_check_interrupt();
          int_total_cnt++;
          if (int_total_cnt > 50) {
             fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS with IPC %f ] ==========\x1b[0m\n", argv[1], 1.0 * sim_cnt / engine.trace_count);
@@ -151,7 +151,7 @@ int main(int argc, char** argv)
       if(((engine.emu_get_pc() != engine.sim_get_pc()) ||
 //          engine.sim_get_mideleg() != engine.emu_get_mideleg() ||
 //          (engine.emu_get_priv() != engine.sim_get_priv()) ||
-          (memcmp(engine.sim_state.regs, engine.emu_state.regs, 32*sizeof(reg_t)) != 0 ))) {
+          (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
 
             faultExitLatency++;
             fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
@@ -174,21 +174,21 @@ int main(int argc, char** argv)
                                                 engine.emu_get_mtvec(), engine.emu_get_stvec(), engine.emu_get_mideleg(),
                                                 engine.emu_get_medeleg());
 
-//            if (engine.emu_get_mstatus() != engine.sim_get_mstatus())
-//                fprintf(stderr, "emu|sim \x1b[31mmstatus: %016lX|%016lx\x1b[0m\n",  engine.emu_get_mstatus(), engine.sim_get_mstatus());
-//            else
-//                fprintf(stderr, "emu|sim mstatus: %016lX|%016lx\n",  engine.emu_get_mstatus(), engine.sim_get_mstatus());
-//
-//            if (engine.emu_get_priv() != engine.sim_get_priv())
-//                fprintf(stderr, "emu|sim \x1b[31mpriv: %016lX|%016lx\x1b[0m\n",  engine.emu_get_priv(), engine.sim_get_priv());
-//            else
-//                fprintf(stderr, "emu|sim priv: %016lX|%016lx\n",  engine.emu_get_priv(), engine.sim_get_priv());
+           if (engine.emu_get_mstatus() != engine.sim_get_mstatus())
+               fprintf(stderr, "emu|sim \x1b[31mmstatus: %016lX|%016lx\x1b[0m\n",  engine.emu_get_mstatus(), engine.sim_get_mstatus());
+           else
+               fprintf(stderr, "emu|sim mstatus: %016lX|%016lx\n",  engine.emu_get_mstatus(), engine.sim_get_mstatus());
+
+           if (engine.emu_get_priv() != engine.sim_get_priv())
+               fprintf(stderr, "emu|sim \x1b[31mpriv: %016lX|%016lx\x1b[0m\n",  engine.emu_get_priv(), engine.sim_get_priv());
+           else
+               fprintf(stderr, "emu|sim priv: %016lX|%016lx\n",  engine.emu_get_priv(), engine.sim_get_priv());
 
             for (int i = 0; i < REG_G_NUM; i++) {
-               if (engine.emu_state.regs[i] != engine.sim_state.regs[i])
-                  fprintf(stderr, "\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+               if (engine.get_emu_state()->regs[i] != engine.get_sim_state()->regs[i])
+                  fprintf(stderr, "\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", reg_name[i], engine.get_emu_state()->regs[i], engine.get_sim_state()->regs[i]);
                else
-                  fprintf(stderr, "[%-3s] = %016lX|%016lx ", reg_name[i], engine.emu_state.regs[i], engine.sim_state.regs[i]);
+                  fprintf(stderr, "[%-3s] = %016lX|%016lx ", reg_name[i], engine.get_emu_state()->regs[i], engine.get_sim_state()->regs[i]);
                if (i % 3 == 2)
                   fprintf(stderr, "\n");
             }
