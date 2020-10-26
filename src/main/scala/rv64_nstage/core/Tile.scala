@@ -39,7 +39,7 @@ class Tile extends Module with phvntomParams with projectConfig {
         CacheConfig(
           name = "l2cache",
           blockBits = dcache.lineBits,
-          totalSize = 256
+          totalSize = 128
         )
       )
     )

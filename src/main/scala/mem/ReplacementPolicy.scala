@@ -11,13 +11,6 @@ abstract class ReplacementPolicyBase {
       array: Vec[MetaData],
       access_index: UInt
   ): Vec[MetaData]
-
-  // def choose_victim(array: Vec[IMetaData]): UInt
-  // def update_meta(
-  //     array: Vec[IMetaData],
-  //     hitVec: UInt,
-  //     victim_index: UInt
-  // ): Vec[IMetaData]
 }
 
 object RandomPolicy extends ReplacementPolicyBase {
@@ -47,7 +40,6 @@ object LRUPolicy extends ReplacementPolicyBase {
       array: Vec[MetaData],
       access_index: UInt
   ): Vec[MetaData] = {
-    // printf(p"array=${array}, access_index=${access_index}\n")
     val length = log2Ceil(array.length)
     val new_meta = WireDefault(array)
     val old_meta_value =
@@ -55,12 +47,8 @@ object LRUPolicy extends ReplacementPolicyBase {
     (new_meta zip array).map {
       case (n, o) =>
         when(o.meta > old_meta_value) { n.meta := o.meta - 1.U }
-        // printf(p"o.meta=${o.meta}, n.meta=${n.meta}\n")
     }
     new_meta(access_index).meta := Fill(length, 1.U(1.W))
-    // printf(
-    //   p"lru: access_index=${access_index}, old_meta_value=${old_meta_value}\n"
-    // )
     new_meta
   }
 }
