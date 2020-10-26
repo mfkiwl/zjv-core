@@ -109,11 +109,20 @@ public:
     get(emu, mideleg);
     get(emu, medeleg);
 
-    get(sim, mideleg);
-    get(sim, medeleg);
     get(sim, pc);
     get(sim, mstatus);
     get(sim, priv);
+    get(sim, mepc);
+    get(sim, mtval);
+    get(sim, mcause);
+    get(sim, mtvec);
+    get(sim, mideleg);
+    get(sim, medeleg);
+    get(sim, sstatus);
+    get(sim, sepc);
+    get(sim, stval);
+    get(sim, scause);
+    get(sim, stvec);
     get(sim, satp);
 #undef get
 
@@ -133,13 +142,28 @@ private:
     difftest_state_t* sim_state;
     difftest_state_t* emu_state;
 
-
     #if VM_TRACE
         VerilatedVcdC* tfp;
     #endif
 
     std::string file_fifo_path;
 };
+
+#define difftest_check_point(reg) \
+    if (engine.emu_get_##reg() != engine.sim_get_##reg())   \
+        fprintf(stderr, "emu|sim \x1b[31m" #reg ": %016lX|%016lx\x1b[0m\n",  engine.emu_get_##reg(), engine.sim_get_##reg());   \
+    else    \
+        fprintf(stderr, "emu|sim " #reg ": %016lX|%016lx\n",  engine.emu_get_##reg(), engine.sim_get_##reg());
+
+#define difftest_check_general_register() \
+    for (int i = 0; i < REG_G_NUM; i++) {   \
+        if (engine.get_emu_state()->regs[i] != engine.get_sim_state()->regs[i]) \
+            fprintf(stderr, "\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", engine.reg_name[i], engine.get_emu_state()->regs[i], engine.get_sim_state()->regs[i]);  \
+        else    \
+            fprintf(stderr, "[%-3s] = %016lX|%016lx ", engine.reg_name[i], engine.get_emu_state()->regs[i], engine.get_sim_state()->regs[i]);   \
+        if (i % 3 == 2) \
+            fprintf(stderr, "\n");  \
+    }
 
 
 #endif // _ENGINE_H
