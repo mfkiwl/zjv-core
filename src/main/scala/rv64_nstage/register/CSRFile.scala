@@ -1199,7 +1199,7 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.sen := io.cmd === ControlConst.wenCSRS
   csr_regfile.io.wdata := io.in
   csr_regfile.io.stall := io.stall
-  csr_regfile.io.current_pc := Cat(io.pc(31, 2), 0.U(2.W))
+  csr_regfile.io.current_pc := Cat(io.pc(xlen - 1, 2), 0.U(2.W))
   csr_regfile.io.is_mret := io.inst === "b00110000001000000000000001110011".U
   csr_regfile.io.is_sret := io.inst === "b00010000001000000000000001110011".U
   csr_regfile.io.is_uret := io.inst === "b00000000001000000000000001110011".U
