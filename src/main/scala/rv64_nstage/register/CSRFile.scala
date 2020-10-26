@@ -932,7 +932,7 @@ class CSRFile extends Module with phvntomParams {
             mstatusr_mpie := io.wdata(7)
             mstatusr_mie := io.wdata(3)
           }
-          mstatusr_sd := io.wdata(16, 15).orR || io.wdata(14, 13).orR
+          mstatusr_sd := io.wdata(16, 15).andR || io.wdata(14, 13).andR
           mstatusr_mxr := io.wdata(19)
           mstatusr_sum := io.wdata(18)
           mstatusr_xs := io.wdata(16, 15)
@@ -955,7 +955,7 @@ class CSRFile extends Module with phvntomParams {
             mstatusr_mpie := mstatusr(7) | io.wdata(7)
             mstatusr_mie := mstatusr(3) | io.wdata(3)
           }
-          mstatusr_sd := (mstatusr(16, 15) | io.wdata(16, 15)).orR || (mstatusr(14, 13) | io.wdata(14, 13)).orR
+          mstatusr_sd := (mstatusr(16, 15) | io.wdata(16, 15)).andR || (mstatusr(14, 13) | io.wdata(14, 13)).andR
           mstatusr_mxr := mstatusr(19) | io.wdata(19)
           mstatusr_sum := mstatusr(18) | io.wdata(18)
           mstatusr_xs := mstatusr(16, 15) | io.wdata(16, 15)
@@ -978,7 +978,7 @@ class CSRFile extends Module with phvntomParams {
             mstatusr_mpie := mstatusr(7) & ~io.wdata(7)
             mstatusr_mie := mstatusr(3) & ~io.wdata(3)
           }
-          mstatusr_sd := (mstatusr(16, 15) & ~io.wdata(16, 15)).orR || (mstatusr(14, 13) & ~io.wdata(14, 13)).orR
+          mstatusr_sd := (mstatusr(16, 15) & ~io.wdata(16, 15)).andR || (mstatusr(14, 13) & ~io.wdata(14, 13)).andR
           mstatusr_mxr := mstatusr(19) & ~io.wdata(19)
           mstatusr_sum := mstatusr(18) & ~io.wdata(18)
           mstatusr_xs := mstatusr(16, 15) & ~io.wdata(16, 15)
