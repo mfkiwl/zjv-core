@@ -5,7 +5,7 @@ ZJV SoC
 
 ```bash
 # Install packages
-sudo apt install default-jdk verilator device-tree-compiler curl gnupg
+sudo apt install default-jdk verilator device-tree-compiler curl gnupg make gcc g++
 
 # Install sbt
 echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
