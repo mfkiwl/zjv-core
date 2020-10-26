@@ -12,7 +12,7 @@ class TileIO extends Bundle with phvntomParams {
   // TODO
 }
 
-class Tile extends Module with phvntomParams with projectConfig {
+class Tile extends Module with phvntomParams {
   val io = IO(new TileIO)
 
   val core = Module(new Core)

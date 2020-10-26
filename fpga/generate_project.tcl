@@ -16,7 +16,7 @@ if {[llength $argv] > 1} {
 }
 # set outputDir ./Tutorial_Created_Data/cpu_project
 # file mkdir $outputDir
-create_project $board $outputDir -part xc7a100tcsg324-1 -force
+create_project phvntom $outputDir -part xc7a100tcsg324-1 -force
 #
 # STEP#2: setup design sources and constraints
 #
@@ -61,5 +61,3 @@ wait_on_run synth_1
 launch_runs impl_1 -to_step write_bitstream
 wait_on_run impl_1
 puts "Implementation done!"
-
-start_gui
