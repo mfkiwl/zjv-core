@@ -11,8 +11,7 @@
 #endif
 
 /*    spike    */
-#include <riscv/difftest.h>
-#include <riscv/sim.h>
+#include "riscv/sim.h"
 
 /*     libc     */ 
 #include <iostream>
@@ -37,66 +36,111 @@
 extern void init_uart(const std::string img);
 extern void init_ram(const std::string img);
 
+struct difftest_state_t {
+    reg_t regs[32];
+    reg_t pc;
+    reg_t npc;
+    reg_t priv;
+    reg_t mstatus;
+    reg_t mepc;
+    reg_t mtval;
+    reg_t mcause;
+    reg_t mtvec;
+    reg_t mideleg;
+    reg_t medeleg;
+    reg_t mcycle;
+    reg_t sstatus;
+    reg_t sepc;
+    reg_t stval;
+    reg_t scause;
+    reg_t stvec;
+    reg_t satp;
+    reg_t inst;
+    bool valid;
+    bool interrupt;
+    reg_t poweroff;
+};
+
 class dtengine_t {
 public:
-    sim_t* sim_init(std::string elfpath);
-    emu_t* emu_init(std::string elfpath);
+    dtengine_t(std::string elfpath);
+    bool is_finish();
+    void trace_close();
+
+    void sim_check_interrupt();
+    void sim_solo();
+    void sim_sync_cycle();
+
+    void sim_init(std::string elfpath);
+    void emu_init(std::string elfpath);
 
     void emu_reset(uint cycle);
     void sim_reset(uint cycle);
     
     void sim_step(uint step);
     void emu_step(uint step);
-    void sim_checkINT();
-    void sim_solo();
 
-    dtengine_t(std::string elfpath);
+    difftest_state_t* get_sim_state(){ return sim_state; };
+    difftest_state_t* get_emu_state(){ return emu_state; };
 
-    void trace_close();
+    void emu_update_state();
+    void sim_update_state();      
 
-    void emu_get_state();
-    void sim_get_state();
-
-    unsigned long emu_get_pc();
-    unsigned long emu_get_inst();
-    unsigned long emu_get_int();
-    unsigned long emu_get_mcycle();
-    unsigned long emu_get_mstatus();
-    unsigned long emu_get_priv();
-
-    unsigned long emu_get_mepc();
-    unsigned long emu_get_mtval();
-    unsigned long emu_get_mcause();
-    unsigned long emu_get_sstatus();
-    unsigned long emu_get_sepc();
-    unsigned long emu_get_stval();
-    unsigned long emu_get_scause();
-    unsigned long emu_get_stvec();
-    unsigned long emu_get_mtvec();
-
-    unsigned long emu_get_mideleg();
-    unsigned long emu_get_medeleg();
-
-    unsigned long sim_get_mideleg();
-    unsigned long sim_get_medeleg();
-    unsigned long sim_get_pc();
-    unsigned long sim_get_mstatus();
-    unsigned long sim_get_priv();
-    unsigned long sim_get_satp();
-    void sim_sync_cycle();
-
-    bool is_finish();
+ 
     unsigned long emu_difftest_valid();
     unsigned long emu_difftest_poweroff();
 
-    difftest_sim_state_t sim_state;
-    difftest_emu_state_t emu_state;
+#define get(which, reg) reg_t which##_get_##reg() { return which##_state->reg; }
+    get(emu, pc);
+    get(emu, inst);
+    get(emu, interrupt);
+    get(emu, mcycle);
+    get(emu, mstatus);
+    get(emu, priv);
+    get(emu, mepc);
+    get(emu, mtval);
+    get(emu, mcause);
+    get(emu, sstatus);
+    get(emu, sepc);
+    get(emu, stval);
+    get(emu, scause);
+    get(emu, stvec);
+    get(emu, mtvec);
+    get(emu, mideleg);
+    get(emu, medeleg);
+
+    get(sim, pc);
+    get(sim, mstatus);
+    get(sim, priv);
+    get(sim, mepc);
+    get(sim, mtval);
+    get(sim, mcause);
+    get(sim, mtvec);
+    get(sim, mideleg);
+    get(sim, medeleg);
+    get(sim, sstatus);
+    get(sim, sepc);
+    get(sim, stval);
+    get(sim, scause);
+    get(sim, stvec);
+    get(sim, satp);
+#undef get
 
     reg_t trace_count;
+
+    const char *reg_name[REG_G_NUM] = {
+        "x0", "ra", "sp",  "gp",  "tp", "t0", "t1", "t2",
+        "s0", "s1", "a0",  "a1",  "a2", "a3", "a4", "a5",
+        "a6", "a7", "s2",  "s3",  "s4", "s5", "s6", "s7",
+        "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
+    };
 
 private:
     sim_t*  spike;
     emu_t*  zjv;
+
+    difftest_state_t* sim_state;
+    difftest_state_t* emu_state;
 
     #if VM_TRACE
         VerilatedVcdC* tfp;
@@ -104,6 +148,22 @@ private:
 
     std::string file_fifo_path;
 };
+
+#define difftest_check_point(reg) \
+    if (engine.emu_get_##reg() != engine.sim_get_##reg())   \
+        fprintf(stderr, "emu|sim \x1b[31m" #reg ": %016lX|%016lx\x1b[0m\n",  engine.emu_get_##reg(), engine.sim_get_##reg());   \
+    else    \
+        fprintf(stderr, "emu|sim " #reg ": %016lX|%016lx\n",  engine.emu_get_##reg(), engine.sim_get_##reg());
+
+#define difftest_check_general_register() \
+    for (int i = 0; i < REG_G_NUM; i++) {   \
+        if (engine.get_emu_state()->regs[i] != engine.get_sim_state()->regs[i]) \
+            fprintf(stderr, "\x1b[31m[%-3s] = %016lX|%016lx \x1b[0m", engine.reg_name[i], engine.get_emu_state()->regs[i], engine.get_sim_state()->regs[i]);  \
+        else    \
+            fprintf(stderr, "[%-3s] = %016lX|%016lx ", engine.reg_name[i], engine.get_emu_state()->regs[i], engine.get_sim_state()->regs[i]);   \
+        if (i % 3 == 2) \
+            fprintf(stderr, "\n");  \
+    }
 
 
 #endif // _ENGINE_H
