@@ -250,7 +250,7 @@ class DataPath extends Module with phvntomParams {
     rs2
   )
 
-  multiplier.io.start := reg_id_exe.io.iiio.inst_info_out.mult && !scheduler.io.stall_req && !stall_exe_dtlb
+  multiplier.io.start := reg_id_exe.io.iiio.inst_info_out.mult && !scheduler.io.stall_req
   multiplier.io.a := rs1
   multiplier.io.b := rs2
   multiplier.io.op := reg_id_exe.io.iiio.inst_info_out.aluType
@@ -628,7 +628,7 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_int, "difftestInt")
 
     if (pipeTrace) {
-      printf("\t\t\tIF1\t\tIF2\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n")
+      printf("\t\tIF1\t\tIF2\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n")
       printf(
         "Stall Req\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\n",
         stall_req_if1_atomic,
@@ -663,7 +663,7 @@ class DataPath extends Module with phvntomParams {
         reg_mem2_wb.io.bsrio.pc_out(31, 0)
       )
       printf(
-        "Inst\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+        "Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
         BUBBLE(31, 0),
         io.imem.resp.bits.data(31, 0),
         reg_if2_id.io.instio.inst_out(31, 0),

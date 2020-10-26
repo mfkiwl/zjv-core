@@ -106,6 +106,9 @@ class Multiplier extends Module with phvntomParams {
       aluREMUW -> Cat(Fill(32, 0.U), io.a(31, 0))
     )
   )
+
+//  printf("MUL a:%x, b:%x, out:%x, op:%x, start:%x, stall_req:%x, cnt:%x\n", io.a, io.b, io.mult_out, io.op, io.start, io.stall_req, mult_cnt)
+
   val sign_b = io.b(xlen - 1)
   val sign_wb = io.b(31)
   val abs_b = MuxLookup(io.op, Cat(Fill(32, 0.U), io.b(31, 0)),

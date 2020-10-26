@@ -34,7 +34,7 @@ sim_t* dtengine_t::sim_init(std::string elfpath) {
                     diffTest, file_fifo_path);
 
     #ifdef ZJV_DEBUG
-         spike->set_procs_debug(true);
+//         spike->set_procs_debug(true);
     #endif
     
     // spike->run();
