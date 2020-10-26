@@ -7,6 +7,7 @@ SRC_DIR		:=	$(CURDIR)/src
 
 TARGET_CORE ?= rv64_nstage.core
 VSRC_DIR := $(WORK_DIR)/verilog/$(TARGET_CORE)
+N ?= 6
 
 # Test ELF 
 TEST_SRC_DIR  := $(CURDIR)/zjv-soc-test
@@ -33,8 +34,8 @@ VERILATOR_LDFLAGS 	:=	-lpthread -ldl -L$(SPIKE_DEST_DIR) -lfesvr -lriscv -lfdt -
 VERILATOR_SOURCE 	:= $(sort $(wildcard $(VERILATOR_CSRC_DIR)/*.cpp)) $(sort $(wildcard $(VERILATOR_VSRC_DIR)/*.v))
 
 VERILATOR_FLAGS := --cc --exe --top-module Top 	\
+				  --threads $(N) \
 				  --assert --x-assign unique    \
-				  --threads 8                   \
 				  --output-split 20000 -O3    	\
 				  -I$(VERILATOR_VSRC_DIR) 	  	\
 				  -CFLAGS "$(VERILATOR_CXXFLAGS) -DZJV_DEBUG" \
