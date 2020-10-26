@@ -1,6 +1,6 @@
 #include "engine.h"
 
-sim_t* dtengine_t::sim_init(std::string elfpath) {
+void dtengine_t::sim_init(std::string elfpath) {
     sim_state = new difftest_state_t;
     const char* isa = "RV64IMA";
     const char* priv = "MSU";
@@ -42,7 +42,7 @@ sim_t* dtengine_t::sim_init(std::string elfpath) {
     spike->difftest_setup();
 }
 
-emu_t* dtengine_t::emu_init(std::string elfpath) {
+void dtengine_t::emu_init(std::string elfpath) {
     emu_state = new difftest_state_t;
     zjv = new emu_t;
     init_ram(elfpath.c_str());
