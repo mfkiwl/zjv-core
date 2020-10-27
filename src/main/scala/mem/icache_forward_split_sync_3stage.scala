@@ -22,11 +22,11 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
   val write_data = Wire(Vec(nWays, new CacheLineData))
 
   /* stage1 signals */
-  val s1_valid = WireInit(Bool(), false.B)
+  val s1_valid = WireDefault(Bool(), false.B)
   val s1_addr = Wire(UInt(xlen.W))
-  val s1_index = Wire(UInt(indexLength.W))
+  val s1_index = WireDefault(UInt(indexLength.W), 0.U(indexLength.W))
   val s1_data = Wire(UInt(blockBits.W))
-  val s1_wen = WireInit(Bool(), false.B)
+  val s1_wen = WireDefault(Bool(), false.B)
   val s1_memtype = Wire(UInt(xlen.W))
 
   s1_valid := io.in.req.valid
@@ -39,20 +39,17 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
   /* stage2 registers */
   val s2_valid = RegInit(Bool(), false.B)
   val s2_addr = RegInit(UInt(xlen.W), 0.U)
-  val s2_index = RegInit(UInt(indexLength.W), 0.U)
   val s2_data = RegInit(UInt(blockBits.W), 0.U)
   val s2_wen = RegInit(Bool(), false.B)
   val s2_memtype = RegInit(UInt(xlen.W), 0.U)
   val s2_meta = Wire(Vec(nWays, new MetaData))
   val s2_cacheline = Wire(Vec(nWays, new CacheLineData))
+  val s2_index = WireDefault(UInt(indexLength.W), 0.U)
   val s2_tag = Wire(UInt(tagLength.W))
-  // val s2_lineoffset = Wire(UInt(lineLength.W))
-  // val s2_wordoffset = Wire(UInt((offsetLength - lineLength).W))
 
   when(!io.in.stall) {
     s2_valid := s1_valid
     s2_addr := s1_addr
-    s2_index := s1_index
     s2_data := s1_data
     s2_wen := s1_wen
     s2_memtype := s1_memtype
@@ -62,14 +59,13 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
     s2_cacheline := write_data
   }.otherwise {
     for (i <- 0 until nWays) {
-      s2_meta(i) := metaArray(i).read(s1_index)
-      s2_cacheline(i) := dataArray(i).read(s1_index)
+      s2_meta(i) := metaArray(i).read(s1_index, true.B)
+      s2_cacheline(i) := dataArray(i).read(s1_index, true.B)
     }
   }
 
+  s2_index := s2_addr(indexLength + offsetLength - 1, offsetLength)
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
-  // s2_lineoffset := s2_addr(offsetLength - 1, offsetLength - lineLength)
-  // s2_wordoffset := s2_addr(offsetLength - lineLength - 1, 0)
 
   val s2_hitVec = VecInit(s2_meta.map(m => m.valid && m.tag === s2_tag)).asUInt
   val s2_hit_index = PriorityEncoder(s2_hitVec)
@@ -78,17 +74,16 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
   val s2_hit = s2_hitVec.orR
   val s2_access_index = Mux(s2_hit, s2_hit_index, s2_victim_index)
   val s2_access_vec = UIntToOH(s2_access_index)
-  
 
   /* stage3 registers */
   val s3_valid = RegInit(Bool(), false.B)
   val s3_addr = RegInit(UInt(xlen.W), 0.U)
-  val s3_index = RegInit(UInt(indexLength.W), 0.U)
   val s3_data = RegInit(UInt(blockBits.W), 0.U)
   val s3_wen = RegInit(Bool(), false.B)
   val s3_memtype = RegInit(UInt(xlen.W), 0.U)
   val s3_meta = Reg(Vec(nWays, new MetaData))
   val s3_cacheline = Reg(Vec(nWays, new CacheLineData))
+  val s3_index = WireDefault(UInt(indexLength.W), 0.U)
   val s3_tag = Wire(UInt(tagLength.W))
   val s3_lineoffset = Wire(UInt(lineLength.W))
   val s3_wordoffset = Wire(UInt((offsetLength - lineLength).W))
@@ -99,7 +94,6 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
   when(!io.in.stall) {
     s3_valid := s2_valid
     s3_addr := s2_addr
-    s3_index := s2_index
     s3_data := s2_data
     s3_wen := s2_wen
     s3_memtype := s2_memtype
@@ -109,6 +103,7 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
     s3_access_vec := s2_access_vec
     s3_hit := s2_hit
   }
+  s3_index := s3_addr(indexLength + offsetLength - 1, offsetLength)
   s3_tag := s3_addr(xlen - 1, xlen - tagLength)
   s3_lineoffset := s3_addr(offsetLength - 1, offsetLength - lineLength)
   s3_wordoffset := s3_addr(offsetLength - lineLength - 1, 0)
@@ -174,8 +169,8 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
     when(request_satisfied) {
       val result_data = target_data.data(s3_lineoffset)
       val offset = s3_wordoffset << 3
-      val mask = WireInit(UInt(blockBits.W), 0.U)
-      val real_data = WireInit(UInt(blockBits.W), 0.U)
+      val mask = WireDefault(UInt(blockBits.W), 0.U)
+      val real_data = WireDefault(UInt(blockBits.W), 0.U)
       switch(s3_memtype) {
         is(memXXX) { result := result_data }
         is(memByte) {

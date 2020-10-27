@@ -71,7 +71,7 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
 
   /* stage3 registers */
   val s3_valid = RegInit(Bool(), false.B)
-  val s3_addr = RegInit(UInt(xlen.W), 0.U)  
+  val s3_addr = RegInit(UInt(xlen.W), 0.U)
   val s3_data = RegInit(UInt(blockBits.W), 0.U)
   val s3_wen = RegInit(Bool(), false.B)
   val s3_meta = Reg(Vec(nWays, new MetaData))
