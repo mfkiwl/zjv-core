@@ -235,7 +235,7 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
       new_meta(i).tag := DontCare
     }
     for (i <- 0 until nWays) {
-      metaArray(i).write(s3_index, write_meta(i))
+      metaArray(i).write(flush_counter.value, new_meta(i))
     }
     flush_counter.inc()
   }

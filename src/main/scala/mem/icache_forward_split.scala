@@ -208,9 +208,8 @@ class ICacheForwardSplit(implicit val cacheConfig: CacheConfig)
       new_meta(i).meta := DontCare
       new_meta(i).tag := DontCare
     }
-    // metaArray.write(flush_counter.value, new_meta)
     for (i <- 0 until nWays) {
-      metaArray(i).write(s2_index, write_meta(i))
+      metaArray(i).write(flush_counter.value, new_meta(i))
     }
     flush_counter.inc()
   }

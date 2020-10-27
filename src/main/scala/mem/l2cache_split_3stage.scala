@@ -115,7 +115,7 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
 
   current_request.resp.valid := s3_valid && request_satisfied
   current_request.resp.bits.data := result
-  current_request.req.ready := state === s_idle
+  current_request.req.ready := !stall // state === s_idle
   current_request.flush_ready := true.B
 
   io.mem.stall := false.B
