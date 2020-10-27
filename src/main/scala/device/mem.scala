@@ -48,3 +48,18 @@ class SimMemIO extends Bundle with phvntomParams {
 class SimMem extends BlackBox {
   val io = IO(new SimMemIO)
 }
+
+class FPGAMem extends Module with phvntomParams {
+  val io = IO(new SimMemIO)
+  // TODO initialize memory
+  // refer to https://github.com/freechipsproject/chisel3/wiki/Chisel-Memories
+  val mem = Mem(4096, UInt(xlen.W))
+  //  IPORT
+  io.rdata := mem(io.raddr)
+
+  //  DPORT
+  when (io.wen) {
+    val data = mem(io.waddr)
+    mem(io.waddr) := (io.wdata & io.wmask) | (data & ~io.wmask)
+  }  
+}

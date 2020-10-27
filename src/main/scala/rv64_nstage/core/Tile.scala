@@ -15,7 +15,7 @@ class TileIO extends Bundle with phvntomParams {
   // TODO
 }
 
-class Tile extends Module with phvntomParams with projectConfig {
+class Tile extends Module with phvntomParams {
   val io = IO(new TileIO)
 
   val core = Module(new Core)
@@ -23,9 +23,9 @@ class Tile extends Module with phvntomParams with projectConfig {
 
   // mem path
   val icache = Module(
-    new ICache()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false))
+    new ICacheForwardSplit()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false))
   )
-  val dcache = Module(new DCache()(CacheConfig(name = "dcache")))
+  val dcache = Module(new DCacheWriteThroughSplit()(CacheConfig(name = "dcache")))
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
 
   core.io.imem <> icache.io.in
@@ -35,11 +35,11 @@ class Tile extends Module with phvntomParams with projectConfig {
     val mem_source = List(icache, dcache)
     val memxbar = Module(new CrossbarNto1(1))
     val l2cache = Module(
-      new L2Cache(4)(
+      new L2CacheSplit3Stage(4)(
         CacheConfig(
           name = "l2cache",
           blockBits = dcache.lineBits,
-          totalSize = 256
+          totalSize = 128
         )
       )
     )
@@ -55,8 +55,8 @@ class Tile extends Module with phvntomParams with projectConfig {
   } else {
     val icacheBus = Module(new DUncache(icache.lineBits, "inst uncache"))
     val dcacheBus = Module(new DUncache(dcache.lineBits, "mem uncache"))
-    val immuBus = Module(new DUncache)
-    val dmmuBus = Module(new DUncache)
+    val immuBus = Module(new DUncache(icache.lineBits))
+    val dmmuBus = Module(new DUncache(dcache.lineBits))
     val mem_source = List(icacheBus, dcacheBus, immuBus, dmmuBus)
     val memxbar = Module(new CrossbarNto1(mem_source.length))
     icache.io.mem <> icacheBus.io.in
@@ -70,6 +70,9 @@ class Tile extends Module with phvntomParams with projectConfig {
   }
 
   // mmio path
+  // uart
+  val uart = Module(new AXI4UART)
+
   // power off
   val poweroff = Module(new AXI4PowerOff)
   val poweroffSync = poweroff.io.extra.get.poweroff
@@ -81,16 +84,20 @@ class Tile extends Module with phvntomParams with projectConfig {
   val msipSync = clint.io.extra.get.msip
   core.io.int.msip := msipSync
   core.io.int.mtip := mtipSync
-  core.io.int.meip := false.B
-  core.io.int.seip := false.B
   BoringUtils.addSource(mtipSync, "mtip")
   BoringUtils.addSource(msipSync, "msip")
 
-  // uart
-  val uart = Module(new AXI4UART)
+  // plic
+  val plic = Module(new AXI4PLIC)
+  plic.io.extra.get.intrVec := uart.io.extra.get.irq
+  val hart0_meipSync = plic.io.extra.get.meip(0)
+  val hart0_seipSync = plic.io.extra.get.meip(1)
+  core.io.int.meip := hart0_meipSync
+  core.io.int.seip := hart0_seipSync
+//  printf("Here is the output of PLIC meip %x\n", meipSync)
 
   // xbar
-  val mmio_device = List(poweroff, clint, uart)
+  val mmio_device = List(poweroff, clint, plic, uart)
   val mmioBus = Module(new Uncache(mname = "mmio uncache"))
   val mmioxbar = Module(new Crossbar1toN(AddressSpace.mmio))
   // val xbar = Module(new AXI4Xbar(2, addrSpace))

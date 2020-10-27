@@ -15,6 +15,9 @@ class PcGenIO extends Bundle with phvntomParams {
   val flush_cache_tlb = Input(Bool())
   val epc = Input(UInt(xlen.W))
   val tvec = Input(UInt(xlen.W))
+  // Prediction
+  val predict_jump = Input(Bool())
+  val predict_jump_target = Input(UInt(xlen.W))
   // Branch and Jump
   val branch_jump = Input(Bool())
   val branch_pc = Input(UInt(xlen.W))
@@ -47,7 +50,7 @@ class PcGen extends Module with phvntomParams {
   }.elsewhen(io.branch_jump && !io.inst_addr_misaligned) {
     pc_for_restore := io.branch_pc
   }.elsewhen(!last_stall && io.stall) {
-    pc_for_restore := pc + 4.U
+    pc_for_restore := Mux(io.predict_jump, io.predict_jump_target, pc + 4.U)
   }
 
   when(!io.stall) {
@@ -64,13 +67,13 @@ class PcGen extends Module with phvntomParams {
     }.elsewhen(last_stall) {
       pc := Cat(pc_for_restore(xlen - 1, 1), Fill(1, 0.U))
     }.otherwise {
-      pc := pc + 4.U
+      pc := Mux(io.predict_jump, io.predict_jump_target, pc + 4.U)
     }
   }
 
   io.pc_out := pc
 
-  if (pipeTrace) {
+  if (pipeTrace && false) {
     printf("In PC_Gen: pc %x, stall %x, br %x, bpc %x, ei %x, tvec %x\n", pc, io.stall, io.branch_jump, io.branch_pc, io.expt_int, io.tvec)
   }
 }

@@ -1,8 +1,9 @@
 #include "engine.h"
 
-sim_t* dtengine_t::sim_init(std::string elfpath) {
+void dtengine_t::sim_init(std::string elfpath) {
+    sim_state = new difftest_state_t;
     const char* isa = "RV64IMA";
-    const char* priv = "M";
+    const char* priv = "MSU";
     const char* varch = "vlen:128,elen:64,slen:128";
     size_t nprocs = 1;
     bool halted = false;
@@ -34,14 +35,15 @@ sim_t* dtengine_t::sim_init(std::string elfpath) {
                     diffTest, file_fifo_path);
 
     #ifdef ZJV_DEBUG
-        spike->set_procs_debug(true);
+//         spike->set_procs_debug(true);
     #endif
     
     // spike->run();
     spike->difftest_setup();
 }
 
-emu_t* dtengine_t::emu_init(std::string elfpath) {
+void dtengine_t::emu_init(std::string elfpath) {
+    emu_state = new difftest_state_t;
     zjv = new emu_t;
     init_ram(elfpath.c_str());
     init_uart(file_fifo_path);
@@ -56,16 +58,26 @@ void dtengine_t::emu_reset(uint cycle) {
         zjv->eval();
         zjv->reset = 0;
     }
-    emu_get_state();
+    emu_update_state();
 }
 
 void dtengine_t::sim_reset(uint cycle) {
     // TODO
 }
 
+void dtengine_t::sim_solo() {
+    sim_sync_cycle();
+    spike->difftest_checkINT();
+}
+
 void dtengine_t::sim_step(uint step) {
     spike->difftest_continue(1);
-    sim_get_state();
+    sim_update_state();
+}
+
+void dtengine_t::sim_check_interrupt() {
+    spike->difftest_checkINT();
+    sim_update_state();
 }
 
 void dtengine_t::emu_step(uint step) {
@@ -83,12 +95,13 @@ void dtengine_t::emu_step(uint step) {
             tfp->dump(static_cast<vluint64_t>(trace_count * 2 + 1));
     #endif
     trace_count++;
-    emu_get_state();
+    emu_update_state();
 }
 
-dtengine_t::dtengine_t(std::string elfpath) {
+dtengine_t::dtengine_t(size_t xlen, std::string elfpath): xlen(xlen) {
 
     file_fifo_path = "/tmp/zjv";
+    disassembler = new disassembler_t(xlen);
 
     emu_init(elfpath);
     sim_init(elfpath);
@@ -117,8 +130,8 @@ void dtengine_t::trace_close () {
     #endif  
 }
 
-void dtengine_t::emu_get_state() {
-    #define emu_get_reg(n) emu_state.regs[n] = zjv->io_difftest_regs_##n
+void dtengine_t::emu_update_state() {
+    #define emu_get_reg(n) emu_state->regs[n] = zjv->io_difftest_regs_##n
         emu_get_reg( 0); emu_get_reg(10); emu_get_reg(20); emu_get_reg(30); 
         emu_get_reg( 1); emu_get_reg(11); emu_get_reg(21); emu_get_reg(31); 
         emu_get_reg( 2); emu_get_reg(12); emu_get_reg(22); 
@@ -129,53 +142,64 @@ void dtengine_t::emu_get_state() {
         emu_get_reg( 7); emu_get_reg(17); emu_get_reg(27);
         emu_get_reg( 8); emu_get_reg(18); emu_get_reg(28);
         emu_get_reg( 9); emu_get_reg(19); emu_get_reg(29);
-    emu_state.pc    = zjv->io_difftest_pc;
-    emu_state.inst  = zjv->io_difftest_inst;
-    emu_state.valid = zjv->io_difftest_valid;
-    emu_state.interrupt = zjv->io_difftest_int;
-    emu_state.poweroff  = zjv->io_poweroff;
-
-    // printf(">>>> %lx\n", emu_state.poweroff);
+    emu_state->pc        = zjv->io_difftest_pc;
+    emu_state->inst      = zjv->io_difftest_inst;
+    emu_state->valid     = zjv->io_difftest_valid;
+    emu_state->interrupt = zjv->io_difftest_int;
+    emu_state->poweroff  = zjv->io_poweroff;
+    emu_state->mstatus   = zjv->io_difftest_mstatus;
+    emu_state->mideleg   = zjv->io_difftest_mideleg;
+    emu_state->medeleg   = zjv->io_difftest_medeleg;
+    emu_state->priv      = zjv->io_difftest_priv;
+    emu_state->mepc      = zjv->io_difftest_mepc;
+    emu_state->mtval     = zjv->io_difftest_mtval;
+    emu_state->mcause    = zjv->io_difftest_mcause;
+    emu_state->mtvec     = zjv->io_difftest_mtvec;
+    emu_state->stvec     = zjv->io_difftest_stvec;
+    emu_state->sstatus   = zjv->io_difftest_sstatus;
+    emu_state->sepc      = zjv->io_difftest_sepc;
+    emu_state->stval     = zjv->io_difftest_stval;
+    emu_state->scause    = zjv->io_difftest_scause;
+    emu_state->mcycle    = zjv->io_difftest_mcycle;
 }
 
-void dtengine_t::sim_get_state() {
-    spike->get_state(&sim_state);       
+void dtengine_t::sim_update_state() {
+    state_t* s = spike->get_state();
+
+    for (int i = 0; i < 32; i++) {
+      sim_state->regs[i] = s->XPR[i];
+    }
+    sim_state->npc = s->pc;
+    sim_state->pc = s->last_pc;
+    sim_state->inst = s->last_inst;
+    sim_state->priv = s->prv;
+    sim_state->mstatus  = s->mstatus;
+    sim_state->mepc    = s->mepc;
+    sim_state->mtval   = s->mtval;
+    sim_state->mcause  = s->mcause;
+    sim_state->mtvec   = s->mtvec;
+    sim_state->mideleg = s->mideleg;
+    sim_state->medeleg = s->medeleg;
+    sim_state->sstatus = s->mstatus & ~(MSTATUS_MIE | MSTATUS_MPIE | MSTATUS_MPP | MSTATUS_MPRV | 
+                                       MSTATUS_TVM | MSTATUS_TW | MSTATUS_TSR | MSTATUS_SXL | 
+                                       MSTATUS64_MBE | MSTATUS64_SBE );
+    sim_state->sepc    = s->sepc;
+    sim_state->stval   = s->stval;
+    sim_state->scause  = s->scause;
+    sim_state->stvec   = s->stvec;
+    sim_state->satp    = s->satp;
 }
 
 unsigned long dtengine_t::emu_difftest_valid() {
-    return emu_state.valid;
+    return emu_state->valid;
 }
 
 unsigned long dtengine_t::emu_difftest_poweroff() {
-    return emu_state.poweroff;
-}
-
-unsigned long dtengine_t::emu_get_mcycle() {
-    return zjv->io_difftest_mcycler;
-}
-
-unsigned long dtengine_t::emu_get_pc() {
-    return emu_state.pc;
-}
-
-unsigned long dtengine_t::emu_get_inst() {
-    return emu_state.inst;
-}
-
-unsigned long dtengine_t::sim_get_pc() {
-    return sim_state.pc;
-}
-
-unsigned long dtengine_t::emu_get_int() {
-    return emu_state.interrupt;
+    return emu_state->poweroff;
 }
 
 void dtengine_t::sim_sync_cycle() {
     spike->sync_cycle();
-}
-
-void dtengine_t::sim_set_mip() {
-    spike->set_mip();
 }
 
 bool dtengine_t::is_finish() {

@@ -8,14 +8,14 @@ import bus._
 import device._
 import utils._
 
-class DCache(implicit val cacheConfig: CacheConfig)
+class DCacheSplit(implicit val cacheConfig: CacheConfig)
     extends Module
     with CacheParameters {
   val io = IO(new CacheIO)
 
   // Module Used
-  val metaArray = Mem(nSets, Vec(nWays, new MetaData))
-  val dataArray = Mem(nSets, Vec(nWays, new CacheLineData))
+  val metaArray = List.fill(nWays)(Mem(nSets, new MetaData))
+  val dataArray = List.fill(nWays)(Mem(nSets, new CacheLineData))
   val stall = Wire(Bool())
   val need_forward = Wire(Bool())
   val write_meta = Wire(Vec(nWays, new MetaData))
@@ -56,8 +56,15 @@ class DCache(implicit val cacheConfig: CacheConfig)
     s2_data := s1_data
     s2_wen := s1_wen
     s2_memtype := s1_memtype
-    s2_meta := Mux(need_forward, write_meta, metaArray.read(s1_index))
-    s2_cacheline := Mux(need_forward, write_data, dataArray.read(s1_index))
+    when(need_forward) {
+      s2_meta := write_meta
+      s2_cacheline := write_data
+    }.otherwise {
+      for (i <- 0 until nWays) {
+        s2_meta(i) := metaArray(i).read(s1_index)
+        s2_cacheline(i) := dataArray(i).read(s1_index)
+      }
+    }
   }
 
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
@@ -196,16 +203,20 @@ class DCache(implicit val cacheConfig: CacheConfig)
         for (i <- 0 until nWays) {
           when(access_index === i.U) {
             write_data(i) := new_data
+            dataArray(i).write(s2_index, new_data)
           }.otherwise {
             write_data(i) := s2_cacheline(i)
           }
         }
-        dataArray.write(s2_index, write_data, access_vec.asBools)
+        // dataArray.write(s2_index, write_data, access_vec.asBools)
         write_meta := policy.update_meta(s2_meta, access_index)
         write_meta(access_index).valid := true.B
         write_meta(access_index).dirty := true.B
         write_meta(access_index).tag := s2_tag
-        metaArray.write(s2_index, write_meta)
+        // metaArray.write(s2_index, write_meta)
+        for (i <- 0 until nWays) {
+          metaArray(i).write(s2_index, write_meta(i))
+        }
         // printf(
         //   p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, filled_data=${Hexadecimal(filled_data)}\n"
         // )
@@ -262,11 +273,12 @@ class DCache(implicit val cacheConfig: CacheConfig)
             for (i <- 0 until nWays) {
               when(access_index === i.U) {
                 write_data(i) := target_data
+                dataArray(i).write(s2_index, target_data)
               }.otherwise {
                 write_data(i) := s2_cacheline(i)
               }
             }
-            dataArray.write(s2_index, write_data, access_vec.asBools)
+            // dataArray.write(s2_index, write_data, access_vec.asBools)
           }
           write_meta := policy.update_meta(s2_meta, access_index)
           write_meta(access_index).valid := true.B
@@ -274,7 +286,10 @@ class DCache(implicit val cacheConfig: CacheConfig)
             write_meta(access_index).dirty := false.B
           }
           write_meta(access_index).tag := s2_tag
-          metaArray.write(s2_index, write_meta)
+          // metaArray.write(s2_index, write_meta)
+          for (i <- 0 until nWays) {
+            metaArray(i).write(s2_index, write_meta(i))
+          }
           // printf(
           //   p"dcache write: mask=${Hexadecimal(mask)}, mem_result=${Hexadecimal(mem_result)}, s2_index=0x${Hexadecimal(s2_index)}\n"
           // )

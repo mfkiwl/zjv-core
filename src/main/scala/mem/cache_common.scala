@@ -78,5 +78,5 @@ class CacheLineData(implicit val cacheConfig: CacheConfig)
     with CacheParameters {
   val data = Vec(nLine, UInt(blockBits.W))
   override def toPrintable: Printable =
-    p"DCacheLineData(data = ${data})\n"
+    p"CacheLineData(data = ${data})\n"
 }

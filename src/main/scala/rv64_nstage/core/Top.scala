@@ -8,14 +8,27 @@ import common._
 import rv64_nstage.control.ControlConst
 
 class DiffTestIO extends Bundle with phvntomParams {
-  val regs = Output(Vec(regNum, UInt(xlen.W)))
-  val pc   = Output(UInt(xlen.W))
-  val inst = Output(UInt(xlen.W))
-  val valid = Output(Bool())
-  val csr_cmd = Output(UInt(ControlConst.wenBits.W))
-  val tick = Output(Bool())
-  val int = Output(Bool())
-  val mcycler = Output(UInt(xlen.W))
+  val regs     = Output(Vec(regNum, UInt(xlen.W)))
+  val pc       = Output(UInt(xlen.W))
+  val inst     = Output(UInt(xlen.W))
+  val valid    = Output(Bool())
+  val csr_cmd  = Output(UInt(ControlConst.wenBits.W))
+  val tick     = Output(Bool())
+  val int      = Output(Bool())
+  val mcycle   = Output(UInt(xlen.W))
+  val mstatus  = Output(UInt(xlen.W))
+  val priv     = Output(UInt(2.W))
+  val mepc     = Output(UInt(xlen.W))
+  val mtval    = Output(UInt(xlen.W))
+  val mcause   = Output(UInt(xlen.W))
+  val sstatus  = Output(UInt(xlen.W))
+  val sepc     = Output(UInt(xlen.W))
+  val stval    = Output(UInt(xlen.W))
+  val scause   = Output(UInt(xlen.W))
+  val stvec    = Output(UInt(xlen.W))
+  val mtvec    = Output(UInt(xlen.W))
+  val mideleg  = Output(UInt(xlen.W))
+  val medeleg  = Output(UInt(xlen.W))
 }
 
 class TopIO extends Bundle with phvntomParams {
@@ -36,8 +49,22 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.inst,    "difftestInst")
   BoringUtils.addSink(difftest.valid,   "difftestValid")
   BoringUtils.addSink(difftest.csr_cmd, "difftestCSRCmd")
-  BoringUtils.addSink(difftest.int, "difftestInt")
-  BoringUtils.addSink(difftest.mcycler, "difftestmcycler")
+  BoringUtils.addSink(difftest.int,     "difftestInt")
+  BoringUtils.addSink(difftest.mcycle,  "difftestmcycler")
+  BoringUtils.addSink(difftest.mstatus, "difftestmstatusr")
+  BoringUtils.addSink(difftest.priv,    "difftestprivilege")
+
+  BoringUtils.addSink(difftest.mepc,    "difftestmepcr")
+  BoringUtils.addSink(difftest.mtval,   "difftestmtvalr")
+  BoringUtils.addSink(difftest.mcause,  "difftestmcauser")
+  BoringUtils.addSink(difftest.sstatus, "difftestsstatusr")
+  BoringUtils.addSink(difftest.sepc,    "difftestsepcr")
+  BoringUtils.addSink(difftest.stval,   "diffteststvalr")
+  BoringUtils.addSink(difftest.scause,  "difftestscauser")
+  BoringUtils.addSink(difftest.stvec,   "diffteststvecr")
+  BoringUtils.addSink(difftest.mtvec,   "difftestmtvecr")
+  BoringUtils.addSink(difftest.mideleg, "difftestmidelegr")
+  BoringUtils.addSink(difftest.medeleg, "difftestmedelegr")
 
   val poweroff = WireInit(0.U(xlen.W))
   BoringUtils.addSink(poweroff, "poweroff")
@@ -46,8 +73,6 @@ class Top extends Module with phvntomParams {
   val msip = WireInit(false.B)
   BoringUtils.addSink(mtip, "mtip")
   BoringUtils.addSink(msip, "msip")
-
-  
 
   io.difftest := difftest
   io.poweroff := poweroff
