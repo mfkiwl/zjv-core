@@ -158,6 +158,8 @@ class DataPath extends Module with phvntomParams {
   immu.io.front.valid := true.B // !stall_if1_if2
   immu.io.front.force_s_mode := false.B
   immu.io.front.sum := 0.U
+  immu.io.front.mxr := 0.U
+  immu.io.front.mpp_s := false.B
   immu.io.front.va := pc_gen.io.pc_out
   immu.io.front.flush_all := write_satp_flush || s_fence_flush
   immu.io.front.satp_val := csr.io.satp_val
@@ -396,6 +398,8 @@ class DataPath extends Module with phvntomParams {
   dmmu.io.front.valid := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR // && !stall_dtlb_mem1
   dmmu.io.front.force_s_mode := csr.io.force_s_mode_mem
   dmmu.io.front.sum := csr.io.mstatus_sum
+  dmmu.io.front.mxr := csr.io.mstatus_mxr
+  dmmu.io.front.mpp_s := csr.io.is_mpp_s_mode
   dmmu.io.front.va := reg_exe_dtlb.io.aluio.alu_val_out
   dmmu.io.front.flush_all := write_satp_flush || s_fence_flush
   dmmu.io.front.satp_val := csr.io.satp_val

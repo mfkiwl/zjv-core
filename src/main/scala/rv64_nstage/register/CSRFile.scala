@@ -281,6 +281,8 @@ class CSRFileIO extends Bundle with phvntomParams {
   val current_p = Output(UInt(2.W))
   val force_s_mode_mem = Output(Bool())
   val mstatus_sum = Output(UInt(1.W))
+  val mstatus_mxr = Output(UInt(1.W))
+  val is_mpp_s_mode = Output(Bool())
 }
 
 class CSRFile extends Module with phvntomParams {
@@ -387,7 +389,7 @@ class CSRFile extends Module with phvntomParams {
   val mimpidr = RegInit(0.U(xlen.W))
   val mcycler = RegInit(UInt(64.W), 0.U)
   val minstretr = RegInit(0.U(64.W))
-  val mcounterenr = RegInit(0.U(xlen.W))
+  val mcounterenr = RegInit(0.U(32.W))
 
   // [--------- Physical Memory Protection Registers in CSR --------]
   val pmpcfg0r = RegInit(0.U(xlen.W))
@@ -415,7 +417,7 @@ class CSRFile extends Module with phvntomParams {
   val scauser = Cat(scauser_int, 0.U((xlen - 5).W), scauser_cause)
   val stvalr = RegInit(0.U(xlen.W))
   val sscratchr = RegInit(0.U(xlen.W))
-  val scounterenr = RegInit(0.U(xlen.W))
+  val scounterenr = RegInit(0.U(32.W))
 
   //  [--------- User Mode Registers in CSR --------]
   val uepcr = RegInit(0.U(xlen.W))
@@ -1132,8 +1134,10 @@ class CSRFile extends Module with phvntomParams {
     (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
   io.satp_val := satpr
   io.current_p := current_p
-  io.force_s_mode_mem := mstatusr_mpp === CSR.PRV_S && mstatusr_mprv
+  io.force_s_mode_mem := mstatusr_mprv
+  io.is_mpp_s_mode := mstatusr_mpp === CSR.PRV_S
   io.mstatus_sum := mstatusr_sum
+  io.mstatus_mxr := mstatusr_mxr
 
   if(diffTest) {
     BoringUtils.addSource(mstatusr, "difftestmstatusr")
@@ -1186,6 +1190,8 @@ class CSRIO extends Bundle with phvntomParams {
   val current_p = Output(UInt(2.W))
   val force_s_mode_mem = Output(Bool())
   val mstatus_sum = Output(UInt(1.W))
+  val mstatus_mxr = Output(UInt(1.W))
+  val is_mpp_s_mode = Output(Bool())
   // Interrupt
   val tim_int = Input(Bool())
   val soft_int = Input(Bool())
@@ -1243,4 +1249,6 @@ class CSR extends Module with phvntomParams {
   io.current_p := csr_regfile.io.current_p
   io.force_s_mode_mem := csr_regfile.io.force_s_mode_mem
   io.mstatus_sum := csr_regfile.io.mstatus_sum
+  io.mstatus_mxr := csr_regfile.io.mstatus_mxr
+  io.is_mpp_s_mode := csr_regfile.io.is_mpp_s_mode
 }

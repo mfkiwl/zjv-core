@@ -44,6 +44,8 @@ class MMUFrontIO(implicit val mmuConfig: MMUConfig)
   val current_p = Input(UInt(2.W))
   val force_s_mode = Input(Bool())
   val sum = Input(UInt(1.W))
+  val mxr = Input(UInt(1.W))
+  val mpp_s = Input(Bool())
   // Protection
   val is_inst = Input(Bool())
   val is_load = Input(Bool())

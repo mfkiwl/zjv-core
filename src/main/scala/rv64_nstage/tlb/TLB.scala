@@ -35,17 +35,20 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     val ageVec = VecInit(array.map(m => !m.meta.orR)).asUInt
     PriorityEncoder(ageVec)
   }
+
   def update_meta(
-      array: Vec[TLBEntry],
-      access_index: UInt
-  ): Vec[TLBEntry] = {
+                   array: Vec[TLBEntry],
+                   access_index: UInt
+                 ): Vec[TLBEntry] = {
     val length = log2Ceil(array.length)
     val new_meta = WireDefault(array)
     val old_meta_value =
       Mux(array(access_index).valid, array(access_index).meta, 0.U)
     (new_meta zip array).map {
       case (n, o) =>
-        when(o.meta > old_meta_value) { n.meta := o.meta - 1.U }
+        when(o.meta > old_meta_value) {
+          n.meta := o.meta - 1.U
+        }
     }
     new_meta(access_index).meta := Fill(length, 1.U(1.W))
     new_meta
@@ -60,12 +63,13 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
   }
 
   def pass_protection_check(
-      pte: UInt,
-      is_inst: Bool,
-      is_load: Bool,
-      is_store: Bool
-  ): Bool = {
-    Mux(is_inst, pte(3), Mux(is_load, pte(1), Mux(is_store, pte(2), true.B)))
+                             pte: UInt,
+                             is_inst: Bool,
+                             is_load: Bool,
+                             is_store: Bool,
+                             mxr: Bool
+                           ): Bool = {
+    Mux(is_inst, pte(3), Mux(is_load, pte(1) || (mxr && pte(3)), Mux(is_store, pte(2), true.B)))
   }
 
   def misaligned_spage(lev: UInt, last_pte: UInt): Bool = {
@@ -82,15 +86,16 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
   }
 
   def sum_is_zero_fault(
-      sum: UInt,
-      force_s_mode: Bool,
-      current_p: UInt,
-      last_pte: UInt
-  ): Bool = {
+                         sum: UInt,
+                         force_s_mode: Bool,
+                         mpp_s: Bool,
+                         current_p: UInt,
+                         last_pte: UInt
+                       ): Bool = {
     Mux(
       sum === 1.U,
       false.B,
-      Mux(current_p === CSR.PRV_S || force_s_mode, last_pte(4), false.B)
+      Mux(current_p === CSR.PRV_S || (force_s_mode && mpp_s), last_pte(4), false.B)
     )
   }
 
@@ -149,13 +154,15 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     current_pte,
     io.in.is_inst,
     io.in.is_load,
-    io.in.is_store
+    io.in.is_store,
+    io.in.mxr.orR,
   ) &&
     !misaligned_spage(current_level, current_pte) &&
     pass_pmp_pma(current_pte) &&
     !sum_is_zero_fault(
       io.in.sum,
       io.in.force_s_mode,
+      io.in.mpp_s,
       io.in.current_p,
       current_pte
     )
@@ -179,9 +186,19 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
         state := s_req
       }
     }
-    is(s_req) { when(io.out.req.fire()) { state := s_resp } }
-    is(s_resp) { when(io.out.resp.fire()) { state := s_idle } }
-    is(s_flush) { state := s_idle }
+    is(s_req) {
+      when(io.out.req.fire()) {
+        state := s_resp
+      }
+    }
+    is(s_resp) {
+      when(io.out.resp.fire()) {
+        state := s_idle
+      }
+    }
+    is(s_flush) {
+      state := s_idle
+    }
   }
 
   when(request_satisfied) {
@@ -222,7 +239,7 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     printf(p"entryArray=${entryArray}\n")
     printf("-----------------------------------------------\n")
 
-    if(mmuConfig.isdmmu)
+    if (mmuConfig.isdmmu)
       printf("In DMMU nt %x\n", need_translate)
     else
       printf("In IMMU nt %x\n", need_translate)
