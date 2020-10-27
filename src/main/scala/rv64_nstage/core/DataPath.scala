@@ -49,7 +49,7 @@ class DataPath extends Module with phvntomParams {
   val reg_dtlb_mem1 = Module(new RegDTLBMem1)
   val csr = Module(new CSR)
   val reg_mem1_mem2 = Module(new RegMem1Mem2)
-//  val reg_mem2_mem3 = Module(new RegMem1Mem2)
+  //  val reg_mem2_mem3 = Module(new RegMem1Mem2)
   val reg_mem3_wb = Module(new RegMem3Wb)
   val reg_file = Module(new RegFile)
   val scheduler = Module(new ALUScheduler)
@@ -650,111 +650,207 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_int, "difftestInt")
 
-    if (pipeTrace) {
-      printf("\t\tIF1\t\tIF2\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n")
-      printf(
-        "Stall Req\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\n",
-        stall_req_if1_atomic,
-        stall_req_if3_atomic,
-        0.U,
-        stall_req_exe_atomic || stall_req_exe_interruptable,
-        stall_req_dtlb_atomic,
-        0.U,
-        stall_req_mem3_atomic,
-        0.U
-      )
-      printf(
-        "Stall\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\n",
-        stall_pc,
-        stall_if1_if2,
-        stall_if3_id,
-        stall_id_exe,
-        stall_exe_dtlb,
-        stall_dtlb_mem1,
-        stall_mem1_mem2,
-        stall_mem3_wb
-      )
-      printf(
-        "PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
-        pc_gen.io.pc_out(31, 0),
-        reg_if1_if2.io.bsrio.pc_out(31, 0),
-        reg_if3_id.io.bsrio.pc_out(31, 0),
-        reg_id_exe.io.bsrio.pc_out(31, 0),
-        reg_exe_dtlb.io.bsrio.pc_out(31, 0),
-        reg_dtlb_mem1.io.bsrio.pc_out(31, 0),
-        reg_mem1_mem2.io.bsrio.pc_out(31, 0),
-        reg_mem3_wb.io.bsrio.pc_out(31, 0)
-      )
-      printf(
-        "Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
-        BUBBLE(31, 0),
-        io.imem.resp.bits.data(31, 0),
-        reg_if3_id.io.instio.inst_out(31, 0),
-        reg_id_exe.io.instio.inst_out(31, 0),
-        reg_exe_dtlb.io.instio.inst_out(31, 0),
-        reg_dtlb_mem1.io.instio.inst_out(31, 0),
-        reg_mem1_mem2.io.instio.inst_out(31, 0),
-        reg_mem3_wb.io.instio.inst_out(31, 0)
-      )
-      printf(
-        "AluO\t\t%x\t\t%x\t\t%x\t\t%x\t%x\t%x\t%x\t%x\n",
-        0.U,
-        0.U,
-        0.U,
-        alu.io.out(31, 0),
-        reg_exe_dtlb.io.aluio.alu_val_out(31, 0),
-        reg_dtlb_mem1.io.aluio.alu_val_out(31, 0),
-        reg_mem1_mem2.io.aluio.alu_val_out(31, 0),
-        reg_mem3_wb.io.aluio.alu_val_out(31, 0)
-      )
-      printf(
-        "MemO\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t%x\n",
-        0.U,
-        0.U,
-        0.U,
-        0.U,
-        0.U,
-        0.U,
-        io.dmem.resp.bits.data(31, 0),
-        reg_mem3_wb.io.memio.mem_val_out(31, 0)
-      )
-      printf(
-        "Bubb\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\n",
-        0.U,
-        reg_if1_if2.io.bsrio.bubble_out,
-        reg_if3_id.io.bsrio.bubble_out,
-        reg_id_exe.io.bsrio.bubble_out,
-        reg_exe_dtlb.io.bsrio.bubble_out,
-        reg_dtlb_mem1.io.bsrio.bubble_out,
-        reg_mem1_mem2.io.bsrio.bubble_out,
-        reg_mem3_wb.io.bsrio.bubble_out
-      )
-      if(traceBPU) {
+    if (pipeTrace || vscode) {
+      if (vscode) {
+        printf("\t\tIF1\t\tIF2\t\tIF3\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n")
         printf(
-          "Take\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\n",
-          bpu.io.branch_taken,
-          reg_if1_if2.io.bpio.predict_taken_out,
-          reg_if3_id.io.bpio.predict_taken_out,
-          reg_id_exe.io.bpio.predict_taken_out,
+          "Stall Req\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\n",
+          stall_req_if1_atomic,
           0.U,
+          stall_req_if3_atomic,
           0.U,
+          stall_req_exe_atomic || stall_req_exe_interruptable,
+          stall_req_dtlb_atomic,
           0.U,
+          stall_req_mem3_atomic,
           0.U
         )
         printf(
-          "Tar\t\t%x\t%x\t%x\t%x\t%x\t\t%x\t\t%x\t\t%x\n",
-          bpu.io.pc_in_btb(31, 0),
-          reg_if1_if2.io.bpio.target_out(31, 0),
-          reg_if3_id.io.bpio.target_out(31, 0),
-          reg_id_exe.io.bpio.target_out(31, 0),
+          "Stall\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\n",
+          stall_pc,
+          stall_if1_if2,
+          stall_if2_if3,
+          stall_if3_id,
+          stall_id_exe,
+          stall_exe_dtlb,
+          stall_dtlb_mem1,
+          stall_mem1_mem2,
+          stall_mem3_wb
+        )
+        printf(
+          "PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          pc_gen.io.pc_out(31, 0),
+          reg_if1_if2.io.bsrio.pc_out(31, 0),
+          reg_if2_if3.io.bsrio.pc_out(31, 0),
+          reg_if3_id.io.bsrio.pc_out(31, 0),
+          reg_id_exe.io.bsrio.pc_out(31, 0),
+          reg_exe_dtlb.io.bsrio.pc_out(31, 0),
+          reg_dtlb_mem1.io.bsrio.pc_out(31, 0),
+          reg_mem1_mem2.io.bsrio.pc_out(31, 0),
+          reg_mem3_wb.io.bsrio.pc_out(31, 0)
+        )
+        printf(
+          "Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          BUBBLE(31, 0),
+          BUBBLE(31, 0),
+          io.imem.resp.bits.data(31, 0),
+          reg_if3_id.io.instio.inst_out(31, 0),
+          reg_id_exe.io.instio.inst_out(31, 0),
+          reg_exe_dtlb.io.instio.inst_out(31, 0),
+          reg_dtlb_mem1.io.instio.inst_out(31, 0),
+          reg_mem1_mem2.io.instio.inst_out(31, 0),
+          reg_mem3_wb.io.instio.inst_out(31, 0)
+        )
+        printf(
+          "AluO\t\t%x\t\t%x\t\t%x\t\t%x\t%x\t%x\t%x\t%x\t%x\n",
           0.U,
           0.U,
           0.U,
+          0.U,
+          alu.io.out(31, 0),
+          reg_exe_dtlb.io.aluio.alu_val_out(31, 0),
+          reg_dtlb_mem1.io.aluio.alu_val_out(31, 0),
+          reg_mem1_mem2.io.aluio.alu_val_out(31, 0),
+          reg_mem3_wb.io.aluio.alu_val_out(31, 0)
+        )
+        printf(
+          "MemO\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t%x\t%x\n",
+          0.U,
+          0.U,
+          0.U,
+          0.U,
+          0.U,
+          0.U,
+          0.U,
+          io.dmem.resp.bits.data(31, 0),
+          reg_mem3_wb.io.memio.mem_val_out(31, 0)
+        )
+        printf(
+          "Bubb\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\n",
+          0.U,
+          reg_if1_if2.io.bsrio.bubble_out,
+          reg_if2_if3.io.bsrio.bubble_out,
+          reg_if3_id.io.bsrio.bubble_out,
+          reg_id_exe.io.bsrio.bubble_out,
+          reg_exe_dtlb.io.bsrio.bubble_out,
+          reg_dtlb_mem1.io.bsrio.bubble_out,
+          reg_mem1_mem2.io.bsrio.bubble_out,
+          reg_mem3_wb.io.bsrio.bubble_out
+        )
+      } else {
+        printf("\t\tIF1\tIF2\tIF3\tID\tEXE\tDTLB\tMEM1\tMEM3\tWB\n")
+        printf(
+          "Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          stall_req_if1_atomic,
+          0.U,
+          stall_req_if3_atomic,
+          0.U,
+          stall_req_exe_atomic || stall_req_exe_interruptable,
+          stall_req_dtlb_atomic,
+          0.U,
+          stall_req_mem3_atomic,
           0.U
+        )
+        printf(
+          "Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          stall_pc,
+          stall_if1_if2,
+          stall_if2_if3,
+          stall_if3_id,
+          stall_id_exe,
+          stall_exe_dtlb,
+          stall_dtlb_mem1,
+          stall_mem1_mem2,
+          stall_mem3_wb
+        )
+        printf(
+          "PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          pc_gen.io.pc_out(15, 0),
+          reg_if1_if2.io.bsrio.pc_out(15, 0),
+          reg_if2_if3.io.bsrio.pc_out(15, 0),
+          reg_if3_id.io.bsrio.pc_out(15, 0),
+          reg_id_exe.io.bsrio.pc_out(15, 0),
+          reg_exe_dtlb.io.bsrio.pc_out(15, 0),
+          reg_dtlb_mem1.io.bsrio.pc_out(15, 0),
+          reg_mem1_mem2.io.bsrio.pc_out(15, 0),
+          reg_mem3_wb.io.bsrio.pc_out(15, 0)
+        )
+        printf(
+          "Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          BUBBLE(15, 0),
+          BUBBLE(15, 0),
+          io.imem.resp.bits.data(15, 0),
+          reg_if3_id.io.instio.inst_out(15, 0),
+          reg_id_exe.io.instio.inst_out(15, 0),
+          reg_exe_dtlb.io.instio.inst_out(15, 0),
+          reg_dtlb_mem1.io.instio.inst_out(15, 0),
+          reg_mem1_mem2.io.instio.inst_out(15, 0),
+          reg_mem3_wb.io.instio.inst_out(15, 0)
+        )
+        printf(
+          "AluO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          0.U,
+          0.U,
+          0.U,
+          0.U,
+          alu.io.out(15, 0),
+          reg_exe_dtlb.io.aluio.alu_val_out(15, 0),
+          reg_dtlb_mem1.io.aluio.alu_val_out(15, 0),
+          reg_mem1_mem2.io.aluio.alu_val_out(15, 0),
+          reg_mem3_wb.io.aluio.alu_val_out(15, 0)
+        )
+        printf(
+          "MemO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          0.U,
+          0.U,
+          0.U,
+          0.U,
+          0.U,
+          0.U,
+          0.U,
+          io.dmem.resp.bits.data(15, 0),
+          reg_mem3_wb.io.memio.mem_val_out(15, 0)
+        )
+        printf(
+          "Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          0.U,
+          reg_if1_if2.io.bsrio.bubble_out,
+          reg_if2_if3.io.bsrio.bubble_out,
+          reg_if3_id.io.bsrio.bubble_out,
+          reg_id_exe.io.bsrio.bubble_out,
+          reg_exe_dtlb.io.bsrio.bubble_out,
+          reg_dtlb_mem1.io.bsrio.bubble_out,
+          reg_mem1_mem2.io.bsrio.bubble_out,
+          reg_mem3_wb.io.bsrio.bubble_out
         )
       }
-      printf("Priv %x\t\tInstAddrO %x\t\tMemAddr0 %x\t\tMemFS %x\n",
-        csr.io.current_p, immu.io.front.pa, dmmu.io.front.pa, csr.io.force_s_mode_mem)
+
+      //      if(traceBPU) {
+      //        printf(
+      //          "Take\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+      //          bpu.io.branch_taken,
+      //          reg_if1_if2.io.bpio.predict_taken_out,
+      //          reg_if3_id.io.bpio.predict_taken_out,
+      //          reg_id_exe.io.bpio.predict_taken_out,
+      //          0.U,
+      //          0.U,
+      //          0.U,
+      //          0.U
+      //        )
+      //        printf(
+      //          "Tar\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+      //          bpu.io.pc_in_btb(15, 0),
+      //          reg_if1_if2.io.bpio.target_out(15, 0),
+      //          reg_if3_id.io.bpio.target_out(15, 0),
+      //          reg_id_exe.io.bpio.target_out(15, 0),
+      //          0.U,
+      //          0.U,
+      //          0.U,
+      //          0.U
+      //        )
+      //      }
+      //      printf("Priv %x\t\tInstAddrO %x\t\tMemAddr0 %x\t\tMemFS %x\n",
+      //        csr.io.current_p, immu.io.front.pa, dmmu.io.front.pa, csr.io.force_s_mode_mem)
       printf("\n")
     }
 

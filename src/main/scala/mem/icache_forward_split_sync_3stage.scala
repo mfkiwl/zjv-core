@@ -219,11 +219,11 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
       for (i <- 0 until nWays) {
         metaArray(i).write(s3_index, write_meta(i))
       }
-      printf(
-        p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
-      )
-      printf(p"\twrite_data=${write_data}\n")
-      printf(p"\twrite_meta=${write_meta}\n")
+//      printf(
+//        p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
+//      )
+//      printf(p"\twrite_data=${write_data}\n")
+//      printf(p"\twrite_meta=${write_meta}\n")
     }
   }
 
