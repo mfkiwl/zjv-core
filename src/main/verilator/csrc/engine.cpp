@@ -132,16 +132,16 @@ void dtengine_t::trace_close () {
 
 void dtengine_t::emu_update_state() {
     #define emu_get_reg(n) emu_state->regs[n] = zjv->io_difftest_regs_##n
-        emu_get_reg( 0); emu_get_reg(10); emu_get_reg(20); emu_get_reg(30); 
-        emu_get_reg( 1); emu_get_reg(11); emu_get_reg(21); emu_get_reg(31); 
-        emu_get_reg( 2); emu_get_reg(12); emu_get_reg(22); 
-        emu_get_reg( 3); emu_get_reg(13); emu_get_reg(23);
-        emu_get_reg( 4); emu_get_reg(14); emu_get_reg(24);
-        emu_get_reg( 5); emu_get_reg(15); emu_get_reg(25);
-        emu_get_reg( 6); emu_get_reg(16); emu_get_reg(26);
-        emu_get_reg( 7); emu_get_reg(17); emu_get_reg(27);
-        emu_get_reg( 8); emu_get_reg(18); emu_get_reg(28);
-        emu_get_reg( 9); emu_get_reg(19); emu_get_reg(29);
+            emu_get_reg( 0); emu_get_reg(10); emu_get_reg(20); emu_get_reg(30); 
+            emu_get_reg( 1); emu_get_reg(11); emu_get_reg(21); emu_get_reg(31); 
+            emu_get_reg( 2); emu_get_reg(12); emu_get_reg(22); 
+            emu_get_reg( 3); emu_get_reg(13); emu_get_reg(23);
+            emu_get_reg( 4); emu_get_reg(14); emu_get_reg(24);
+            emu_get_reg( 5); emu_get_reg(15); emu_get_reg(25);
+            emu_get_reg( 6); emu_get_reg(16); emu_get_reg(26);
+            emu_get_reg( 7); emu_get_reg(17); emu_get_reg(27);
+            emu_get_reg( 8); emu_get_reg(18); emu_get_reg(28);
+            emu_get_reg( 9); emu_get_reg(19); emu_get_reg(29);
     emu_state->pc        = zjv->io_difftest_pc;
     emu_state->inst      = zjv->io_difftest_inst;
     emu_state->valid     = zjv->io_difftest_valid;
@@ -161,6 +161,7 @@ void dtengine_t::emu_update_state() {
     emu_state->stval     = zjv->io_difftest_stval;
     emu_state->scause    = zjv->io_difftest_scause;
     emu_state->mcycle    = zjv->io_difftest_mcycle;
+    #undef emu_get_reg
 }
 
 void dtengine_t::sim_update_state() {
