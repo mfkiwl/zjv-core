@@ -360,8 +360,9 @@ class CSRFile extends Module with phvntomParams {
     mier_mtie, false.B, mier_stie, false.B,
     mier_msie, false.B, mier_ssie, false.B
   )
-  val mipr = Cat(0.U((xlen - 12).W), io.int_pend.meip, false.B,
-    mipr_seip, false.B, io.int_pend.mtip, false.B, mipr_stip, false.B,
+  val mipr = Cat(0.U((xlen - 12).W), 
+    io.int_pend.meip, false.B, mipr_seip, false.B, 
+    io.int_pend.mtip, false.B, mipr_stip, false.B,
     io.int_pend.msip, false.B, mipr_ssip, false.B
   )
   val mstatusr = Cat(mstatusr_sd, 0.U((xlen - 39).W), mstatusr_mbe, mstatusr_sbe, mstatusr_sxl, mstatusr_uxl,
@@ -1218,9 +1219,9 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.wdata := io.in
   csr_regfile.io.stall := io.stall
   csr_regfile.io.current_pc := Cat(io.pc(xlen - 1, 2), 0.U(2.W))
-  csr_regfile.io.is_mret := io.inst === "b00110000001000000000000001110011".U
-  csr_regfile.io.is_sret := io.inst === "b00010000001000000000000001110011".U
-  csr_regfile.io.is_uret := io.inst === "b00000000001000000000000001110011".U
+  csr_regfile.io.is_mret := io.inst === "b00110000001000000000000001110011".U  // mret
+  csr_regfile.io.is_sret := io.inst === "b00010000001000000000000001110011".U  // sret
+  csr_regfile.io.is_uret := io.inst === "b00000000001000000000000001110011".U  // uret
   csr_regfile.io.bad_addr := io.in
   csr_regfile.io.bubble := io.bubble
   csr_regfile.io.inst_af := io.inst_access_fault
@@ -1232,10 +1233,10 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.mem_pf := io.mem_page_fault
   csr_regfile.io.is_load := io.is_load
   csr_regfile.io.is_store := io.is_store
-  csr_regfile.io.is_ecall := io.inst === "b00000000000000000000000001110011".U
-  csr_regfile.io.is_bpoint := io.inst === "b00000000000100000000000001110011".U
-  csr_regfile.io.is_wfi := io.inst === "b00010000010100000000000001110011".U
-  csr_regfile.io.is_sfence := io.inst(31, 25) === "b0001001".U && io.inst(14, 0) === "b000000001110011".U
+  csr_regfile.io.is_ecall :=  io.inst === "b00000000000000000000000001110011".U  // ecall
+  csr_regfile.io.is_bpoint := io.inst === "b00000000000100000000000001110011".U  // breakpoint
+  csr_regfile.io.is_wfi :=    io.inst === "b00010000010100000000000001110011".U  // wfi
+  csr_regfile.io.is_sfence := io.inst(31, 25) === "b0001001".U && io.inst(14, 0) === "b000000001110011".U // sfence.vma
   csr_regfile.io.int_pend.msip := io.soft_int
   csr_regfile.io.int_pend.meip := io.external_int
   csr_regfile.io.int_pend.mtip := io.tim_int
