@@ -641,7 +641,7 @@ class CSRFile extends Module with phvntomParams {
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.mcounteren) {
-    io.rdata := mcounterenr
+    io.rdata := Cat(Fill(xlen - 32, 0.U), mcounterenr)
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.mhartid) {
@@ -669,7 +669,7 @@ class CSRFile extends Module with phvntomParams {
     csr_not_exists := false.B
     bad_csr_access := bad_csr_s
   }.elsewhen(io.which_reg === CSR.scounteren) {
-    io.rdata := scounterenr
+    io.rdata := Cat(Fill(xlen - 32, 0.U), scounterenr)
     csr_not_exists := false.B
     bad_csr_access := bad_csr_s
   }.elsewhen(io.which_reg === CSR.sscratch) {
@@ -832,11 +832,11 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.mcounteren) {
         when(io.wen) {
-          mcounterenr := io.wdata
+          mcounterenr := io.wdata(31, 0)
         }.elsewhen(io.sen) {
-          mcounterenr := mcounterenr | io.wdata
+          mcounterenr := mcounterenr | io.wdata(31, 0)
         }.elsewhen(io.cen) {
-          mcounterenr := mcounterenr & (~io.wdata)
+          mcounterenr := mcounterenr & (~io.wdata(31, 0))
         }
       }.elsewhen(io.which_reg === CSR.mideleg) {
         when(io.wen) {
@@ -1048,11 +1048,11 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.scounteren) {
         when(io.wen) {
-          scounterenr := io.wdata
+          scounterenr := io.wdata(31, 0)
         }.elsewhen(io.sen) {
-          scounterenr := scounterenr | io.wdata
+          scounterenr := scounterenr | io.wdata(31, 0)
         }.elsewhen(io.cen) {
-          scounterenr := scounterenr & (~io.wdata)
+          scounterenr := scounterenr & (~io.wdata(31, 0))
         }
       }.elsewhen(io.which_reg === CSR.tselect) {
         when(io.wen) {
