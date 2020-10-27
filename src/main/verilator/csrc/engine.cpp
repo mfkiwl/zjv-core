@@ -98,9 +98,10 @@ void dtengine_t::emu_step(uint step) {
     emu_update_state();
 }
 
-dtengine_t::dtengine_t(std::string elfpath) {
+dtengine_t::dtengine_t(size_t xlen, std::string elfpath): xlen(xlen) {
 
     file_fifo_path = "/tmp/zjv";
+    disassembler = new disassembler_t(xlen);
 
     emu_init(elfpath);
     sim_init(elfpath);
@@ -170,6 +171,7 @@ void dtengine_t::sim_update_state() {
     }
     sim_state->npc = s->pc;
     sim_state->pc = s->last_pc;
+    sim_state->inst = s->last_inst;
     sim_state->priv = s->prv;
     sim_state->mstatus  = s->mstatus;
     sim_state->mepc    = s->mepc;
