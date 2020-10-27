@@ -66,8 +66,8 @@ class ICacheForwardSplitSync(implicit val cacheConfig: CacheConfig)
   val s2_wordoffset = Wire(UInt((offsetLength - lineLength).W))
 
   for (i <- 0 until nWays) {
-    s2_meta_wire(i) := metaArray(i).read(s1_index)
-    s2_cacheline_wire(i) := dataArray(i).read(s1_index)
+    s2_meta_wire(i) := metaArray(i).read(s1_index, true.B)
+    s2_cacheline_wire(i) := dataArray(i).read(s1_index, true.B)
   }
 
   when(!io.in.stall) {

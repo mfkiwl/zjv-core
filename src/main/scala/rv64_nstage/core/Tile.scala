@@ -35,7 +35,7 @@ class Tile extends Module with phvntomParams {
     val mem_source = List(icache, dcache)
     val memxbar = Module(new CrossbarNto1(1))
     val l2cache = Module(
-      new L2CacheSplit3Stage(4)(
+      new L2CacheSplit(4)(
         CacheConfig(
           name = "l2cache",
           blockBits = dcache.lineBits,
