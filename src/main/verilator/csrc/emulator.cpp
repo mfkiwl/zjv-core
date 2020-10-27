@@ -130,6 +130,7 @@ int main(int argc, char** argv)
             difftest_check_point(mideleg);   difftest_check_point(medeleg, "\n");
             difftest_check_point(sstatus);   difftest_check_point(sepc, "\n");
             difftest_check_point(stval);     difftest_check_point(scause);          difftest_check_point(stvec, "\n");
+            difftest_check_point(meip_as);   difftest_check_point(seip_as, "\n");
             difftest_check_general_register();
 
             fprintf(stderr, "\n");
