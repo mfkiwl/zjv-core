@@ -60,6 +60,8 @@ struct difftest_state_t {
     bool valid;
     bool interrupt;
     reg_t poweroff;
+    bool meip_as;
+    bool seip_as;
 };
 
 class dtengine_t {
@@ -109,6 +111,8 @@ public:
     get(emu, mtvec);
     get(emu, mideleg);
     get(emu, medeleg);
+    get(emu, meip_as);
+    get(emu, seip_as);
 
     get(sim, pc);
     get(sim, inst);
@@ -126,6 +130,8 @@ public:
     get(sim, scause);
     get(sim, stvec);
     get(sim, satp);
+    get(sim, meip_as);
+    get(sim, seip_as);
 #undef get
 
     reg_t trace_count;

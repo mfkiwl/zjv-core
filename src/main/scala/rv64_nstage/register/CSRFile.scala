@@ -16,92 +16,92 @@ class InterruptIO extends Bundle with phvntomParams {
 }
 
 object CSR {
-  val N =           0.U(3.W)
-  val W =           1.U(3.W)
-  val S =           2.U(3.W)
-  val C =           3.U(3.W)
-  val P =           4.U(3.W)
+  val N = 0.U(3.W)
+  val W = 1.U(3.W)
+  val S = 2.U(3.W)
+  val C = 3.U(3.W)
+  val P = 4.U(3.W)
 
-  val PRV_U =       0x0.U(2.W)
-  val PRV_S =       0x1.U(2.W)
-  val PRV_H =       0x2.U(2.W)
-  val PRV_M =       0x3.U(2.W)
+  val PRV_U = 0x0.U(2.W)
+  val PRV_S = 0x1.U(2.W)
+  val PRV_H = 0x2.U(2.W)
+  val PRV_M = 0x3.U(2.W)
 
-  val cycle =       0xc00.U(12.W)
-  val time =        0xc01.U(12.W)
-  val instret =     0xc02.U(12.W)
-  val cycleh =      0xc80.U(12.W)
-  val timeh =       0xc81.U(12.W)
-  val instreth =    0xc82.U(12.W)
+  val cycle = 0xc00.U(12.W)
+  val time = 0xc01.U(12.W)
+  val instret = 0xc02.U(12.W)
+  val cycleh = 0xc80.U(12.W)
+  val timeh = 0xc81.U(12.W)
+  val instreth = 0xc82.U(12.W)
 
-  val cyclew =      0x900.U(12.W)
-  val timew =       0x901.U(12.W)
-  val instretw =    0x902.U(12.W)
-  val cyclehw =     0x980.U(12.W)
-  val timehw =      0x981.U(12.W)
-  val instrethw =   0x982.U(12.W)
+  val cyclew = 0x900.U(12.W)
+  val timew = 0x901.U(12.W)
+  val instretw = 0x902.U(12.W)
+  val cyclehw = 0x980.U(12.W)
+  val timehw = 0x981.U(12.W)
+  val instrethw = 0x982.U(12.W)
 
   // MACHINE MODE
-  val mvendorid =   0xf11.U(12.W)
-  val marchid =     0xf12.U(12.W)
-  val mimpid =      0xf13.U(12.W)
-  val mhartid =     0xf14.U(12.W)
-  val mstatus =     0x300.U(12.W)
-  val misa =        0x301.U(12.W)
-  val medeleg =     0x302.U(12.W)
-  val mideleg =     0x303.U(12.W)
-  val mie =         0x304.U(12.W)
-  val mtvec =       0x305.U(12.W)
-  val mcounteren =  0x306.U(12.W)
-  val mstatush =    0x310.U(12.W)
-  val mtime =       0x701.U(12.W)
-  val mtimeh =      0x741.U(12.W)
-  val mscratch =    0x340.U(12.W)
-  val mepc =        0x341.U(12.W)
-  val mcause =      0x342.U(12.W)
-  val mtval =       0x343.U(12.W)
-  val mip =         0x344.U(12.W)
-  val mtinst =      0x34a.U(12.W)
-  val mtval2 =      0x34b.U(12.W)
+  val mvendorid = 0xf11.U(12.W)
+  val marchid = 0xf12.U(12.W)
+  val mimpid = 0xf13.U(12.W)
+  val mhartid = 0xf14.U(12.W)
+  val mstatus = 0x300.U(12.W)
+  val misa = 0x301.U(12.W)
+  val medeleg = 0x302.U(12.W)
+  val mideleg = 0x303.U(12.W)
+  val mie = 0x304.U(12.W)
+  val mtvec = 0x305.U(12.W)
+  val mcounteren = 0x306.U(12.W)
+  val mstatush = 0x310.U(12.W)
+  val mtime = 0x701.U(12.W)
+  val mtimeh = 0x741.U(12.W)
+  val mscratch = 0x340.U(12.W)
+  val mepc = 0x341.U(12.W)
+  val mcause = 0x342.U(12.W)
+  val mtval = 0x343.U(12.W)
+  val mip = 0x344.U(12.W)
+  val mtinst = 0x34a.U(12.W)
+  val mtval2 = 0x34b.U(12.W)
 
   // SUPERVISOR MODE
-  val sstatus =     0x100.U(12.W)
-  val sedeleg =     0x102.U(12.W)
-  val sideleg =     0x103.U(12.W)
-  val sie =         0x104.U(12.W)
-  val stvec =       0x105.U(12.W)
-  val scounteren =  0x106.U(12.W)
-  val sscratch =    0x140.U(12.W)
-  val sepc =        0x141.U(12.W)
-  val scause =      0x142.U(12.W)
-  val stval =       0x143.U(12.W)
-  val sip =         0x144.U(12.W)
-  val satp =        0x180.U(12.W)
+  val sstatus = 0x100.U(12.W)
+  val sedeleg = 0x102.U(12.W)
+  val sideleg = 0x103.U(12.W)
+  val sie = 0x104.U(12.W)
+  val stvec = 0x105.U(12.W)
+  val scounteren = 0x106.U(12.W)
+  val sscratch = 0x140.U(12.W)
+  val sepc = 0x141.U(12.W)
+  val scause = 0x142.U(12.W)
+  val stval = 0x143.U(12.W)
+  val sip = 0x144.U(12.W)
+  val satp = 0x180.U(12.W)
 
   // PHYSICAL MEM PROTECTION
-  val pmpcfg0 =     0x3a0.U(12.W)
-  val pmpcfg1 =     0x3a1.U(12.W)
-  val pmpcfg2 =     0x3a2.U(12.W)
-  val pmpcfg3 =     0x3a3.U(12.W)
-  val pmpaddr0 =    0x3b0.U(12.W)
-  val pmpaddr1 =    0x3b1.U(12.W)
-  val pmpaddr2 =    0x3b2.U(12.W)
-  val pmpaddr3 =    0x3b3.U(12.W)
+  val pmpcfg0 = 0x3a0.U(12.W)
+  val pmpcfg1 = 0x3a1.U(12.W)
+  val pmpcfg2 = 0x3a2.U(12.W)
+  val pmpcfg3 = 0x3a3.U(12.W)
+  val pmpaddr0 = 0x3b0.U(12.W)
+  val pmpaddr1 = 0x3b1.U(12.W)
+  val pmpaddr2 = 0x3b2.U(12.W)
+  val pmpaddr3 = 0x3b3.U(12.W)
 
   // DEBUG
-  val tselect =     0x7a0.U(12.W)
-  val tdata1 =      0x7a1.U(12.W)
-  val tdata2 =      0x7a2.U(12.W)
-  val tdata3 =      0x7a3.U(12.W)
+  val tselect = 0x7a0.U(12.W)
+  val tdata1 = 0x7a1.U(12.W)
+  val tdata2 = 0x7a2.U(12.W)
+  val tdata3 = 0x7a3.U(12.W)
 
   // PERFORMANCE
-  val mcycle =      0xb00.U(12.W)
-  val minstret =    0xb02.U(12.W)
+  val mcycle = 0xb00.U(12.W)
+  val minstret = 0xb02.U(12.W)
 }
 
 object SATP {
-  val Bare    = 0.U(4.W)
-  val Sv39    = 8.U(4.W)
+  val Bare = 0.U(4.W)
+  val Sv39 = 8.U(4.W)
 }
 
 object Exception {
@@ -315,7 +315,7 @@ class CSRFile extends Module with phvntomParams {
   val mstatusr_spie = RegInit(false.B)
   val mstatusr_mie = RegInit(false.B)
   val mstatusr_sie = RegInit(false.B)
-  if(only_M) {
+  if (only_M) {
     mstatusr_sxl := 0.U
     mstatusr_uxl := 0.U
   } else {
@@ -377,7 +377,7 @@ class CSRFile extends Module with phvntomParams {
     Fill(3, 0.U), midelegr_ssip, Fill(1, 0.U)
   )
   val misar = Wire(UInt(xlen.W))
-  if(only_M) {
+  if (only_M) {
     misar := "h8000000000001101".U
   } else {
     misar := "h8000000000141101".U
@@ -437,10 +437,12 @@ class CSRFile extends Module with phvntomParams {
 
   // Combinational Judger for Interrupt
   val int_judger = Module(new InterruptJudger)
+
   def int_global_enable(ideleg_bit: Bool): Bool = Mux(ideleg_bit,
     current_p < CSR.PRV_S || (current_p === CSR.PRV_S && mstatusr_sie),
     current_p < CSR.PRV_M || (current_p === CSR.PRV_M && mstatusr_mie)
   )
+
   val int_enable_vec = Cat(int_global_enable(ideleg(11)), int_global_enable(ideleg(10)), int_global_enable(ideleg(9)),
     int_global_enable(ideleg(8)), int_global_enable(ideleg(7)), int_global_enable(ideleg(6)),
     int_global_enable(ideleg(5)), int_global_enable(ideleg(4)), int_global_enable(ideleg(3)),
@@ -451,7 +453,7 @@ class CSRFile extends Module with phvntomParams {
   val has_int_comb = int_judger.io.has_int
   val int_num_comb = int_judger.io.int_out
 
-//  printf("seip %x, has_int %x, ideleg_se %x, priv %x, sie %x, mie %x, stall %x, bubble %x\n", io.int_pend.seip, io.interrupt_out, ideleg(9), current_p, mstatusr_sie, mstatusr_mie, io.stall, io.bubble)
+  //  printf("seip %x, has_int %x, ideleg_se %x, priv %x, sie %x, mie %x, stall %x, bubble %x\n", io.int_pend.seip, io.interrupt_out, ideleg(9), current_p, mstatusr_sie, mstatusr_mie, io.stall, io.bubble)
   // Combinational Judger for Exceptions
   val expt_judger = Module(new ExceptionJudger)
   val csr_not_exists = WireInit(false.B)
@@ -469,7 +471,7 @@ class CSRFile extends Module with phvntomParams {
   expt_vec(Exception.EcallU) := current_p === CSR.PRV_U && io.is_ecall
   expt_vec(Exception.IllegalInst) := (io.illegal_inst || tw_wfi_illegal || tvm_sfence_illegal || tsr_sret_illegal ||
     ((csr_not_exists || bad_csr_access) &&
-    (io.wen || io.cen || io.sen)))
+      (io.wen || io.cen || io.sen)))
   expt_vec(Exception.InstAccessFault) := io.inst_af
   expt_vec(Exception.InstAddrMisaligned) := io.inst_ma
   expt_vec(Exception.InstPageFault) := io.inst_pf
@@ -496,8 +498,8 @@ class CSRFile extends Module with phvntomParams {
   val has_expt_comb = expt_judger.io.has_except
   val expt_num_comb = expt_judger.io.except_out
 
-//  printf("In CSR: ill %x; wfi %x; sfence %x; tsr %x; csr_ne %x; bad_csr_ac %x; wen %x; sen %x; cen %x\n", io.illegal_inst,
-//    tw_wfi_illegal, tvm_sfence_illegal, tsr_sret_illegal, csr_not_exists, bad_csr_access, io.wen, io.sen, io.cen)
+  //  printf("In CSR: ill %x; wfi %x; sfence %x; tsr %x; csr_ne %x; bad_csr_ac %x; wen %x; sen %x; cen %x\n", io.illegal_inst,
+  //    tw_wfi_illegal, tvm_sfence_illegal, tsr_sret_illegal, csr_not_exists, bad_csr_access, io.wen, io.sen, io.cen)
 
   // Combinational Logic for Trap-Ret Delegations and Addresses
   val trap_addr = WireInit(0.U(xlen.W))
@@ -508,7 +510,7 @@ class CSRFile extends Module with phvntomParams {
   val check_bit = Mux(deleg_2_s, stvecr(0), mtvecr(0))
   trap_addr := Mux(deleg_2_s, Cat(stvecr(xlen - 1, 2), Fill(2, 0.U)), Cat(mtvecr(xlen - 1, 2), Fill(2, 0.U)))
   eret_addr := Mux(io.is_mret, mepcr, Mux(io.is_sret, sepcr, uepcr))
-//printf("In CSR mtvec %x, tveco %x, has_expt %x, exno %x\n", mtvecr, io.tvec_out, has_expt_comb, expt_num_comb)
+  //printf("In CSR mtvec %x, tveco %x, has_expt %x, exno %x\n", mtvecr, io.tvec_out, has_expt_comb, expt_num_comb)
   // Output Comb Logic
   io.tvec_out := Mux(check_bit && has_int_comb, trap_addr + (int_num_comb << 2.U), trap_addr)
   io.epc_out := eret_addr
@@ -518,11 +520,14 @@ class CSRFile extends Module with phvntomParams {
 
   // Write Signal for MTVAL or STVAL
   val write_tval = io.mem_af || io.mem_pf || io.mem_ma || io.inst_af || io.inst_pf || io.inst_ma
-  val tval_value = Mux(expt_num_comb === Exception.InstAddrMisaligned ||
-                       expt_num_comb === Exception.InstAccessFault    ||
-                       expt_num_comb === Exception.InstPageFault, 
-                       io.current_pc, 
-                       io.bad_addr)
+  val tval_value = Mux(expt_num_comb === Exception.InstAccessFault ||
+    expt_num_comb === Exception.InstPageFault,
+    io.current_pc,
+    Mux(expt_num_comb === Exception.InstAddrMisaligned,
+      Cat(io.bad_addr(xlen - 1, 1), Fill(1, 0.U)),
+      io.bad_addr
+    )
+  )
 
   // MCYCLE and MINSTRET
   // TODO Restore + 3.U and + 1.U
@@ -553,7 +558,7 @@ class CSRFile extends Module with phvntomParams {
     minstretr := minstretr + 1.U(1.W)
   }
 
-//  printf("mtvec %x, priv %x, has_expt %x, expt_num %x\n", mtvecr, current_p, has_expt_comb, expt_num_comb)
+  //  printf("mtvec %x, priv %x, has_expt %x, expt_num %x\n", mtvecr, current_p, has_expt_comb, expt_num_comb)
 
   // CSR Read
   when(io.which_reg === CSR.mepc) {
@@ -582,7 +587,7 @@ class CSRFile extends Module with phvntomParams {
     bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.medeleg) {
     io.rdata := medelegr
-    if(only_M) {
+    if (only_M) {
       csr_not_exists := true.B
     } else {
       csr_not_exists := false.B
@@ -590,7 +595,7 @@ class CSRFile extends Module with phvntomParams {
     bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.mideleg) {
     io.rdata := midelegr
-    if(only_M) {
+    if (only_M) {
       csr_not_exists := true.B
     } else {
       csr_not_exists := false.B
@@ -722,8 +727,8 @@ class CSRFile extends Module with phvntomParams {
     bad_csr_access := bad_csr_m
   }
 
-//  printf("mstatusr_tvm %x, privilege %x\n", mstatusr_tvm, current_p)
-//  printf("IN CSR sum %x, mprv %x, mpp %x, mxr %x, privlege %x\n", mstatusr_sum, mstatusr_mprv, mstatusr_mpp, mstatusr_mxr, current_p)
+  //  printf("mstatusr_tvm %x, privilege %x\n", mstatusr_tvm, current_p)
+  //  printf("IN CSR sum %x, mprv %x, mpp %x, mxr %x, privlege %x\n", mstatusr_sum, mstatusr_mprv, mstatusr_mpp, mstatusr_mxr, current_p)
 
   // Write CSR File
   when(!io.stall && !io.bubble) {
@@ -930,7 +935,7 @@ class CSRFile extends Module with phvntomParams {
             mstatusr_tw := io.wdata(21)
             mstatusr_tvm := io.wdata(20)
             mstatusr_mprv := io.wdata(17)
-            if(!only_M) {
+            if (!only_M) {
               mstatusr_mpp := io.wdata(12, 11)
             }
             mstatusr_mpie := io.wdata(7)
@@ -953,7 +958,7 @@ class CSRFile extends Module with phvntomParams {
             mstatusr_tw := mstatusr(21) | io.wdata(21)
             mstatusr_tvm := mstatusr(20) | io.wdata(20)
             mstatusr_mprv := mstatusr(17) | io.wdata(17)
-            if(!only_M) {
+            if (!only_M) {
               mstatusr_mpp := mstatusr(12, 11) | io.wdata(12, 11)
             }
             mstatusr_mpie := mstatusr(7) | io.wdata(7)
@@ -1139,19 +1144,19 @@ class CSRFile extends Module with phvntomParams {
   io.mstatus_sum := mstatusr_sum
   io.mstatus_mxr := mstatusr_mxr
 
-  if(diffTest) {
+  if (diffTest) {
     BoringUtils.addSource(mstatusr, "difftestmstatusr")
     BoringUtils.addSource(mcycler, "difftestmcycler")
     BoringUtils.addSource(current_p, "difftestprivilege")
-    BoringUtils.addSource(mepcr   , "difftestmepcr")
-    BoringUtils.addSource(mtvalr  , "difftestmtvalr")
-    BoringUtils.addSource(mcauser , "difftestmcauser")
+    BoringUtils.addSource(mepcr, "difftestmepcr")
+    BoringUtils.addSource(mtvalr, "difftestmtvalr")
+    BoringUtils.addSource(mcauser, "difftestmcauser")
     BoringUtils.addSource(sstatusr, "difftestsstatusr")
-    BoringUtils.addSource(sepcr   , "difftestsepcr")
-    BoringUtils.addSource(stvalr  , "diffteststvalr")
-    BoringUtils.addSource(scauser , "difftestscauser")
-    BoringUtils.addSource(stvecr  , "diffteststvecr")
-    BoringUtils.addSource(mtvecr , "difftestmtvecr")
+    BoringUtils.addSource(sepcr, "difftestsepcr")
+    BoringUtils.addSource(stvalr, "diffteststvalr")
+    BoringUtils.addSource(scauser, "difftestscauser")
+    BoringUtils.addSource(stvecr, "diffteststvecr")
+    BoringUtils.addSource(mtvecr, "difftestmtvecr")
     BoringUtils.addSource(midelegr, "difftestmidelegr")
     BoringUtils.addSource(medelegr, "difftestmedelegr")
   }

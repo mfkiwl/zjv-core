@@ -29,6 +29,8 @@ class DiffTestIO extends Bundle with phvntomParams {
   val mtvec    = Output(UInt(xlen.W))
   val mideleg  = Output(UInt(xlen.W))
   val medeleg  = Output(UInt(xlen.W))
+  val meip_as  = Output(Bool())
+  val seip_as  = Output(Bool())
 }
 
 class TopIO extends Bundle with phvntomParams {
@@ -65,6 +67,8 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.mtvec,   "difftestmtvecr")
   BoringUtils.addSink(difftest.mideleg, "difftestmidelegr")
   BoringUtils.addSink(difftest.medeleg, "difftestmedelegr")
+  BoringUtils.addSink(difftest.meip_as, "difftestmeip")
+  BoringUtils.addSink(difftest.seip_as, "difftestseip")
 
   val poweroff = WireInit(0.U(xlen.W))
   BoringUtils.addSink(poweroff, "poweroff")

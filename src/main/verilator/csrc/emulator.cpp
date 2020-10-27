@@ -141,7 +141,8 @@ int main(int argc, char** argv)
             difftest_check_point(scause);
             difftest_check_point(stvec);
             difftest_check_point(sepc);
-            difftest_check_point(stvec);
+            difftest_check_point(meip_as);
+            difftest_check_point(seip_as);
             difftest_check_general_register();
 
             fprintf(stderr, "\n");
