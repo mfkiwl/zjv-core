@@ -26,11 +26,11 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
   val current_request = arbiter.io.out
 
   /* stage1 signals */
-  val s1_valid = WireInit(Bool(), false.B)
+  val s1_valid = WireDefault(Bool(), false.B)
   val s1_addr = Wire(UInt(xlen.W))
-  val s1_index = Wire(UInt(indexLength.W))
+  val s1_index = WireDefault(UInt(indexLength.W), 0.U(indexLength.W))
   val s1_data = Wire(UInt(blockBits.W))
-  val s1_wen = WireInit(Bool(), false.B)
+  val s1_wen = WireDefault(Bool(), false.B)
   val s1_memtype = Wire(UInt(xlen.W))
 
   s1_valid := current_request.req.valid
@@ -43,10 +43,8 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
   /* stage2 registers */
   val s2_valid = RegInit(Bool(), false.B)
   val s2_addr = RegInit(UInt(xlen.W), 0.U)
-  val s2_index = RegInit(UInt(indexLength.W), 0.U)
   val s2_data = RegInit(UInt(blockBits.W), 0.U)
   val s2_wen = RegInit(Bool(), false.B)
-  val s2_memtype = RegInit(UInt(xlen.W), 0.U)
   val s2_meta = Wire(Vec(nWays, new MetaData))
   val s2_cacheline = Wire(Vec(nWays, new CacheLineData))
   val s2_tag = Wire(UInt(tagLength.W))
@@ -54,14 +52,12 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
   when(!stall) {
     s2_valid := s1_valid
     s2_addr := s1_addr
-    s2_index := s1_index
     s2_data := s1_data
     s2_wen := s1_wen
-    s2_memtype := s1_memtype
   }
   for (i <- 0 until nWays) {
-    s2_meta(i) := metaArray(i).read(s1_index)
-    s2_cacheline(i) := dataArray(i).read(s1_index)
+    s2_meta(i) := metaArray(i).read(s1_index, true.B)
+    s2_cacheline(i) := dataArray(i).read(s1_index, true.B)
   }
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
 
@@ -75,13 +71,12 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
 
   /* stage3 registers */
   val s3_valid = RegInit(Bool(), false.B)
-  val s3_addr = RegInit(UInt(xlen.W), 0.U)
-  val s3_index = RegInit(UInt(indexLength.W), 0.U)
+  val s3_addr = RegInit(UInt(xlen.W), 0.U)  
   val s3_data = RegInit(UInt(blockBits.W), 0.U)
   val s3_wen = RegInit(Bool(), false.B)
-  val s3_memtype = RegInit(UInt(xlen.W), 0.U)
   val s3_meta = Reg(Vec(nWays, new MetaData))
   val s3_cacheline = Reg(Vec(nWays, new CacheLineData))
+  val s3_index = WireDefault(UInt(indexLength.W), 0.U)
   val s3_tag = Wire(UInt(tagLength.W))
   val s3_lineoffset = Wire(UInt(lineLength.W))
   val s3_wordoffset = Wire(UInt((offsetLength - lineLength).W))
@@ -92,16 +87,15 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
   when(!stall) {
     s3_valid := s2_valid
     s3_addr := s2_addr
-    s3_index := s2_index
     s3_data := s2_data
     s3_wen := s2_wen
-    s3_memtype := s2_memtype
     s3_meta := s2_meta
     s3_cacheline := s2_cacheline
     s3_access_index := s2_access_index
     s3_access_vec := s2_access_vec
     s3_hit := s2_hit
   }
+  s3_index := s3_addr(indexLength + offsetLength - 1, offsetLength)
   s3_tag := s3_addr(xlen - 1, xlen - tagLength)
   s3_lineoffset := s3_addr(offsetLength - 1, offsetLength - lineLength)
   s3_wordoffset := s3_addr(offsetLength - lineLength - 1, 0)
@@ -180,11 +174,11 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
         for (i <- 0 until nWays) {
           metaArray(i).write(s3_index, write_meta(i))
         }
-        printf(
-          p"l2cache write: s3_index=${s3_index}, s3_access_index=${s3_access_index}\n"
-        )
-        printf(p"\tnew_data=${new_data}\n")
-        printf(p"\twrite_meta=${write_meta}\n")
+        // printf(
+        //   p"l2cache write: s3_index=${s3_index}, s3_access_index=${s3_access_index}\n"
+        // )
+        // printf(p"\tnew_data=${new_data}\n")
+        // printf(p"\twrite_meta=${write_meta}\n")
       }.otherwise {
         val result_data = target_data.data(s3_lineoffset)
         val write_data = Wire(Vec(nWays, new CacheLineData))
@@ -210,38 +204,38 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
         for (i <- 0 until nWays) {
           metaArray(i).write(s3_index, write_meta(i))
         }
-        printf(
-          p"l2cache read update: s3_index=${s3_index}, s3_access_index=${s3_access_index}\n"
-        )
-        printf(p"\ttarget_data=${target_data}\n")
-        printf(p"\twrite_meta=${write_meta}\n")
+        // printf(
+        //   p"l2cache read update: s3_index=${s3_index}, s3_access_index=${s3_access_index}\n"
+        // )
+        // printf(p"\ttarget_data=${target_data}\n")
+        // printf(p"\twrite_meta=${write_meta}\n")
       }
     }
   }
 
-  printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  printf("state=%d, s3_hit=%d, result=%x\n", state, s3_hit, result)
-  printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-  printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
-  printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
-  printf("s3_valid=%d, s3_addr=%x, s3_index=%x\n", s3_valid, s3_addr, s3_index)
-  printf("s3_data=%x, s3_wen=%d, s3_memtype=%d\n", s3_data, s3_wen, s3_memtype)
-  printf(
-    "s3_tag=%x, s3_lineoffset=%x, s3_wordoffset=%x\n",
-    s3_tag,
-    s3_lineoffset,
-    s3_wordoffset
-  )
-  printf(p"s2_hitVec=${s2_hitVec}, s3_access_index=${s3_access_index}\n")
-  printf(
-    p"s2_victim_index=${s2_victim_index}, s2_victim_vec=${s2_victim_vec}, s3_access_vec = ${s3_access_vec}\n"
-  )
-  printf(p"s2_cacheline=${s2_cacheline}\n")
-  printf(p"s2_meta=${s2_meta}\n")
-  printf(p"s3_cacheline=${s3_cacheline}\n")
-  printf(p"s3_meta=${s3_meta}\n")
-  printf(p"----------${cacheName} io.mem----------\n")
-  printf(p"${io.mem}\n")
-  printf("-----------------------------------------------\n")
+  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  // printf("state=%d, stall=%d, s3_hit=%d, result=%x\n", state, stall, s3_hit, result)
+  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+  // printf("s1_data=%x, s1_wen=%d\n", s1_data, s1_wen)
+  // printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_addr(indexLength + offsetLength - 1, offsetLength))
+  // printf("s2_data=%x, s2_wen=%d\n", s2_data, s2_wen)
+  // printf("s3_valid=%d, s3_addr=%x, s3_index=%x\n", s3_valid, s3_addr, s3_index)
+  // printf("s3_data=%x, s3_wen=%d\n", s3_data, s3_wen)
+  // printf(
+  //   "s3_tag=%x, s3_lineoffset=%x, s3_wordoffset=%x\n",
+  //   s3_tag,
+  //   s3_lineoffset,
+  //   s3_wordoffset
+  // )
+  // printf(p"s2_hitVec=${s2_hitVec}, s3_access_index=${s3_access_index}\n")
+  // printf(
+  //   p"s2_victim_index=${s2_victim_index}, s2_victim_vec=${s2_victim_vec}, s3_access_vec = ${s3_access_vec}\n"
+  // )
+  // printf(p"s2_cacheline=${s2_cacheline}\n")
+  // printf(p"s2_meta=${s2_meta}\n")
+  // printf(p"s3_cacheline=${s3_cacheline}\n")
+  // printf(p"s3_meta=${s3_meta}\n")
+  // printf(p"----------${cacheName} io.mem----------\n")
+  // printf(p"${io.mem}\n")
+  // printf("-----------------------------------------------\n")
 }
