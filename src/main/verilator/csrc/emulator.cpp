@@ -113,17 +113,17 @@ int main(int argc, char** argv)
       if (startTest && engine.emu_difftest_valid()) {
          bubble_cnt = 0;
       #ifdef ZJV_DEBUG
-            fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx): %s\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
+            // fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx): %s\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
       #endif
          engine.sim_step(1);
          sim_cnt++;
 
-      fprintf(stderr, "emu: uart %d plic0 %d plic1 %d\n", engine.get_emu_state()->uartirq, engine.get_emu_state()->plicmeip, engine.get_emu_state()->plicseip);
-      difftest_check_general_register();
+      // fprintf(stderr, "emu: uart %d plic0 %d plic1 %d\n", engine.get_emu_state()->uartirq, engine.get_emu_state()->plicmeip, engine.get_emu_state()->plicseip);
+      // difftest_check_general_register();
 
       if((faultExitLatency || (engine.emu_get_pc() != engine.sim_get_pc()) || 
-          (engine.emu_get_mip()&MIP_MEIP != engine.sim_get_mip()&MIP_MEIP) ||
-	       (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
+         (engine.emu_get_mip()&MIP_MEIP != engine.sim_get_mip()&MIP_MEIP)  ||
+	      (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
 
             faultExitLatency++;
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);

@@ -85,7 +85,7 @@ extern "C" void uart_getc(char addr, char *data) // read
     default:
         break;
     }
-    // printf("In uart_getc: addr = %d, data = %d\n", addr, *data);
+    printf("In uart_getc: addr = %d, data = %d\n", addr, *data);
 
 }
 
@@ -97,8 +97,8 @@ extern "C" void uart_putc(char addr, char data) // write
         if (line_control < 0)
             divisor_latch_low = data;
         else {
-            fprintf(stderr, "%c", data);
-            fflush(stderr);
+            fprintf(stdout, "%c", data);
+            fflush(stdout);
         }
         break;
     case UART_IER: // 1
