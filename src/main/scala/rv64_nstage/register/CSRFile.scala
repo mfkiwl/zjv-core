@@ -1139,7 +1139,7 @@ class CSRFile extends Module with phvntomParams {
     (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
   io.satp_val := satpr
   io.current_p := current_p
-  io.force_s_mode_mem := mstatusr_mprv
+  io.force_s_mode_mem := mstatusr_mprv && mstatusr_mpp =/= CSR.PRV_M
   io.is_mpp_s_mode := mstatusr_mpp === CSR.PRV_S
   io.mstatus_sum := mstatusr_sum
   io.mstatus_mxr := mstatusr_mxr
