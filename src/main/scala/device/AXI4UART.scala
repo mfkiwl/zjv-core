@@ -15,11 +15,13 @@ class SimUART extends BlackBox with phvntomParams {
     val ren = Input(Bool())
     val raddr = Input(UInt(8.W))
     val rdata = Output(UInt(8.W))
+    val irq = Output(Bool())
   })
 }
 
 class UARTIO extends Bundle with phvntomParams {
   // val offset = Input(UInt(xlen.W))
+  val irq = Output(Bool())
 }
 
 class AXI4UART(name: String = "uart") extends AXI4Slave(new UARTIO, name) with AXI4Parameters {
@@ -41,6 +43,8 @@ class AXI4UART(name: String = "uart") extends AXI4Slave(new UARTIO, name) with A
   uart_sim.io.raddr := Cat(Fill(5, 0.U), io.in.ar.bits.addr(2, 0))
   val rdata = uart_sim.io.rdata << (io.in.ar.bits.addr(2, 0) << 3)
   io.in.r.bits.data := RegEnable(rdata, ren)
+
+  io.extra.get.irq := uart_sim.io.irq
 
   // when(wen && io.extra.get.offset(2, 0) === 0.U) {
   //   printf("%c", io.in.w.bits.data(7, 0))

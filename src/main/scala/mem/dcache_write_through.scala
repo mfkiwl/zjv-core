@@ -102,7 +102,7 @@ class DCacheWriteThrough(implicit val cacheConfig: CacheConfig)
 
   io.mem.stall := false.B
   io.mem.flush := false.B
-  io.mem.req.valid := s2_valid && (state === s_memReadReq || state === s_memReadResp || state === s_memWriteReq || state === s_memWriteResp)
+  io.mem.req.valid := s2_valid && (state === s_memReadReq || state === s_memWriteReq)
   io.mem.req.bits.addr := Mux(
     state === s_memWriteReq || state === s_memWriteResp,
     write_address,
@@ -332,7 +332,7 @@ class DCacheWriteThrough(implicit val cacheConfig: CacheConfig)
   // printf(p"${io.in}\n")
   // printf(p"----------${cacheName} io.mem----------\n")
   // printf(p"${io.mem}\n")
-  // // printf(p"----------${cacheName} io.mmio----------\n")
-  // // printf(p"${io.mmio}\n")
+  // printf(p"----------${cacheName} io.mmio----------\n")
+  // printf(p"${io.mmio}\n")
   // printf("-----------------------------------------------\n")
 }

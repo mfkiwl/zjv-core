@@ -28,7 +28,7 @@ class Clint(name: String = "clint")
   val freq = RegInit(clk.U(16.W))
   val inc = RegInit(1.U(16.W))
 
-  val cnt = RegInit(3.U(16.W))
+  val cnt = RegInit(2.U(16.W))
   val nextCnt = cnt + 1.U
   cnt := Mux(nextCnt < freq, nextCnt, 0.U)
   val tick = (nextCnt === freq)
@@ -62,8 +62,8 @@ class Clint(name: String = "clint")
     MaskExpand(io.in.w.bits.strb)
   )
 
-//  printf("MY CLINT %x, cnt %x\n", mtime, cnt)
+  // printf("MTIME %x, MCMP %x, cnt %x\n", mtime, mtimecmp, cnt)
 
-  io.extra.get.mtip := RegNext(mtime >= mtimecmp)
-  io.extra.get.msip := RegNext(msip =/= 0.U)
+  io.extra.get.mtip := mtime >= mtimecmp
+  io.extra.get.msip := msip =/= 0.U
 }

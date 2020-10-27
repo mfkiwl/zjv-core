@@ -55,8 +55,8 @@ class Tile extends Module with phvntomParams {
   } else {
     val icacheBus = Module(new DUncache(icache.lineBits, "inst uncache"))
     val dcacheBus = Module(new DUncache(dcache.lineBits, "mem uncache"))
-    val immuBus = Module(new DUncache)
-    val dmmuBus = Module(new DUncache)
+    val immuBus = Module(new DUncache(icache.lineBits))
+    val dmmuBus = Module(new DUncache(dcache.lineBits))
     val mem_source = List(icacheBus, dcacheBus, immuBus, dmmuBus)
     val memxbar = Module(new CrossbarNto1(mem_source.length))
     icache.io.mem <> icacheBus.io.in
@@ -70,6 +70,9 @@ class Tile extends Module with phvntomParams {
   }
 
   // mmio path
+  // uart
+  val uart = Module(new AXI4UART)
+
   // power off
   val poweroff = Module(new AXI4PowerOff)
   val poweroffSync = poweroff.io.extra.get.poweroff
@@ -81,16 +84,20 @@ class Tile extends Module with phvntomParams {
   val msipSync = clint.io.extra.get.msip
   core.io.int.msip := msipSync
   core.io.int.mtip := mtipSync
-  core.io.int.meip := false.B
-  core.io.int.seip := false.B
   BoringUtils.addSource(mtipSync, "mtip")
   BoringUtils.addSource(msipSync, "msip")
 
-  // uart
-  val uart = Module(new AXI4UART)
+  // plic
+  val plic = Module(new AXI4PLIC)
+  plic.io.extra.get.intrVec := uart.io.extra.get.irq
+  val hart0_meipSync = plic.io.extra.get.meip(0)
+  val hart0_seipSync = plic.io.extra.get.meip(1)
+  core.io.int.meip := hart0_meipSync
+  core.io.int.seip := hart0_seipSync
+//  printf("Here is the output of PLIC meip %x\n", meipSync)
 
   // xbar
-  val mmio_device = List(poweroff, clint, uart)
+  val mmio_device = List(poweroff, clint, plic, uart)
   val mmioBus = Module(new Uncache(mname = "mmio uncache"))
   val mmioxbar = Module(new Crossbar1toN(AddressSpace.mmio))
   // val xbar = Module(new AXI4Xbar(2, addrSpace))

@@ -10,6 +10,7 @@ metals.sbt
 target/
 test_run_dir/
 build/
+test_elf/
 toolchain/
 log
 

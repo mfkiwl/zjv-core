@@ -9,7 +9,7 @@ object AddressSpace extends phvntomParams {
     List( // (start, size)
       (0x000100L, 0x10L), // POWEROFFF
       (0x2000000L, 0x10000L), // CLINT
-      // (0xc000000L, 0x4000000L)  // PLIC
+      (0xc000000L, 0x4000000L),  // PLIC
       (0x10000000L, 0x100L) // uart
     )
 
