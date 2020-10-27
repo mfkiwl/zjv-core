@@ -9,7 +9,7 @@ import rv64_nstage.control._
 import rv64_nstage.control.ControlConst._
 import rv64_nstage.fu._
 import rv64_nstage.register._
-import rv64_nstage.tlb._
+import rv64_nstage.mmu._
 import utils._
 import mem._
 
