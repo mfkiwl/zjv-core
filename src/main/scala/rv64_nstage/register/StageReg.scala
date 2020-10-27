@@ -159,15 +159,15 @@ class RegIf1If2 extends Module with phvntomParams {
   io.bpio.xored_index_out := xored_index
 }
 
-class RegIf2IdIO extends Bundle with phvntomParams {
+class RegIf3IdIO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
   val instio = Flipped(Flipped(new InstIO))
   val bpio = Flipped(Flipped(new BPUPredictIO))
 }
 
-class RegIf2Id extends Module with phvntomParams {
-  val io = IO(new RegIf2IdIO)
+class RegIf3Id extends Module with phvntomParams {
+  val io = IO(new RegIf3IdIO)
   
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
@@ -615,7 +615,7 @@ class RegMem1Mem2 extends Module with phvntomParams {
   io.csrio.af_out := af
 }
 
-class RegMem2WbIO extends Bundle with phvntomParams {
+class RegMem3WbIO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val instio = Flipped(Flipped(new InstIO))
   val iiio = Flipped(Flipped(new InstInfoIO))
@@ -624,8 +624,8 @@ class RegMem2WbIO extends Bundle with phvntomParams {
   val memio = Flipped(Flipped(new MemDataIO))
 }
 
-class RegMem2Wb extends Module with phvntomParams {
-  val io = IO(new RegMem2WbIO)
+class RegMem3Wb extends Module with phvntomParams {
+  val io = IO(new RegMem3WbIO)
 
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
