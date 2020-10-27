@@ -115,37 +115,27 @@ int main(int argc, char** argv)
          engine.sim_step(1);
          sim_cnt++;
 
-      if(((engine.emu_get_pc() != engine.sim_get_pc()) ||
-          (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
+      if(((engine.emu_get_pc() != engine.sim_get_pc()) || 
+          (engine.emu_get_meip_as() != engine.sim_get_meip_as()) ||
+	       (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
 
             faultExitLatency++;
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
 
-            fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx): %s\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
-            fprintf(stderr,"spike pc: 0x%016lx (0x%08lx): %s\n",  engine.sim_get_pc(), engine.sim_get_inst(), engine.disasm(engine.sim_get_inst()).c_str());
+            fprintf(stderr,"zjv   pc: 0x%016lX (0x%08X): %s\n",  engine.emu_get_pc(), (unsigned int)engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
+            fprintf(stderr,"spike pc: 0x%016lx (0x%08x): %s\n",  engine.sim_get_pc(), (unsigned int)engine.sim_get_inst(), engine.disasm(engine.sim_get_inst()).c_str());
 
-            difftest_check_point(pc); 
-            difftest_check_point(priv);
-            difftest_check_point(mstatus);
-            difftest_check_point(mepc);
-            difftest_check_point(mtval);
-            difftest_check_point(mcause);
-            difftest_check_point(mtvec);
-            difftest_check_point(mepc);
-            difftest_check_point(mtvec);
-            difftest_check_point(mideleg);
-            difftest_check_point(medeleg);
-            difftest_check_point(sstatus);
-            difftest_check_point(sepc);
-            difftest_check_point(stval);
-            difftest_check_point(scause);
-            difftest_check_point(stvec);
-            difftest_check_point(sepc);
-            difftest_check_point(stvec);
+            difftest_check_point(pc);        difftest_check_point(priv, "\n");
+            difftest_check_point(mstatus);   difftest_check_point(mepc, "\n");
+            difftest_check_point(mtval);     difftest_check_point(mcause);          difftest_check_point(mtvec, "\n");
+            difftest_check_point(mideleg);   difftest_check_point(medeleg, "\n");
+            difftest_check_point(sstatus);   difftest_check_point(sepc, "\n");
+            difftest_check_point(stval);     difftest_check_point(scause);          difftest_check_point(stvec, "\n");
+            difftest_check_point(meip_as);   difftest_check_point(seip_as, "\n");
             difftest_check_general_register();
 
             fprintf(stderr, "\n");
-            if (faultExitLatency == 1)
+            if (faultExitLatency == 3)
                 exit(-1);
          }
          else {

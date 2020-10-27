@@ -94,7 +94,9 @@ class Tile extends Module with phvntomParams {
   val hart0_seipSync = plic.io.extra.get.meip(1)
   core.io.int.meip := hart0_meipSync
   core.io.int.seip := hart0_seipSync
-//  printf("Here is the output of PLIC meip %x\n", meipSync)
+
+  BoringUtils.addSource(hart0_meipSync, "difftestmeip")
+  BoringUtils.addSource(hart0_seipSync, "difftestseip")
 
   // xbar
   val mmio_device = List(poweroff, clint, plic, uart)
