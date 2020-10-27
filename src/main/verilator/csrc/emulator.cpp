@@ -115,8 +115,9 @@ int main(int argc, char** argv)
          engine.sim_step(1);
          sim_cnt++;
 
-      if(((engine.emu_get_pc() != engine.sim_get_pc()) ||
-          (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
+      if(((engine.emu_get_pc() != engine.sim_get_pc()) || 
+          (engine.emu_get_meip_as() != engine.sim_get_meip_as()) ||
+	       (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
 
             faultExitLatency++;
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
@@ -134,7 +135,7 @@ int main(int argc, char** argv)
             difftest_check_general_register();
 
             fprintf(stderr, "\n");
-            if (faultExitLatency == 1)
+            if (faultExitLatency == 3)
                 exit(-1);
          }
          else {

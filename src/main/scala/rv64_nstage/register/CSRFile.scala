@@ -360,8 +360,9 @@ class CSRFile extends Module with phvntomParams {
     mier_mtie, false.B, mier_stie, false.B,
     mier_msie, false.B, mier_ssie, false.B
   )
-  val mipr = Cat(0.U((xlen - 12).W), io.int_pend.meip, false.B,
-    mipr_seip, false.B, io.int_pend.mtip, false.B, mipr_stip, false.B,
+  val mipr = Cat(0.U((xlen - 12).W), 
+    io.int_pend.meip, false.B, mipr_seip, false.B, 
+    io.int_pend.mtip, false.B, mipr_stip, false.B,
     io.int_pend.msip, false.B, mipr_ssip, false.B
   )
   val mstatusr = Cat(mstatusr_sd, 0.U((xlen - 39).W), mstatusr_mbe, mstatusr_sbe, mstatusr_sxl, mstatusr_uxl,

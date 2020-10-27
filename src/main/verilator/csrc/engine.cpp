@@ -191,8 +191,8 @@ void dtengine_t::sim_update_state() {
     sim_state->scause  = s->scause;
     sim_state->stvec   = s->stvec;
     sim_state->satp    = s->satp;
-    sim_state->meip_as = (s->mip & 0x0000800) == 1;
-    sim_state->seip_as = (s->mip & 0x0000200) == 1;
+    sim_state->meip_as = (s->mip & 0x0000800) != 0;
+    sim_state->seip_as = (s->mip & 0x0000200) != 0;
 }
 
 unsigned long dtengine_t::emu_difftest_valid() {
