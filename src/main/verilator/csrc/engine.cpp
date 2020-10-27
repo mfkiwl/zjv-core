@@ -142,6 +142,7 @@ void dtengine_t::emu_update_state() {
             emu_get_reg( 7); emu_get_reg(17); emu_get_reg(27);
             emu_get_reg( 8); emu_get_reg(18); emu_get_reg(28);
             emu_get_reg( 9); emu_get_reg(19); emu_get_reg(29);
+    #undef emu_get_reg
     emu_state->pc        = zjv->io_difftest_pc;
     emu_state->inst      = zjv->io_difftest_inst;
     emu_state->valid     = zjv->io_difftest_valid;
@@ -161,9 +162,14 @@ void dtengine_t::emu_update_state() {
     emu_state->stval     = zjv->io_difftest_stval;
     emu_state->scause    = zjv->io_difftest_scause;
     emu_state->mcycle    = zjv->io_difftest_mcycle;
-    emu_state->meip_as   = zjv->io_difftest_meip_as;
-    emu_state->seip_as   = zjv->io_difftest_seip_as;
-    #undef emu_get_reg
+    emu_state->mip       = zjv->io_difftest_mip;
+    emu_state->sip       = zjv->io_difftest_sip;
+    emu_state->mie       = zjv->io_difftest_mie;
+    emu_state->sie       = zjv->io_difftest_sie;
+
+    emu_state->uartirq       = zjv->io_difftest_uartirq;
+    emu_state->plicmeip       = zjv->io_difftest_plicmeip;
+    emu_state->plicseip       = zjv->io_difftest_plicseip;
 }
 
 void dtengine_t::sim_update_state() {
@@ -191,8 +197,10 @@ void dtengine_t::sim_update_state() {
     sim_state->scause  = s->scause;
     sim_state->stvec   = s->stvec;
     sim_state->satp    = s->satp;
-    sim_state->meip_as = (s->mip & 0x0000800) != 0;
-    sim_state->seip_as = (s->mip & 0x0000200) != 0;
+    sim_state->mip     = s->mip;
+    sim_state->mie     = s->mie;
+    sim_state->sip     = s->mip & ~(MIP_MSIP | MIP_MTIP | MIP_MEIP);
+    sim_state->sie     = s->mie & ~(MIP_MSIP | MIP_MTIP | MIP_MEIP);
 }
 
 unsigned long dtengine_t::emu_difftest_valid() {

@@ -37,8 +37,10 @@ static void uart_dequeue(char* data) {
     if (file_fifo.is_open()) {
         if (!file_fifo.eof()) 
             file_fifo.get(*data);
-        if (file_fifo.eof()) 
+        if (file_fifo.eof()) {
             file_fifo.close();
+            fprintf(stderr, "[UART] close fifo \n");
+        }
     }
 }
 

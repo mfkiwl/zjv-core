@@ -26,7 +26,7 @@ class PlicIO(val nrIntr: Int, val nrHart: Int) extends Bundle {
   val meip = Output(Vec(nrHart, Bool()))
 }
 
-class AXI4PLIC(nrIntr: Int = 32, nrHart: Int = 2) extends AXI4Slave(new PlicIO(nrIntr, nrHart)) {
+class AXI4PLIC(nrIntr: Int = 3, nrHart: Int = 2) extends AXI4Slave(new PlicIO(nrIntr, nrHart)) {
   require(nrIntr < 1024)
   require(nrHart <= 15872)
   val addressSpaceSize = 0x4000000
@@ -70,7 +70,7 @@ class AXI4PLIC(nrIntr: Int = 32, nrHart: Int = 2) extends AXI4Slave(new PlicIO(n
   }.toMap
 
   io.extra.get.intrVec.asBools.zipWithIndex.map { case (intr, i) => {
-    val id = 10 // FixMe
+    val id = i + 1
     when (intr) { pending(id / 32)(id % 32) := true.B }
     when (inHandle(id)) { pending(id / 32)(id % 32) := false.B }
   } }

@@ -1147,12 +1147,16 @@ class CSRFile extends Module with phvntomParams {
 
   if (diffTest) {
     BoringUtils.addSource(mstatusr, "difftestmstatusr")
+    BoringUtils.addSource(mipr, "difftestmipr")
+    BoringUtils.addSource(mier, "difftestmier")
     BoringUtils.addSource(mcycler, "difftestmcycler")
     BoringUtils.addSource(current_p, "difftestprivilege")
     BoringUtils.addSource(mepcr, "difftestmepcr")
     BoringUtils.addSource(mtvalr, "difftestmtvalr")
     BoringUtils.addSource(mcauser, "difftestmcauser")
     BoringUtils.addSource(sstatusr, "difftestsstatusr")
+    BoringUtils.addSource(sipr, "difftestsipr")
+    BoringUtils.addSource(sier, "difftestsier")
     BoringUtils.addSource(sepcr, "difftestsepcr")
     BoringUtils.addSource(stvalr, "diffteststvalr")
     BoringUtils.addSource(scauser, "difftestscauser")
