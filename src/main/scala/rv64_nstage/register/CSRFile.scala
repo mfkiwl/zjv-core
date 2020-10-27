@@ -516,9 +516,11 @@ class CSRFile extends Module with phvntomParams {
 
   // Write Signal for MTVAL or STVAL
   val write_tval = io.mem_af || io.mem_pf || io.mem_ma || io.inst_af || io.inst_pf || io.inst_ma
-  val tval_value = Mux(expt_num_comb === Exception.InstAddrMisaligned, Cat(io.bad_addr(xlen - 1, 1),
-    Fill(1, 0.U)), io.bad_addr
-  )
+  val tval_value = Mux(expt_num_comb === Exception.InstAddrMisaligned ||
+                       expt_num_comb === Exception.InstAccessFault    ||
+                       expt_num_comb === Exception.InstPageFault, 
+                       io.current_pc, 
+                       io.bad_addr)
 
   // MCYCLE and MINSTRET
   // TODO Restore + 3.U and + 1.U
