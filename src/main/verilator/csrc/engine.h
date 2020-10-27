@@ -12,6 +12,7 @@
 
 /*    spike    */
 #include "riscv/sim.h"
+#include "riscv/disasm.h"
 
 /*     libc     */ 
 #include <iostream>
@@ -39,6 +40,7 @@ extern void init_ram(const std::string img);
 struct difftest_state_t {
     reg_t regs[32];
     reg_t pc;
+    reg_t inst;
     reg_t npc;
     reg_t priv;
     reg_t mstatus;
@@ -55,7 +57,6 @@ struct difftest_state_t {
     reg_t scause;
     reg_t stvec;
     reg_t satp;
-    reg_t inst;
     bool valid;
     bool interrupt;
     reg_t poweroff;
@@ -63,7 +64,7 @@ struct difftest_state_t {
 
 class dtengine_t {
 public:
-    dtengine_t(std::string elfpath);
+    dtengine_t(size_t xlen, std::string elfpath);
     bool is_finish();
     void trace_close();
 
@@ -110,6 +111,7 @@ public:
     get(emu, medeleg);
 
     get(sim, pc);
+    get(sim, inst);
     get(sim, mstatus);
     get(sim, priv);
     get(sim, mepc);
@@ -135,7 +137,15 @@ public:
         "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
     };
 
+    std::string disasm(reg_t bits) {
+        if (disassembler) 
+            return disassembler->disassemble(bits);
+        else
+            return "";
+    }
+
 private:
+    size_t xlen;
     sim_t*  spike;
     emu_t*  zjv;
 
@@ -147,6 +157,7 @@ private:
     #endif
 
     std::string file_fifo_path;
+    disassembler_t* disassembler;
 };
 
 #define difftest_check_point(reg) \

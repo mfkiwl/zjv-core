@@ -45,7 +45,7 @@ int main(int argc, char** argv)
       exit(1);
    }
 
-   dtengine_t engine(argv[1]);
+   dtengine_t engine(64, argv[1]);
    engine.emu_reset(10);
    #ifdef ZJV_DEBUG
       fprintf(stderr, "[Emu] Reset after 10 cycles \n");
@@ -110,7 +110,7 @@ int main(int argc, char** argv)
       if (startTest && engine.emu_difftest_valid()) {
          bubble_cnt = 0;
       #ifdef ZJV_DEBUG
-//         fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+            // fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx): %s\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
       #endif
          engine.sim_step(1);
          sim_cnt++;
@@ -119,9 +119,11 @@ int main(int argc, char** argv)
           (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
 
             faultExitLatency++;
-            fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
-
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
+
+            fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx): %s\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
+            fprintf(stderr,"spike pc: 0x%016lx (0x%08lx): %s\n",  engine.sim_get_pc(), engine.sim_get_inst(), engine.disasm(engine.sim_get_inst()).c_str());
+
             difftest_check_point(pc); 
             difftest_check_point(priv);
             difftest_check_point(mstatus);
