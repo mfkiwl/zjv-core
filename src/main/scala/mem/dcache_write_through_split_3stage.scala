@@ -25,7 +25,7 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
   /* stage1 signals */
   val s1_valid = WireDefault(Bool(), false.B)
   val s1_addr = Wire(UInt(xlen.W))
-  val s1_index = WireDefault(UInt(indexLength.W), 0.U(indexLength.W))
+  val s1_index = Wire(UInt(indexLength.W))
   val s1_data = Wire(UInt(blockBits.W))
   val s1_wen = WireDefault(Bool(), false.B)
   val s1_memtype = Wire(UInt(xlen.W))
@@ -43,10 +43,13 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
   val s2_data = RegInit(UInt(blockBits.W), 0.U)
   val s2_wen = RegInit(Bool(), false.B)
   val s2_memtype = RegInit(UInt(xlen.W), 0.U)
-  val s2_meta = Reg(Vec(nWays, new MetaData))
-  val s2_cacheline = Reg(Vec(nWays, new CacheLineData))
-  val s2_index = WireDefault(UInt(indexLength.W), 0.U)
+  val s2_meta = Wire(Vec(nWays, new MetaData))
+  val s2_cacheline = Wire(Vec(nWays, new CacheLineData))
+  val array_meta = Wire(Vec(nWays, new MetaData))
+  val array_cacheline = Wire(Vec(nWays, new CacheLineData))
+  val s2_index = Wire(UInt(indexLength.W))
   val s2_tag = Wire(UInt(tagLength.W))
+  val read_index = Mux(io.in.stall, s2_index, s1_index)
 
   when(!io.in.stall) {
     s2_valid := s1_valid
@@ -55,16 +58,12 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
     s2_wen := s1_wen
     s2_memtype := s1_memtype
   }
-  when(need_forward) {
-    s2_meta := write_meta
-    s2_cacheline := writeData
-  }.otherwise {
-    for (i <- 0 until nWays) {
-      s2_meta(i) := metaArray(i).read(s1_index, true.B)
-      s2_cacheline(i) := dataArray(i).read(s1_index, true.B)
-    }
+  for (i <- 0 until nWays) {
+    array_meta(i) := metaArray(i).read(read_index, true.B)
+    array_cacheline(i) := dataArray(i).read(read_index, true.B)
   }
-
+  s2_meta := Mux(need_forward, write_meta, array_meta)
+  s2_cacheline :=  Mux(need_forward, writeData, array_cacheline)
   s2_index := s2_addr(indexLength + offsetLength - 1, offsetLength)
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
 
@@ -84,7 +83,7 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
   val s3_memtype = RegInit(UInt(xlen.W), 0.U)
   val s3_meta = Reg(Vec(nWays, new MetaData))
   val s3_cacheline = Reg(Vec(nWays, new CacheLineData))
-  val s3_index = WireDefault(UInt(indexLength.W), 0.U)
+  val s3_index = Wire(UInt(indexLength.W))
   val s3_tag = Wire(UInt(tagLength.W))
   val s3_lineoffset = Wire(UInt(lineLength.W))
   val s3_wordoffset = Wire(UInt((offsetLength - lineLength).W))
