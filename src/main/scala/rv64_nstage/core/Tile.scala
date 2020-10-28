@@ -76,7 +76,7 @@ class Tile extends Module with phvntomParams {
   // power off
   val poweroff = Module(new AXI4PowerOff)
   val poweroffSync = poweroff.io.extra.get.poweroff
-  BoringUtils.addSource(poweroffSync(31, 0), "poweroff")
+  BoringUtils.addSource(poweroffSync(31, 0), "difftestpoweroff")
 
   // clint
   val clint = Module(new Clint)
@@ -84,19 +84,20 @@ class Tile extends Module with phvntomParams {
   val msipSync = clint.io.extra.get.msip
   core.io.int.msip := msipSync
   core.io.int.mtip := mtipSync
-  BoringUtils.addSource(mtipSync, "mtip")
-  BoringUtils.addSource(msipSync, "msip")
+
 
   // plic
   val plic = Module(new AXI4PLIC)
-  plic.io.extra.get.intrVec := uart.io.extra.get.irq
+  val uart_irqSync = uart.io.extra.get.irq
   val hart0_meipSync = plic.io.extra.get.meip(0)
   val hart0_seipSync = plic.io.extra.get.meip(1)
+  plic.io.extra.get.intrVec := uart_irqSync
   core.io.int.meip := hart0_meipSync
   core.io.int.seip := hart0_seipSync
 
-  BoringUtils.addSource(hart0_meipSync, "difftestmeip")
-  BoringUtils.addSource(hart0_seipSync, "difftestseip")
+  BoringUtils.addSource(uart_irqSync,   "difftestuartirq")
+  BoringUtils.addSource(hart0_meipSync, "difftestplicmeip")
+  BoringUtils.addSource(hart0_seipSync, "difftestplicseip")
 
   // xbar
   val mmio_device = List(poweroff, clint, plic, uart)

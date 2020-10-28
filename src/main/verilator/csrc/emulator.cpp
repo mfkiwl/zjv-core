@@ -1,9 +1,7 @@
 #include "engine.h"
 
-sim_t *sim;
-reg_t emu_regs[32];
 
-uint64_t trace_count = 0;
+extern unsigned int sim_uart_irq, sim_prio, sim_ie, sim_ip, sim_thrs, sim_claim;
 
 int main(int argc, char** argv)
 {
@@ -60,13 +58,13 @@ int main(int argc, char** argv)
    int int_total_cnt = 0;
    long sim_cnt = 0;
 
-//     while (!engine.is_finish()) {
-//           engine.emu_step(1);
-//     }
+   // while (!engine.is_finish()) {
+   //       engine.emu_step(1);
+   // }
 
-//    while (!engine.is_finish()) {
-//          engine.sim_solo();
-//    }
+   // while (!engine.is_finish()) {
+   //       engine.sim_solo();
+   // }
 
    while (!engine.is_finish()) {
       engine.emu_step(1);
@@ -80,8 +78,8 @@ int main(int argc, char** argv)
       }
 
       #ifdef ZJV_DEBUG
-//        fprintf(stderr, "\t\t\t\t [ ROUND %lx %lx ]\n", engine.trace_count, engine.emu_get_mcycle());
-//        fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx)\n",  engine.emu_get_pc(), engine.emu_get_inst());
+      //  fprintf(stderr, "\t\t\t\t [ ROUND %lx %lx ]\n", engine.trace_count, engine.emu_get_mcycle());
+      //  fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx): %s\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
       #endif
 
       if (engine.is_finish()) {
@@ -115,9 +113,27 @@ int main(int argc, char** argv)
          engine.sim_step(1);
          sim_cnt++;
 
-      if(((engine.emu_get_pc() != engine.sim_get_pc()) || 
-          (engine.emu_get_meip_as() != engine.sim_get_meip_as()) ||
-	       (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
+            // fprintf(stderr,"zjv   pc: 0x%016lX (0x%08X): %s\n",  engine.emu_get_pc(), (unsigned int)engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
+            // fprintf(stderr,"spike pc: 0x%016lx (0x%08x): %s\n",  engine.sim_get_pc(), (unsigned int)engine.sim_get_inst(), engine.disasm(engine.sim_get_inst()).c_str());
+
+            // difftest_check_point(pc);        difftest_check_point(priv, "\n");
+            // difftest_check_point(mstatus);   difftest_check_point(mepc, "\n");
+            // difftest_check_point(mtval);     difftest_check_point(mcause);          difftest_check_point(mtvec, "\n");
+            // difftest_check_point(mideleg);   difftest_check_point(medeleg, "\n");
+            // difftest_check_point(sstatus);   difftest_check_point(sepc, "\n");
+            // difftest_check_point(stval);     difftest_check_point(scause);          difftest_check_point(stvec, "\n");
+            // difftest_check_point(mip);       difftest_check_point(sip, "\n");
+            // fprintf(stderr, "emu: uart %d plic0 %d plic1 %d prio %x ie %x ip %x thrs %x claim %x\n", 
+            //                  engine.get_emu_state()->uartirq, engine.get_emu_state()->plicmeip, engine.get_emu_state()->plicseip,
+            //                  engine.get_emu_state()->plicprio, engine.get_emu_state()->plicie, engine.get_emu_state()->plicip, engine.get_emu_state()->plicthrs, engine.get_emu_state()->plicclaim);
+            // fprintf(stderr, "sim: uart %d plic0 %d plic1 %d prio %x ie %x ip %x thrs %x claim %x\n", 
+            //                  sim_uart_irq, (engine.sim_get_mip() & MIP_MEIP) != 0, (engine.sim_get_mip() & MIP_SEIP) != 0, 
+            //                  sim_prio, sim_ie, sim_ip, sim_thrs, sim_claim);
+            // difftest_check_general_register();
+
+      if((faultExitLatency || (engine.emu_get_pc() != engine.sim_get_pc()) ||
+         // (engine.get_emu_state()->plicip != sim_ip) ||
+	      (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
 
             faultExitLatency++;
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
@@ -131,8 +147,15 @@ int main(int argc, char** argv)
             difftest_check_point(mideleg);   difftest_check_point(medeleg, "\n");
             difftest_check_point(sstatus);   difftest_check_point(sepc, "\n");
             difftest_check_point(stval);     difftest_check_point(scause);          difftest_check_point(stvec, "\n");
-            difftest_check_point(meip_as);   difftest_check_point(seip_as, "\n");
+            difftest_check_point(mip);       difftest_check_point(sip, "\n");
+            fprintf(stderr, "emu: uart %d plic0 %d plic1 %d prio %x ie %x ip %x thrs %x claim %x\n", 
+                             engine.get_emu_state()->uartirq, engine.get_emu_state()->plicmeip, engine.get_emu_state()->plicseip,
+                             engine.get_emu_state()->plicprio, engine.get_emu_state()->plicie, engine.get_emu_state()->plicip, engine.get_emu_state()->plicthrs, engine.get_emu_state()->plicclaim);
+            fprintf(stderr, "sim: uart %d plic0 %d plic1 %d prio %x ie %x ip %x thrs %x claim %x\n", 
+                             sim_uart_irq, (engine.sim_get_mip() & MIP_MEIP) != 0, (engine.sim_get_mip() & MIP_SEIP) != 0, 
+                             sim_prio, sim_ie, sim_ip, sim_thrs, sim_claim);
             difftest_check_general_register();
+
 
             fprintf(stderr, "\n");
             if (faultExitLatency == 1)
@@ -150,6 +173,7 @@ int main(int argc, char** argv)
         printf("Too many bubbles, end at %lx\n", engine.emu_get_pc());
         exit(-1);
       }
+
    }
 
    engine.trace_close();

@@ -1136,7 +1136,7 @@ class CSRFile extends Module with phvntomParams {
     }
   }
 
-  io.write_satp := (((io.which_reg === CSR.satp || io.which_reg === CSR.mstatus) &&
+  io.write_satp := (((io.which_reg === CSR.satp || io.which_reg === CSR.mstatus || io.which_reg === CSR.sstatus) &&
     (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
   io.satp_val := satpr
   io.current_p := current_p
@@ -1147,12 +1147,16 @@ class CSRFile extends Module with phvntomParams {
 
   if (diffTest) {
     BoringUtils.addSource(mstatusr, "difftestmstatusr")
+    BoringUtils.addSource(mipr, "difftestmipr")
+    BoringUtils.addSource(mier, "difftestmier")
     BoringUtils.addSource(mcycler, "difftestmcycler")
     BoringUtils.addSource(current_p, "difftestprivilege")
     BoringUtils.addSource(mepcr, "difftestmepcr")
     BoringUtils.addSource(mtvalr, "difftestmtvalr")
     BoringUtils.addSource(mcauser, "difftestmcauser")
     BoringUtils.addSource(sstatusr, "difftestsstatusr")
+    BoringUtils.addSource(sipr, "difftestsipr")
+    BoringUtils.addSource(sier, "difftestsier")
     BoringUtils.addSource(sepcr, "difftestsepcr")
     BoringUtils.addSource(stvalr, "diffteststvalr")
     BoringUtils.addSource(scauser, "difftestscauser")

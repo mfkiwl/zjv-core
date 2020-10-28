@@ -39,29 +39,27 @@ extern void init_ram(const std::string img);
 
 struct difftest_state_t {
     reg_t regs[32];
-    reg_t pc;
-    reg_t inst;
+    reg_t pc, inst;
     reg_t npc;
     reg_t priv;
-    reg_t mstatus;
-    reg_t mepc;
-    reg_t mtval;
-    reg_t mcause;
-    reg_t mtvec;
-    reg_t mideleg;
-    reg_t medeleg;
+    reg_t mstatus, mepc, mtval, mcause, mtvec;
+    reg_t mip, mie;
+    reg_t mideleg, medeleg;
     reg_t mcycle;
-    reg_t sstatus;
-    reg_t sepc;
-    reg_t stval;
-    reg_t scause;
-    reg_t stvec;
+    reg_t sstatus, sepc, stval, scause, stvec;
+    reg_t sip, sie;   
     reg_t satp;
     bool valid;
     bool interrupt;
     reg_t poweroff;
-    bool meip_as;
-    bool seip_as;
+    bool uartirq;
+    bool plicmeip;
+    bool plicseip;
+    uint32_t plicip;
+    uint32_t plicie;
+    uint32_t plicprio;
+    uint32_t plicthrs;
+    uint32_t plicclaim;
 };
 
 class dtengine_t {
@@ -111,9 +109,12 @@ public:
     difftest_get(emu, mtvec);
     difftest_get(emu, mideleg);
     difftest_get(emu, medeleg);
-    difftest_get(emu, meip_as);
-    difftest_get(emu, seip_as);
+    difftest_get(emu, mip);
+    difftest_get(emu, sip);
+    difftest_get(emu, mie);
+    difftest_get(emu, sie);
 
+    difftest_get(sim, npc);
     difftest_get(sim, pc);
     difftest_get(sim, inst);
     difftest_get(sim, mstatus);
@@ -130,8 +131,19 @@ public:
     difftest_get(sim, scause);
     difftest_get(sim, stvec);
     difftest_get(sim, satp);
-    difftest_get(sim, meip_as);
-    difftest_get(sim, seip_as);
+    difftest_get(sim, mip);
+    difftest_get(sim, sip);
+    difftest_get(sim, mie);
+    difftest_get(sim, sie);
+
+    difftest_get(emu, uartirq);
+    difftest_get(emu, plicmeip);
+    difftest_get(emu, plicseip);
+    difftest_get(emu, plicip);
+    difftest_get(emu, plicie);
+    difftest_get(emu, plicprio);
+    difftest_get(emu, plicthrs);
+    difftest_get(emu, plicclaim);
 #undef difftest_get
 
     reg_t trace_count;
@@ -190,9 +202,10 @@ private:
                     engine.reg_name[i],                                             \
                     engine.get_emu_state()->regs[i],                                \
                     engine.get_sim_state()->regs[i]);                               \
-        if (i % 3 == 2)                                                             \
+        if (i % 3 == 2 || i == REG_G_NUM-1)                                         \
             fprintf(stderr, "\n");                                                  \
-    }
+    }                                                                               \
+    fprintf(stderr, "\n");
 
 
 #endif // _ENGINE_H
