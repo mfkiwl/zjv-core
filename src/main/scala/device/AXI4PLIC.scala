@@ -21,6 +21,8 @@ import chisel3._
 import chisel3.util._
 import utils._
 
+import chisel3.util.experimental.BoringUtils
+
 class PlicIO(val nrIntr: Int, val nrHart: Int) extends Bundle {
   val intrVec = Input(UInt(nrIntr.W))
   val meip = Output(Vec(nrHart, Bool()))
@@ -90,4 +92,10 @@ class AXI4PLIC(nrIntr: Int = 3, nrHart: Int = 2) extends AXI4Slave(new PlicIO(nr
   io.in.r.bits.data := Fill(2, rdata)
 
   io.extra.get.meip.zipWithIndex.map { case (ip, hart) => ip := claimCompletion(hart) =/= 0.U }
+
+  BoringUtils.addSource(pending(0),           "difftestplicpend")
+  BoringUtils.addSource(enable(0)(0),         "difftestplicenable")
+  BoringUtils.addSource(priority(0),          "difftestplicpriority")
+  BoringUtils.addSource(threshold(0),         "difftestplicthreshold")
+  BoringUtils.addSource(claimCompletion(0),   "difftestplicclaimed")
 }

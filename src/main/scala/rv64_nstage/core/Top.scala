@@ -36,6 +36,11 @@ class DiffTestIO extends Bundle with phvntomParams {
   val uartirq  = Output(Bool())
   val plicmeip = Output(Bool())
   val plicseip = Output(Bool())
+  val plicip   = Output(Vec(32, Bool()))
+  val plicie   = Output(UInt(32.W))
+  val plicprio = Output(UInt(32.W))
+  val plicthrs = Output(UInt(32.W))
+  val plicclaim = Output(UInt(32.W))
 }
 
 class TopIO extends Bundle with phvntomParams {
@@ -83,6 +88,12 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.uartirq,  "difftestuartirq")
   BoringUtils.addSink(difftest.plicmeip, "difftestplicmeip")
   BoringUtils.addSink(difftest.plicseip, "difftestplicseip")
+
+  BoringUtils.addSink(difftest.plicip,      "difftestplicpend")
+  BoringUtils.addSink(difftest.plicie,      "difftestplicenable")
+  BoringUtils.addSink(difftest.plicprio,    "difftestplicpriority")
+  BoringUtils.addSink(difftest.plicthrs,    "difftestplicthreshold")
+  BoringUtils.addSink(difftest.plicclaim,   "difftestplicclaimed")
 
   io.difftest := difftest
   io.poweroff := poweroff

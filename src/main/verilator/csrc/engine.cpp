@@ -167,9 +167,17 @@ void dtengine_t::emu_update_state() {
     emu_state->mie       = zjv->io_difftest_mie;
     emu_state->sie       = zjv->io_difftest_sie;
 
-    emu_state->uartirq       = zjv->io_difftest_uartirq;
-    emu_state->plicmeip       = zjv->io_difftest_plicmeip;
-    emu_state->plicseip       = zjv->io_difftest_plicseip;
+    emu_state->uartirq   = zjv->io_difftest_uartirq;
+    emu_state->plicmeip  = zjv->io_difftest_plicmeip;
+    emu_state->plicseip  = zjv->io_difftest_plicseip;
+    emu_state->plicip    = zjv->io_difftest_plicip_0 | (zjv->io_difftest_plicip_1 << 1) |
+                          (zjv->io_difftest_plicip_2 << 2) | (zjv->io_difftest_plicip_3 << 3);
+    emu_state->plicie    = zjv->io_difftest_plicie;
+    emu_state->plicprio  = zjv->io_difftest_plicprio;
+    emu_state->plicthrs  = zjv->io_difftest_plicthrs;
+    emu_state->plicclaim = zjv->io_difftest_plicclaim;
+
+
 }
 
 void dtengine_t::sim_update_state() {

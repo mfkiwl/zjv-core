@@ -55,6 +55,11 @@ struct difftest_state_t {
     bool uartirq;
     bool plicmeip;
     bool plicseip;
+    uint32_t plicip;
+    uint32_t plicie;
+    uint32_t plicprio;
+    uint32_t plicthrs;
+    uint32_t plicclaim;
 };
 
 class dtengine_t {
@@ -133,6 +138,11 @@ public:
     difftest_get(emu, uartirq);
     difftest_get(emu, plicmeip);
     difftest_get(emu, plicseip);
+    difftest_get(emu, plicip);
+    difftest_get(emu, plicie);
+    difftest_get(emu, plicprio);
+    difftest_get(emu, plicthrs);
+    difftest_get(emu, plicclaim);
 #undef difftest_get
 
     reg_t trace_count;
