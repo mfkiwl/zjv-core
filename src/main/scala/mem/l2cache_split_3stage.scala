@@ -213,29 +213,29 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
     }
   }
 
-  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  // printf("state=%d, stall=%d, s3_hit=%d, result=%x\n", state, stall, s3_hit, result)
-  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  // printf("s1_data=%x, s1_wen=%d\n", s1_data, s1_wen)
-  // printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_addr(indexLength + offsetLength - 1, offsetLength))
-  // printf("s2_data=%x, s2_wen=%d\n", s2_data, s2_wen)
-  // printf("s3_valid=%d, s3_addr=%x, s3_index=%x\n", s3_valid, s3_addr, s3_index)
-  // printf("s3_data=%x, s3_wen=%d\n", s3_data, s3_wen)
-  // printf(
-  //   "s3_tag=%x, s3_lineoffset=%x, s3_wordoffset=%x\n",
-  //   s3_tag,
-  //   s3_lineoffset,
-  //   s3_wordoffset
-  // )
-  // printf(p"s2_hitVec=${s2_hitVec}, s3_access_index=${s3_access_index}\n")
-  // printf(
-  //   p"s2_victim_index=${s2_victim_index}, s2_victim_vec=${s2_victim_vec}, s3_access_vec = ${s3_access_vec}\n"
-  // )
-  // printf(p"s2_cacheline=${s2_cacheline}\n")
-  // printf(p"s2_meta=${s2_meta}\n")
-  // printf(p"s3_cacheline=${s3_cacheline}\n")
-  // printf(p"s3_meta=${s3_meta}\n")
-  // printf(p"----------${cacheName} io.mem----------\n")
-  // printf(p"${io.mem}\n")
-  // printf("-----------------------------------------------\n")
+  printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  printf("state=%d, stall=%d, s3_hit=%d, result=%x\n", state, stall, s3_hit, result)
+  printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+  printf("s1_data=%x, s1_wen=%d\n", s1_data, s1_wen)
+  printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_addr(indexLength + offsetLength - 1, offsetLength))
+  printf("s2_data=%x, s2_wen=%d\n", s2_data, s2_wen)
+  printf("s3_valid=%d, s3_addr=%x, s3_index=%x\n", s3_valid, s3_addr, s3_index)
+  printf("s3_data=%x, s3_wen=%d\n", s3_data, s3_wen)
+  printf(
+    "s3_tag=%x, s3_lineoffset=%x, s3_wordoffset=%x\n",
+    s3_tag,
+    s3_lineoffset,
+    s3_wordoffset
+  )
+  printf(p"s2_hitVec=${s2_hitVec}, s3_access_index=${s3_access_index}\n")
+  printf(
+    p"s2_victim_index=${s2_victim_index}, s2_victim_vec=${s2_victim_vec}, s3_access_vec = ${s3_access_vec}\n"
+  )
+  printf(p"s2_cacheline=${s2_cacheline}\n")
+  printf(p"s2_meta=${s2_meta}\n")
+  printf(p"s3_cacheline=${s3_cacheline}\n")
+  printf(p"s3_meta=${s3_meta}\n")
+  printf(p"----------${cacheName} io.mem----------\n")
+  printf(p"${io.mem}\n")
+  printf("-----------------------------------------------\n")
 }
