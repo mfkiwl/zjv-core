@@ -257,11 +257,11 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
         for (i <- 0 until nWays) {
           metaArray(i).write(s3_index, write_meta(i))
         }
-        // printf(
-        //   p"[${GTimer()}]: dcache write: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, filled_data=${Hexadecimal(filled_data)}\n"
-        // )
-        // printf(p"\twriteData=${writeData}\n")
-        // printf(p"\twrite_meta=${write_meta}\n")
+//         printf(
+//           p"[${GTimer()}]: dcache write: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, filled_data=${Hexadecimal(filled_data)}\n"
+//         )
+//         printf(p"\twriteData=${writeData}\n")
+//         printf(p"\twrite_meta=${write_meta}\n")
       }
     }.otherwise {
       when(s3_hit || mem_read_valid || mmio_request_satisfied) {
@@ -305,9 +305,9 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
           }
         }
         result := Mux(ismmio, io.mmio.resp.bits.data, mem_result)
-        // printf(
-        //   p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
-        // )
+//         printf(
+//           p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
+//         )
         when(!ismmio) {
           when(!s3_hit) {
             for (i <- 0 until nWays) {
@@ -340,41 +340,41 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
     }
   }
 
-  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  // printf(
-  //   "stall=%d, need_forward=%d, state=%d, ismmio=%d, s3_hit=%d, result=%x\n",
-  //   stall,
-  //   need_forward,
-  //   state,
-  //   ismmio,
-  //   s3_hit,
-  //   result
-  // )
-  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  // printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-  // printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
-  // printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
-  // printf("s3_valid=%d, s3_addr=%x, s3_index=%x\n", s3_valid, s3_addr, s3_index)
-  // printf("s3_data=%x, s3_wen=%d, s3_memtype=%d\n", s3_data, s3_wen, s3_memtype)
-  // printf(
-  //   "s3_tag=%x, s3_lineoffset=%x, s3_wordoffset=%x\n",
-  //   s3_tag,
-  //   s3_lineoffset,
-  //   s3_wordoffset
-  // )
-  // printf(p"s2_hitVec=${s2_hitVec}, s3_access_index=${s3_access_index}\n")
-  // printf(
-  //   p"s2_victim_index=${s2_victim_index}, s2_victim_vec=${s2_victim_vec}, s3_access_vec = ${s3_access_vec}\n"
-  // )
-  // printf(p"s2_cacheline=${s2_cacheline}\n")
-  // printf(p"s2_meta=${s2_meta}\n")
-  // printf(p"s3_cacheline=${s3_cacheline}\n")
-  // printf(p"s3_meta=${s3_meta}\n")
-  // printf(p"----------${cacheName} io.in----------\n")
-  // printf(p"${io.in}\n")
-  // printf(p"----------${cacheName} io.mem----------\n")
-  // printf(p"${io.mem}\n")
-  // printf(p"----------${cacheName} io.mmio----------\n")
-  // printf(p"${io.mmio}\n")
-  // printf("-----------------------------------------------\n")
+//   printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+//   printf(
+//     "stall=%d, need_forward=%d, state=%d, ismmio=%d, s3_hit=%d, result=%x\n",
+//     stall,
+//     need_forward,
+//     state,
+//     ismmio,
+//     s3_hit,
+//     result
+//   )
+//   printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
+//   printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
+//   printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
+//   printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
+//   printf("s3_valid=%d, s3_addr=%x, s3_index=%x\n", s3_valid, s3_addr, s3_index)
+//   printf("s3_data=%x, s3_wen=%d, s3_memtype=%d\n", s3_data, s3_wen, s3_memtype)
+//   printf(
+//     "s3_tag=%x, s3_lineoffset=%x, s3_wordoffset=%x\n",
+//     s3_tag,
+//     s3_lineoffset,
+//     s3_wordoffset
+//   )
+//   printf(p"s2_hitVec=${s2_hitVec}, s3_access_index=${s3_access_index}\n")
+//   printf(
+//     p"s2_victim_index=${s2_victim_index}, s2_victim_vec=${s2_victim_vec}, s3_access_vec = ${s3_access_vec}\n"
+//   )
+//   printf(p"s2_cacheline=${s2_cacheline}\n")
+//   printf(p"s2_meta=${s2_meta}\n")
+//   printf(p"s3_cacheline=${s3_cacheline}\n")
+//   printf(p"s3_meta=${s3_meta}\n")
+//   printf(p"----------${cacheName} io.in----------\n")
+//   printf(p"${io.in}\n")
+//   printf(p"----------${cacheName} io.mem----------\n")
+//   printf(p"${io.mem}\n")
+//   printf(p"----------${cacheName} io.mmio----------\n")
+//   printf(p"${io.mmio}\n")
+//   printf("-----------------------------------------------\n")
 }

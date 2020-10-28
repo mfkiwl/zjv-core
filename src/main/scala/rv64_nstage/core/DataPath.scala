@@ -556,11 +556,15 @@ class DataPath extends Module with phvntomParams {
   reg_mem2_mem3.io.csrio.comp_res_in := reg_mem1_mem2.io.csrio.comp_res_out
   reg_mem2_mem3.io.csrio.af_in := reg_mem1_mem2.io.csrio.af_out
 
+//printf("DMEM valid %x, write %x, write_what %x, write where %x ", io.dmem.req.valid, io.dmem.req.bits.wen,
+  //  io.dmem.req.bits.data, io.dmem.req.bits.addr)
+  //  printf("DMEM resp %x\n", io.dmem.resp.valid)
+
   io.dmem.flush := false.B
   io.dmem.stall := !io.dmem.req.ready
   io.dmem.req.bits.addr := Mux(
     amo_arbiter.io.write_now,
-    reg_mem1_mem2.io.aluio.alu_val_out,
+    reg_mem2_mem3.io.aluio.alu_val_out,
     reg_dtlb_mem1.io.aluio.alu_val_out
   )
   io.dmem.req.bits.data := Mux(
@@ -578,7 +582,7 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.wen := (reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenMem || amo_arbiter.io.write_now)
   io.dmem.req.bits.memtype := Mux(
     amo_arbiter.io.write_now,
-    reg_mem1_mem2.io.iiio.inst_info_out.memType,
+    reg_mem2_mem3.io.iiio.inst_info_out.memType,
     reg_dtlb_mem1.io.iiio.inst_info_out.memType
   )
   io.dmem.resp.ready := true.B
@@ -680,7 +684,7 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_int, "difftestInt")
 
-    if (pipeTrace || true) {
+    if (pipeTrace) {
       if (vscode) {
         printf("\t\tIF1\t\tIF2\t\tIF3\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n")
         printf(

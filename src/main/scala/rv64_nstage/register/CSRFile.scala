@@ -715,7 +715,7 @@ class CSRFile extends Module with phvntomParams {
     csr_not_exists := false.B
     bad_csr_access := false.B
   }.elsewhen(io.which_reg === CSR.mcycle) {
-    io.rdata := mcycler + 3.U(2.W)
+    io.rdata := mcycler + 4.U(3.W)
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.minstret) {
