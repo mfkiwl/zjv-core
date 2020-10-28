@@ -114,6 +114,7 @@ public:
     difftest_get(emu, mie);
     difftest_get(emu, sie);
 
+    difftest_get(sim, npc);
     difftest_get(sim, pc);
     difftest_get(sim, inst);
     difftest_get(sim, mstatus);

@@ -85,7 +85,7 @@ extern "C" void uart_getc(char addr, char *data) // read
     default:
         break;
     }
-    printf("[UART] In uart_getc: addr = 0x%x, data = 0x%x\n", addr, *data);
+    // printf("[UART] In uart_getc: addr = 0x%x, data = 0x%x\n", addr, *data);
 
 }
 
@@ -127,7 +127,7 @@ extern "C" void uart_putc(char addr, char data) // write
         // printf("[UART] Store illegal address 0x%x[%x] \n", addr, data);
         break;
     }
-    printf("[UART] In uart_putc: addr = 0x%x, data = 0x%x\n", addr, data);
+    // printf("[UART] In uart_putc: addr = 0x%x, data = 0x%x\n", addr, data);
 }
 
 extern "C"  void uart_irq (char* irq) {

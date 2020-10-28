@@ -23,38 +23,54 @@ import utils._
 
 import chisel3.util.experimental.BoringUtils
 
-class PlicIO(val nrIntr: Int, val nrHart: Int) extends Bundle {
+class PlicIO(val nrIntr: Int, val nrConxt: Int) extends Bundle {
   val intrVec = Input(UInt(nrIntr.W))
-  val meip = Output(Vec(nrHart, Bool()))
+  val meip = Output(Vec(nrConxt, Bool()))
 }
 
-class AXI4PLIC(nrIntr: Int = 3, nrHart: Int = 2) extends AXI4Slave(new PlicIO(nrIntr, nrHart)) {
+class AXI4PLIC(nrIntr: Int = 31, nrConxt: Int = 2) extends AXI4Slave(new PlicIO(nrIntr, nrConxt)) {
   require(nrIntr < 1024)
-  require(nrHart <= 15872)
+  require(nrConxt <= 15872)
   val addressSpaceSize = 0x4000000
   val addressBits = log2Up(addressSpaceSize)
   def getOffset(addr: UInt) = addr(addressBits-1,0)
-
-  val priority = List.fill(nrIntr)(Reg(UInt(32.W)))
-  val priorityMap = priority.zipWithIndex.map{ case (r, intr) => RegMap((intr + 1) * 4, r) }.toMap
-
   val nrIntrWord = (nrIntr + 31) / 32  // roundup
-  // pending bits are updated in the unit of bit by PLIC,
-  // so define it as vectors of bits, instead of UInt(32.W)
+
   val pending = List.fill(nrIntrWord)(RegInit(0.U.asTypeOf(Vec(32, Bool()))))
   val pendingMap = pending.zipWithIndex.map { case (r, intrWord) =>
     RegMap(0x1000 + intrWord * 4, Cat(r.reverse), RegMap.Unwritable)
   }.toMap
 
-  val enable = List.fill(nrHart)( List.fill(nrIntrWord)(RegInit(0.U(32.W))) )
-  val enableMap = enable.zipWithIndex.map { case (l, hart) =>
-    l.zipWithIndex.map { case (r, intrWord) => RegMap(0x2000 + hart * 0x80 + intrWord * 4, r) }
+
+  // 0x0000004 => priority(0) source 1 priority
+  // 0x0000008 => priority(1) source 2 priority
+  val priority = List.fill(nrIntr)(Reg(UInt(32.W)))
+  val priorityMap = priority.zipWithIndex.map{ case (reg, intr) => 
+    RegMap((intr + 1) * 4, reg)
+  }.toMap
+
+
+  // 0x0002000 => enable(0)(0) context 0 source  0-31
+  // 0x0002004 => enable(0)(1) context 0 source 32-63
+  // 0x0002080 => enable(1)(0) context 1 source  0-31
+  // 0x0002084 => enable(1)(1) context 1 source 32-63
+  val enable = List.fill(nrConxt)( List.fill(nrIntrWord)(RegInit(0.U(32.W))) )
+  val enableMap = enable.zipWithIndex.map { case (regs, context) =>
+                  regs.zipWithIndex.map { case (reg, intrWord) => 
+                    RegMap(0x2000 + context * 0x80 + intrWord * 4, reg) }
   }.reduce(_ ++ _).toMap
 
-  val threshold = List.fill(nrHart)(Reg(UInt(32.W)))
-  val thresholdMap = threshold.zipWithIndex.map {
-    case (r, hart) => RegMap(0x200000 + hart * 0x1000, r)
+
+  // 0x0200000 => prio(0) context 0 priority
+  // 0x0201000 => prio(1) context 1 priority
+  val threshold = List.fill(nrConxt)(RegInit(0.U(32.W)))
+  val thresholdMap = threshold.zipWithIndex.map { case (reg, context) => 
+    RegMap(0x200000 + context * 0x1000, reg)
   }.toMap
+
+
+  // 0x0200004 => claim(0) context 0 claim/completion
+  // 0x0201004 => claim(1) context 1 claim/completion
 
   val inHandle = RegInit(0.U.asTypeOf(Vec(nrIntr + 1, Bool())))
   def completionFn(wdata: UInt) = {
@@ -62,36 +78,47 @@ class AXI4PLIC(nrIntr: Int = 3, nrHart: Int = 2) extends AXI4Slave(new PlicIO(nr
     0.U
   }
 
-  val claimCompletion = List.fill(nrHart)(Reg(UInt(32.W)))
+  val claimCompletion = List.fill(nrConxt)(RegInit(0.U(32.W)))
   val claimCompletionMap = claimCompletion.zipWithIndex.map {
-    case (r, hart) => {
-      val addr = 0x200004 + hart * 0x1000
-      when (io.in.r.fire() && (getOffset(raddr) === addr.U)) { inHandle(r) := true.B }
-      RegMap(addr, r, completionFn)
+    case (reg, context) => {
+      val addr = 0x200004 + context * 0x1000
+      when (io.in.r.fire() && (getOffset(raddr) === addr.U)) { 
+        inHandle(reg) := true.B 
+      }
+      RegMap(addr, reg, completionFn)
     }
   }.toMap
 
-  io.extra.get.intrVec.asBools.zipWithIndex.map { case (intr, i) => {
-    val id = i + 1
-    when (intr) { pending(id / 32)(id % 32) := true.B }
-    when (inHandle(id)) { pending(id / 32)(id % 32) := false.B }
-  } }
+  io.extra.get.intrVec.asBools.zipWithIndex.map { case (intr, index) => 
+    {
+      val id = index + 1
+      pending(id / 32)(id % 32) := intr 
+      when (inHandle(id)) {
+        pending(id / 32)(id % 32) := false.B 
+      }
+    } 
+  }
 
   val pendingVec = Cat(pending.map(x => Cat(x.reverse)))
-  claimCompletion.zipWithIndex.map { case (r, hart) => {
-    val takenVec = pendingVec & Cat(enable(hart))
-    r := Mux(takenVec === 0.U, 0.U, PriorityEncoder(takenVec))
+  claimCompletion.zipWithIndex.map { case (reg, context) => {
+    val takenVec = pendingVec & Cat(enable(context))
+    reg := Mux(takenVec === 0.U, 
+               0.U, 
+               PriorityEncoder(takenVec)
+               )
   } }
 
   val mapping = priorityMap ++ pendingMap ++ enableMap ++ thresholdMap ++ claimCompletionMap
 
   val rdata = Wire(UInt(32.W))
   RegMap.generate(mapping, getOffset(raddr), rdata,
-    getOffset(waddr), io.in.w.fire(), io.in.w.bits.data, MaskExpand(io.in.w.bits.strb >> waddr(2,0)))
+                  getOffset(waddr), io.in.w.fire(), io.in.w.bits.data, MaskExpand(io.in.w.bits.strb >> waddr(2,0)))
   // narrow read
   io.in.r.bits.data := Fill(2, rdata)
 
-  io.extra.get.meip.zipWithIndex.map { case (ip, hart) => ip := claimCompletion(hart) =/= 0.U }
+  io.extra.get.meip.zipWithIndex.map { case (externIntr, context) => 
+    externIntr := claimCompletion(context) =/= 0.U 
+  }
 
   BoringUtils.addSource(pending(0),           "difftestplicpend")
   BoringUtils.addSource(enable(0)(0),         "difftestplicenable")
