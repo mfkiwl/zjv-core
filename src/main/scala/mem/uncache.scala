@@ -189,10 +189,10 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
   }
   io.in.resp.bits.data := RegNext(resp_data)
 
-//   printf(p"[${GTimer()}]: ${mname} Debug Start-----------\n")
-//   printf("state = %d\n", state);
-//   printf("offset = %x, mask = %x, realdata = %x\n", offset, mask, realdata)
-//   printf(p"io.in: \n${io.in}\n")
-//   printf(p"io.out: \n${io.out}\n")
-//   printf("--------------------------------\n")
+  // printf(p"[${GTimer()}]: ${mname} Debug Start-----------\n")
+  // printf("state = %d\n", state);
+  // printf("offset = %x, mask = %x, realdata = %x\n", offset, mask, realdata)
+  // printf(p"io.in: \n${io.in}\n")
+  // printf(p"io.out: \n${io.out}\n")
+  // printf("--------------------------------\n")
 }

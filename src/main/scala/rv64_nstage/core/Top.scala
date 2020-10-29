@@ -29,8 +29,18 @@ class DiffTestIO extends Bundle with phvntomParams {
   val mtvec    = Output(UInt(xlen.W))
   val mideleg  = Output(UInt(xlen.W))
   val medeleg  = Output(UInt(xlen.W))
-  val meip_as  = Output(Bool())
-  val seip_as  = Output(Bool())
+  val mip      = Output(UInt(xlen.W))
+  val mie      = Output(UInt(xlen.W))
+  val sip      = Output(UInt(xlen.W))
+  val sie      = Output(UInt(xlen.W))
+  val uartirq  = Output(Bool())
+  val plicmeip = Output(Bool())
+  val plicseip = Output(Bool())
+  val plicip   = Output(Vec(32, Bool()))
+  val plicie   = Output(UInt(32.W))
+  val plicprio = Output(UInt(32.W))
+  val plicthrs = Output(UInt(32.W))
+  val plicclaim = Output(UInt(32.W))
 }
 
 class TopIO extends Bundle with phvntomParams {
@@ -67,16 +77,23 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.mtvec,   "difftestmtvecr")
   BoringUtils.addSink(difftest.mideleg, "difftestmidelegr")
   BoringUtils.addSink(difftest.medeleg, "difftestmedelegr")
-  BoringUtils.addSink(difftest.meip_as, "difftestmeip")
-  BoringUtils.addSink(difftest.seip_as, "difftestseip")
+  BoringUtils.addSink(difftest.mip,     "difftestmipr")
+  BoringUtils.addSink(difftest.mie,     "difftestmier")
+  BoringUtils.addSink(difftest.sip,     "difftestsipr")
+  BoringUtils.addSink(difftest.sie,     "difftestsier")
 
   val poweroff = WireInit(0.U(xlen.W))
-  BoringUtils.addSink(poweroff, "poweroff")
+  BoringUtils.addSink(poweroff, "difftestpoweroff")
 
-  val mtip = WireInit(false.B)
-  val msip = WireInit(false.B)
-  BoringUtils.addSink(mtip, "mtip")
-  BoringUtils.addSink(msip, "msip")
+  BoringUtils.addSink(difftest.uartirq,  "difftestuartirq")
+  BoringUtils.addSink(difftest.plicmeip, "difftestplicmeip")
+  BoringUtils.addSink(difftest.plicseip, "difftestplicseip")
+
+  BoringUtils.addSink(difftest.plicip,      "difftestplicpend")
+  BoringUtils.addSink(difftest.plicie,      "difftestplicenable")
+  BoringUtils.addSink(difftest.plicprio,    "difftestplicpriority")
+  BoringUtils.addSink(difftest.plicthrs,    "difftestplicthreshold")
+  BoringUtils.addSink(difftest.plicclaim,   "difftestplicclaimed")
 
   io.difftest := difftest
   io.poweroff := poweroff
