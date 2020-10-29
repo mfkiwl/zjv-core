@@ -69,7 +69,19 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
                              is_store: Bool,
                              mxr: Bool
                            ): Bool = {
-    Mux(is_inst, pte(3), Mux(is_load, pte(1) || (mxr && pte(3)), Mux(is_store, pte(2), true.B)))
+    Mux(is_inst,
+      pte(3),
+      Mux(is_load && is_store,
+        (pte(1) | (mxr & pte(3))) & pte(2),
+        Mux(is_load,
+          pte(1) | (mxr & pte(3)),
+          Mux(is_store,
+            pte(2),
+            true.B
+          )
+        )
+      )
+    )
   }
 
   def misaligned_spage(lev: UInt, last_pte: UInt): Bool = {
