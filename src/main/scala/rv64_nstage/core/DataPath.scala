@@ -22,16 +22,10 @@ class DataPathIO extends Bundle with phvntomParams {
   val int = Flipped(Flipped(new InterruptIO))
 }
 
-// TODO This is a 8-stage pipeline
-// TODO IF1 IF2 ID EXE DTLB MEM1 MEM2 WB
+// TODO This is a 10-stage pipeline
+// TODO IF1 IF2 IF3 ID EXE DTLB MEM1 MEM2 MEM3 WB
 class DataPath extends Module with phvntomParams {
   val io = IO(new DataPathIO)
-
-  // TODO forwarding machanism
-  // TODO flush eariler, eg flush & stall_id_exe, but stall_req_exe === false, then just flush (like br_jump in ID_EXE)
-  // TODO the original michanism should be reserved,
-  // TODO furthermore, if the last stage's BUBBLE signal is high, just cut off the stall-chain, thus
-  // TODO the total stalling time might be reduced
 
   val pc_gen = Module(new PcGen)
   val bpu = Module(new BPU)
@@ -49,7 +43,7 @@ class DataPath extends Module with phvntomParams {
   val reg_dtlb_mem1 = Module(new RegDTLBMem1)
   val csr = Module(new CSR)
   val reg_mem1_mem2 = Module(new RegMem1Mem2)
-  //  val reg_mem2_mem3 = Module(new RegMem1Mem2)
+  val reg_mem2_mem3 = Module(new RegMem1Mem2)
   val reg_mem3_wb = Module(new RegMem3Wb)
   val reg_file = Module(new RegFile)
   val scheduler = Module(new ALUScheduler)
@@ -299,9 +293,7 @@ class DataPath extends Module with phvntomParams {
     alu.io.out =/= reg_id_exe.io.bpio.target_out)
   br_jump_flush := ((misprediction || wrong_target || predict_taken_but_not_br ||
     jump_flush) && !scheduler.io.stall_req)
-  inst_addr_misaligned := alu.io.out(
-    1
-  ) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
+  inst_addr_misaligned := alu.io.out(1) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
 
   scheduler.io.is_bubble := reg_id_exe.io.bsrio.bubble_out
   scheduler.io.rs1_used_exe := (reg_id_exe.io.iiio.inst_info_out.ASelect === ARS1 ||
@@ -337,6 +329,13 @@ class DataPath extends Module with phvntomParams {
     reg_mem1_mem2.io.iiio.inst_info_out.wbEnable === wenRes ||
     reg_mem1_mem2.io.iiio.inst_info_out.wbSelect === wbCond)
   scheduler.io.rd_addr_mem2 := reg_mem1_mem2.io.instio.inst_out(11, 7)
+  scheduler.io.rd_used_mem3 := (reg_mem2_mem3.io.iiio.inst_info_out.wbEnable === wenReg ||
+    reg_mem2_mem3.io.iiio.inst_info_out.wbEnable === wenCSRC ||
+    reg_mem2_mem3.io.iiio.inst_info_out.wbEnable === wenCSRS ||
+    reg_mem2_mem3.io.iiio.inst_info_out.wbEnable === wenCSRW ||
+    reg_mem2_mem3.io.iiio.inst_info_out.wbEnable === wenRes ||
+    reg_mem2_mem3.io.iiio.inst_info_out.wbSelect === wbCond)
+  scheduler.io.rd_addr_mem3 := reg_mem2_mem3.io.instio.inst_out(11, 7)
   scheduler.io.rd_used_wb := (reg_mem3_wb.io.iiio.inst_info_out.wbEnable === wenReg ||
     reg_mem3_wb.io.iiio.inst_info_out.wbEnable === wenCSRC ||
     reg_mem3_wb.io.iiio.inst_info_out.wbEnable === wenCSRS ||
@@ -372,6 +371,16 @@ class DataPath extends Module with phvntomParams {
       wbALU -> reg_mem1_mem2.io.aluio.alu_val_out,
       wbCSR -> reg_mem1_mem2.io.csrio.csr_val_out,
       wbPC -> (reg_mem1_mem2.io.bsrio.pc_out + 4.U)
+    )
+  )
+  scheduler.io.rd_fen_from_mem3 := reg_mem2_mem3.io.iiio.inst_info_out.fwd_stage <= fwdMem2
+  scheduler.io.rd_from_mem3 := MuxLookup(
+    reg_mem2_mem3.io.iiio.inst_info_out.wbSelect,
+    "hdeadbeef".U,
+    Seq(
+      wbALU -> reg_mem2_mem3.io.aluio.alu_val_out,
+      wbCSR -> reg_mem2_mem3.io.csrio.csr_val_out,
+      wbPC -> (reg_mem2_mem3.io.bsrio.pc_out + 4.U)
     )
   )
   scheduler.io.rd_fen_from_wb := reg_mem3_wb.io.iiio.inst_info_out.fwd_stage <= fwdWb
@@ -458,7 +467,8 @@ class DataPath extends Module with phvntomParams {
   reg_dtlb_mem1.io.intio.mem_af_in := mem_af
   reg_dtlb_mem1.io.intio.mem_pf_in := dmmu.io.front.pf
 
-  amo_bubble_insert := reg_dtlb_mem1.io.iiio.inst_info_out.amoSelect.orR
+  amo_bubble_insert := (reg_dtlb_mem1.io.iiio.inst_info_out.amoSelect.orR ||
+    reg_mem1_mem2.io.iiio.inst_info_out.amoSelect.orR)
 
   // CSR
   mem_addr_misaligned := MuxLookup(
@@ -508,7 +518,7 @@ class DataPath extends Module with phvntomParams {
   // TODO af is ONLY for Difftest
   // REG MEM1 MEM2
   reg_mem1_mem2.io.bsrio.last_stage_atomic_stall_req := false.B
-  reg_mem1_mem2.io.bsrio.next_stage_atomic_stall_req := stall_req_mem3_atomic
+  reg_mem1_mem2.io.bsrio.next_stage_atomic_stall_req := false.B
   reg_mem1_mem2.io.bsrio.stall := stall_mem1_mem2
   reg_mem1_mem2.io.bsrio.flush_one := false.B
   reg_mem1_mem2.io.bsrio.bubble_in := reg_dtlb_mem1.io.bsrio.bubble_out
@@ -526,11 +536,35 @@ class DataPath extends Module with phvntomParams {
   reg_mem1_mem2.io.csrio.comp_res_in := (!reservation.io.succeed).asUInt
   reg_mem1_mem2.io.csrio.af_in := csr.io.expt && (csr.io.inst_access_fault || csr.io.inst_page_fault)
 
+  // REG MEM2 MEM3
+  reg_mem2_mem3.io.bsrio.last_stage_atomic_stall_req := false.B
+  reg_mem2_mem3.io.bsrio.next_stage_atomic_stall_req := stall_req_mem3_atomic
+  reg_mem2_mem3.io.bsrio.stall := stall_mem2_mem3
+  reg_mem2_mem3.io.bsrio.flush_one := false.B
+  reg_mem2_mem3.io.bsrio.bubble_in := reg_mem1_mem2.io.bsrio.bubble_out
+  reg_mem2_mem3.io.instio.inst_in := reg_mem1_mem2.io.instio.inst_out
+  reg_mem2_mem3.io.bsrio.pc_in := reg_mem1_mem2.io.bsrio.pc_out
+  reg_mem2_mem3.io.iiio.inst_info_in := reg_mem1_mem2.io.iiio.inst_info_out
+  reg_mem2_mem3.io.aluio.inst_addr_misaligned_in := reg_mem1_mem2.io.aluio.inst_addr_misaligned_out
+  reg_mem2_mem3.io.aluio.alu_val_in := reg_mem1_mem2.io.aluio.alu_val_out
+  reg_mem2_mem3.io.aluio.mem_wdata_in := reg_mem1_mem2.io.aluio.mem_wdata_out
+  reg_mem2_mem3.io.csrio.expt_in := reg_mem1_mem2.io.csrio.expt_out
+  reg_mem2_mem3.io.csrio.int_resp_in := reg_mem1_mem2.io.csrio.int_resp_out
+  reg_mem2_mem3.io.csrio.csr_val_in := reg_mem1_mem2.io.csrio.csr_val_out
+  reg_mem2_mem3.io.bsrio.next_stage_flush_req := false.B
+  reg_mem2_mem3.io.csrio.compare_in := reg_mem1_mem2.io.csrio.compare_out
+  reg_mem2_mem3.io.csrio.comp_res_in := reg_mem1_mem2.io.csrio.comp_res_out
+  reg_mem2_mem3.io.csrio.af_in := reg_mem1_mem2.io.csrio.af_out
+
+//printf("DMEM valid %x, write %x, write_what %x, write where %x ", io.dmem.req.valid, io.dmem.req.bits.wen,
+  //  io.dmem.req.bits.data, io.dmem.req.bits.addr)
+  //  printf("DMEM resp %x\n", io.dmem.resp.valid)
+
   io.dmem.flush := false.B
   io.dmem.stall := !io.dmem.req.ready
   io.dmem.req.bits.addr := Mux(
     amo_arbiter.io.write_now,
-    reg_mem1_mem2.io.aluio.alu_val_out,
+    reg_mem2_mem3.io.aluio.alu_val_out,
     reg_dtlb_mem1.io.aluio.alu_val_out
   )
   io.dmem.req.bits.data := Mux(
@@ -548,7 +582,7 @@ class DataPath extends Module with phvntomParams {
   io.dmem.req.bits.wen := (reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenMem || amo_arbiter.io.write_now)
   io.dmem.req.bits.memtype := Mux(
     amo_arbiter.io.write_now,
-    reg_mem1_mem2.io.iiio.inst_info_out.memType,
+    reg_mem2_mem3.io.iiio.inst_info_out.memType,
     reg_dtlb_mem1.io.iiio.inst_info_out.memType
   )
   io.dmem.resp.ready := true.B
@@ -556,12 +590,12 @@ class DataPath extends Module with phvntomParams {
   stall_req_mem3_atomic := !io.dmem.req.ready || amo_arbiter.io.stall_req
 
   amo_arbiter.io.early_amo_op := reg_dtlb_mem1.io.iiio.inst_info_out.amoSelect
-  amo_arbiter.io.exception_or_int := reg_mem1_mem2.io.csrio.expt_out
-  amo_arbiter.io.amo_op := reg_mem1_mem2.io.iiio.inst_info_out.amoSelect
+  amo_arbiter.io.exception_or_int := reg_mem2_mem3.io.csrio.expt_out
+  amo_arbiter.io.amo_op := reg_mem2_mem3.io.iiio.inst_info_out.amoSelect
   amo_arbiter.io.dmem_valid := io.dmem.resp.valid
   amo_arbiter.io.dmem_data := io.dmem.resp.bits.data
-  amo_arbiter.io.reg_val := reg_mem1_mem2.io.aluio.mem_wdata_out
-  amo_arbiter.io.mem_type := reg_mem1_mem2.io.iiio.inst_info_out.memType
+  amo_arbiter.io.reg_val := reg_mem2_mem3.io.aluio.mem_wdata_out
+  amo_arbiter.io.mem_type := reg_mem2_mem3.io.iiio.inst_info_out.memType
 
   reservation.io.push := reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenRes
   reservation.io.push_is_word := reg_dtlb_mem1.io.iiio.inst_info_out.memType === memWord
@@ -571,34 +605,34 @@ class DataPath extends Module with phvntomParams {
   reservation.io.compare_addr := reg_dtlb_mem1.io.aluio.alu_val_out
   reservation.io.flush := false.B
 
-  // Reg MEM2 WB
+  // Reg MEM3 WB
   reg_mem3_wb.io.bsrio.last_stage_atomic_stall_req := stall_req_mem3_atomic
   reg_mem3_wb.io.bsrio.next_stage_atomic_stall_req := false.B
   reg_mem3_wb.io.bsrio.stall := stall_mem3_wb
   reg_mem3_wb.io.bsrio.flush_one := false.B
-  reg_mem3_wb.io.bsrio.bubble_in := reg_mem1_mem2.io.bsrio.bubble_out || stall_req_mem3_atomic
-  reg_mem3_wb.io.instio.inst_in := reg_mem1_mem2.io.instio.inst_out
-  reg_mem3_wb.io.bsrio.pc_in := reg_mem1_mem2.io.bsrio.pc_out
-  reg_mem3_wb.io.iiio.inst_info_in := reg_mem1_mem2.io.iiio.inst_info_out
-  reg_mem3_wb.io.aluio.inst_addr_misaligned_in := reg_mem1_mem2.io.aluio.inst_addr_misaligned_out
-  reg_mem3_wb.io.aluio.alu_val_in := reg_mem1_mem2.io.aluio.alu_val_out
-  reg_mem3_wb.io.aluio.mem_wdata_in := reg_mem1_mem2.io.aluio.mem_wdata_out
-  reg_mem3_wb.io.csrio.expt_in := reg_mem1_mem2.io.csrio.expt_out
-  reg_mem3_wb.io.csrio.int_resp_in := reg_mem1_mem2.io.csrio.int_resp_out
-  reg_mem3_wb.io.csrio.csr_val_in := reg_mem1_mem2.io.csrio.csr_val_out
+  reg_mem3_wb.io.bsrio.bubble_in := reg_mem2_mem3.io.bsrio.bubble_out || stall_req_mem3_atomic
+  reg_mem3_wb.io.instio.inst_in := reg_mem2_mem3.io.instio.inst_out
+  reg_mem3_wb.io.bsrio.pc_in := reg_mem2_mem3.io.bsrio.pc_out
+  reg_mem3_wb.io.iiio.inst_info_in := reg_mem2_mem3.io.iiio.inst_info_out
+  reg_mem3_wb.io.aluio.inst_addr_misaligned_in := reg_mem2_mem3.io.aluio.inst_addr_misaligned_out
+  reg_mem3_wb.io.aluio.alu_val_in := reg_mem2_mem3.io.aluio.alu_val_out
+  reg_mem3_wb.io.aluio.mem_wdata_in := reg_mem2_mem3.io.aluio.mem_wdata_out
+  reg_mem3_wb.io.csrio.expt_in := reg_mem2_mem3.io.csrio.expt_out
+  reg_mem3_wb.io.csrio.int_resp_in := reg_mem2_mem3.io.csrio.int_resp_out
+  reg_mem3_wb.io.csrio.csr_val_in := reg_mem2_mem3.io.csrio.csr_val_out
   reg_mem3_wb.io.memio.mem_val_in := Mux(
     amo_arbiter.io.force_mem_val_out,
     amo_arbiter.io.mem_val_out,
     Mux(
-      reg_mem1_mem2.io.csrio.compare_out,
-      reg_mem1_mem2.io.csrio.comp_res_out,
+      reg_mem2_mem3.io.csrio.compare_out,
+      reg_mem2_mem3.io.csrio.comp_res_out,
       io.dmem.resp.bits.data
     )
   )
   reg_mem3_wb.io.bsrio.next_stage_flush_req := false.B
-  reg_mem3_wb.io.csrio.compare_in := reg_mem1_mem2.io.csrio.compare_out
-  reg_mem3_wb.io.csrio.comp_res_in := reg_mem1_mem2.io.csrio.comp_res_out
-  reg_mem3_wb.io.csrio.af_in := reg_mem1_mem2.io.csrio.af_out
+  reg_mem3_wb.io.csrio.compare_in := reg_mem2_mem3.io.csrio.compare_out
+  reg_mem3_wb.io.csrio.comp_res_in := reg_mem2_mem3.io.csrio.comp_res_out
+  reg_mem3_wb.io.csrio.af_in := reg_mem2_mem3.io.csrio.af_out
 
   // Register File
   reg_file.io.wen := (reg_mem3_wb.io.iiio.inst_info_out.wbEnable === wenReg ||
@@ -652,7 +686,7 @@ class DataPath extends Module with phvntomParams {
       BoringUtils.addSource(dtest_int, "difftestInt")
     }
 
-    if (pipeTrace || true) {
+    if (pipeTrace) {
       if (vscode) {
         printf("\t\tIF1\t\tIF2\t\tIF3\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n")
         printf(
@@ -740,9 +774,9 @@ class DataPath extends Module with phvntomParams {
           reg_mem3_wb.io.bsrio.bubble_out
         )
       } else {
-        printf("\t\tIF1\tIF2\tIF3\tID\tEXE\tDTLB\tMEM1\tMEM3\tWB\n")
+        printf("\t\tIF1\tIF2\tIF3\tID\tEXE\tDTLB\tMEM1\tMEM2\tMEM3\tWB\n")
         printf(
-          "Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          "Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
           stall_req_if1_atomic,
           0.U,
           stall_req_if3_atomic,
@@ -750,11 +784,12 @@ class DataPath extends Module with phvntomParams {
           stall_req_exe_atomic || stall_req_exe_interruptable,
           stall_req_dtlb_atomic,
           0.U,
+          0.U,
           stall_req_mem3_atomic,
           0.U
         )
         printf(
-          "Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          "Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
           stall_pc,
           stall_if1_if2,
           stall_if2_if3,
@@ -763,10 +798,11 @@ class DataPath extends Module with phvntomParams {
           stall_exe_dtlb,
           stall_dtlb_mem1,
           stall_mem1_mem2,
+          stall_mem2_mem3,
           stall_mem3_wb
         )
         printf(
-          "PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          "PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
           pc_gen.io.pc_out(15, 0),
           reg_if1_if2.io.bsrio.pc_out(15, 0),
           reg_if2_if3.io.bsrio.pc_out(15, 0),
@@ -775,10 +811,11 @@ class DataPath extends Module with phvntomParams {
           reg_exe_dtlb.io.bsrio.pc_out(15, 0),
           reg_dtlb_mem1.io.bsrio.pc_out(15, 0),
           reg_mem1_mem2.io.bsrio.pc_out(15, 0),
+          reg_mem2_mem3.io.bsrio.pc_out(15, 0),
           reg_mem3_wb.io.bsrio.pc_out(15, 0)
         )
         printf(
-          "Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          "Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
           BUBBLE(15, 0),
           BUBBLE(15, 0),
           io.imem.resp.bits.data(15, 0),
@@ -787,10 +824,11 @@ class DataPath extends Module with phvntomParams {
           reg_exe_dtlb.io.instio.inst_out(15, 0),
           reg_dtlb_mem1.io.instio.inst_out(15, 0),
           reg_mem1_mem2.io.instio.inst_out(15, 0),
+          reg_mem2_mem3.io.instio.inst_out(15, 0),
           reg_mem3_wb.io.instio.inst_out(15, 0)
         )
         printf(
-          "AluO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          "AluO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
           0.U,
           0.U,
           0.U,
@@ -799,10 +837,12 @@ class DataPath extends Module with phvntomParams {
           reg_exe_dtlb.io.aluio.alu_val_out(15, 0),
           reg_dtlb_mem1.io.aluio.alu_val_out(15, 0),
           reg_mem1_mem2.io.aluio.alu_val_out(15, 0),
+          reg_mem2_mem3.io.aluio.alu_val_out(15, 0),
           reg_mem3_wb.io.aluio.alu_val_out(15, 0)
         )
         printf(
-          "MemO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          "MemO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          0.U,
           0.U,
           0.U,
           0.U,
@@ -814,7 +854,7 @@ class DataPath extends Module with phvntomParams {
           reg_mem3_wb.io.memio.mem_val_out(15, 0)
         )
         printf(
-          "Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+          "Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
           0.U,
           reg_if1_if2.io.bsrio.bubble_out,
           reg_if2_if3.io.bsrio.bubble_out,
@@ -823,6 +863,7 @@ class DataPath extends Module with phvntomParams {
           reg_exe_dtlb.io.bsrio.bubble_out,
           reg_dtlb_mem1.io.bsrio.bubble_out,
           reg_mem1_mem2.io.bsrio.bubble_out,
+          reg_mem2_mem3.io.bsrio.bubble_out,
           reg_mem3_wb.io.bsrio.bubble_out
         )
       }

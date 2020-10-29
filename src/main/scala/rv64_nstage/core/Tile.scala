@@ -27,9 +27,7 @@ class Tile extends Module with phvntomParams {
       CacheConfig(name = "icache", readOnly = true, hasMMIO = false)
     )
   )
-  val dcache = Module(
-    new DCacheWriteThroughSplit3Stage()(CacheConfig(name = "dcache"))
-  )
+  val dcache = Module(new DCacheWriteThroughSplit3Stage()(CacheConfig(name = "dcache")))
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
 
   core.io.imem <> icache.io.in
