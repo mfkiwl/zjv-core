@@ -406,8 +406,8 @@ class DataPath extends Module with phvntomParams {
   dmmu.io.front.current_p := csr.io.current_p
   dmmu.io.front.is_inst := false.B
   dmmu.io.front.is_load := (reg_exe_dtlb.io.iiio.inst_info_out.memType.orR &&
-    reg_exe_dtlb.io.iiio.inst_info_out.wbEnable =/= wenMem ||
-    reg_exe_dtlb.io.iiio.inst_info_out.amoSelect.orR)
+    reg_exe_dtlb.io.iiio.inst_info_out.wbEnable =/= wenMem &&
+    reg_exe_dtlb.io.iiio.inst_info_out.amoSelect === amoXXX)
   dmmu.io.front.is_store := ((reg_exe_dtlb.io.iiio.inst_info_out.memType.orR &&
     reg_exe_dtlb.io.iiio.inst_info_out.wbEnable === wenMem) ||
     reg_exe_dtlb.io.iiio.inst_info_out.amoSelect.orR)
