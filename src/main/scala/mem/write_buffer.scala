@@ -132,7 +132,7 @@ class WriteBuffer(implicit val wbConfig: WBConfig)
         req_state := r_idle
       }
     }
-    is(r_flush) {
+    is(r_flush) { // TODO need flush signal
       when(write_state === w_idle) {
         req_state := r_idle
       }
