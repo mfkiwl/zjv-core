@@ -213,11 +213,11 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
           write_data(i) := s3_cacheline(i)
         }
       }
-      //  printf(
-      //    p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
-      //  )
-      //  printf(p"\twrite_data=${write_data}\n")
-      //  printf(p"\twrite_meta=${write_meta}\n")
+      // printf(
+      //   p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
+      // )
+      // printf(p"\twrite_data=${write_data}\n")
+      // printf(p"\twrite_meta=${write_meta}\n")
     }
   }
 
@@ -242,7 +242,7 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
       new_meta := write_meta
     }
     for (i <- 0 until nWays) {
-      metaArray(i).write(flush_counter.value, new_meta(i))
+      metaArray(i).write(meta_index, new_meta(i))
     }
   }
 

@@ -71,7 +71,8 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
   val s2_hit_index = PriorityEncoder(s2_hitVec)
   val s2_victim_index = policy.choose_victim(s2_meta)
   val s2_victim_vec = UIntToOH(s2_victim_index)
-  val s2_hit = s2_hitVec.orR
+  val s2_ismmio = AddressSpace.isMMIO(s2_addr)
+  val s2_hit = s2_hitVec.orR && !s2_ismmio
   val s2_access_index = Mux(s2_hit, s2_hit_index, s2_victim_index)
   val s2_access_vec = UIntToOH(s2_access_index)
 
@@ -111,7 +112,8 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
   val result = Wire(UInt(blockBits.W))
   val cacheline_meta = s3_meta(s3_access_index)
   val cacheline_data = s3_cacheline(s3_access_index)
-  val ismmio = AddressSpace.isMMIO(s3_addr)
+  val s3_ismmio = AddressSpace.isMMIO(s3_addr)
+  
 
   val s_idle :: s_memReadReq :: s_memReadResp :: s_memWriteReq :: s_memWriteResp :: s_mmioReq :: s_mmioResp :: Nil =
     Enum(7)
@@ -162,7 +164,7 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
     is(s_idle) {
       when(s3_valid) {
         when(!s3_hit) {
-          state := Mux(ismmio, s_mmioReq, s_memReadReq)
+          state := Mux(s3_ismmio, s_mmioReq, s_memReadReq)
         }.elsewhen(s3_wen) {
           state := s_memWriteReq
         }
@@ -254,7 +256,7 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
         write_meta(s3_access_index).dirty := false.B
         write_meta(s3_access_index).tag := s3_tag
         // printf(
-        //   p"[${GTimer()}]: dcache write: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, filled_data=${Hexadecimal(filled_data)}\n"
+        //   p"[${GTimer()}] dcache write: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, filled_data=${Hexadecimal(filled_data)}\n"
         // )
         // printf(p"\twriteData=${writeData}\n")
         // printf(p"\twrite_meta=${write_meta}\n")
@@ -300,11 +302,11 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
             mem_result := Cat(Fill(32, 0.U), real_data(31, 0))
           }
         }
-        result := Mux(ismmio, io.mmio.resp.bits.data, mem_result)
+        result := Mux(s3_ismmio, io.mmio.resp.bits.data, mem_result)
 //         printf(
-//           p"[${GTimer()}]: dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
+//           p"[${GTimer()}] dcache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
 //         )
-        when(!ismmio) {
+        when(!s3_ismmio) {
           when(!s3_hit) {
             for (i <- 0 until nWays) {
               when(s3_access_index === i.U) {
@@ -321,7 +323,7 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
           write_meta(s3_access_index).dirty := false.B
           write_meta(s3_access_index).tag := s3_tag
           // printf(
-          //   p"dcache write: mask=${Hexadecimal(mask)}, mem_result=${Hexadecimal(mem_result)}, s3_index=0x${Hexadecimal(s3_index)}\n"
+          //   p"[${GTimer()}] dcache read: mask=${Hexadecimal(mask)}, mem_result=${Hexadecimal(mem_result)}, s3_index=0x${Hexadecimal(s3_index)}\n"
           // )
           // printf(p"\twriteData=${writeData}\n")
           // printf(p"\twrite_meta=${write_meta}\n")
@@ -339,7 +341,7 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
   }
 
   when(
-    s3_valid && ((s3_wen && (s3_hit || mem_read_valid)) || (!s3_wen && !ismmio && mem_read_valid))
+    s3_valid && ((s3_wen && (s3_hit || mem_read_valid)) || (!s3_wen && !s3_ismmio && mem_read_valid))
   ) {
     for (i <- 0 until nWays) {
       when(s3_access_index === i.U) {
@@ -350,11 +352,11 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
 
   // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
   // printf(
-  //   "stall=%d, need_forward=%d, state=%d, ismmio=%d, s3_hit=%d, result=%x\n",
+  //   "stall=%d, need_forward=%d, state=%d, s3_ismmio=%d, s3_hit=%d, result=%x\n",
   //   stall,
   //   need_forward,
   //   state,
-  //   ismmio,
+  //   s3_ismmio,
   //   s3_hit,
   //   result
   // )
