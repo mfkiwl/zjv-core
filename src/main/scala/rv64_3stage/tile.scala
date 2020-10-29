@@ -19,7 +19,11 @@ class Tile extends Module with phvntomParams {
   core.reset := reset
 
   // mem path
-  val icache = Module(new ICacheSimple()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false)))
+  val icache = Module(
+    new ICacheSimple()(
+      CacheConfig(name = "icache", readOnly = true, hasMMIO = false)
+    )
+  )
   val icacheBus = Module(new DUncache(mname = "inst uncache"))
   val dcache = Module(new DCacheSimple()(CacheConfig(name = "dcache")))
   val dcacheBus = Module(new DUncache(4 * xlen, "mem uncache"))
@@ -41,7 +45,9 @@ class Tile extends Module with phvntomParams {
   // power off
   val poweroff = Module(new AXI4PowerOff)
   val poweroffSync = poweroff.io.extra.get.poweroff
-  BoringUtils.addSource(poweroffSync(31, 0), "poweroff")
+  if (diffTest) {
+    BoringUtils.addSource(poweroffSync(31, 0), "poweroff")
+  }
 
   // clint
   val clint = Module(new Clint)
@@ -49,9 +55,10 @@ class Tile extends Module with phvntomParams {
   val msipSync = clint.io.extra.get.msip
   core.io.int.msip := msipSync
   core.io.int.mtip := mtipSync
-  BoringUtils.addSource(mtipSync, "mtip")
-  BoringUtils.addSource(msipSync, "msip")
-
+  if (diffTest) {
+    BoringUtils.addSource(mtipSync, "mtip")
+    BoringUtils.addSource(msipSync, "msip")
+  }
   // uart
   val uart = Module(new AXI4UART)
   // uart.io.extra.get.offset := mmioBus.io.offset

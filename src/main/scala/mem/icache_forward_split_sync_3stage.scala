@@ -62,7 +62,7 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
     array_cacheline(i) := dataArray(i).read(read_index, true.B)
   }
   s2_meta := Mux(need_forward, write_meta, array_meta)
-  s2_cacheline :=  Mux(need_forward, write_data, array_cacheline)
+  s2_cacheline := Mux(need_forward, write_data, array_cacheline)
   s2_index := s2_addr(indexLength + offsetLength - 1, offsetLength)
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
 
@@ -164,6 +164,7 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
   result := DontCare
   write_data := DontCare
   write_meta := DontCare
+
   when(s3_valid) {
     when(request_satisfied) {
       val result_data = target_data.data(s3_lineoffset)
@@ -212,31 +213,37 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
           write_data(i) := s3_cacheline(i)
         }
       }
-      write_meta := policy.update_meta(s3_meta, s3_access_index)
-      write_meta(s3_access_index).valid := true.B
-      write_meta(s3_access_index).tag := s3_tag
-      for (i <- 0 until nWays) {
-        metaArray(i).write(s3_index, write_meta(i))
-      }
-    //  printf(
-    //    p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
-    //  )
-    //  printf(p"\twrite_data=${write_data}\n")
-    //  printf(p"\twrite_meta=${write_meta}\n")
+      //  printf(
+      //    p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
+      //  )
+      //  printf(p"\twrite_data=${write_data}\n")
+      //  printf(p"\twrite_meta=${write_meta}\n")
     }
   }
 
-  when(state === s_flush) {
+  when(state === s_flush || (s3_valid && request_satisfied)) {
     val new_meta = Wire(Vec(nWays, new MetaData))
-    for (i <- 0 until nWays) {
-      new_meta(i).valid := false.B
-      new_meta(i).meta := DontCare
-      new_meta(i).tag := DontCare
+    val meta_index = Wire(UInt(indexLength.W))
+    new_meta := DontCare
+    meta_index := DontCare
+    when(state === s_flush) {
+      for (i <- 0 until nWays) {
+        new_meta(i).valid := false.B
+        new_meta(i).meta := DontCare
+        new_meta(i).tag := DontCare
+      }
+      meta_index := flush_counter.value
+      flush_counter.inc()
+    }.elsewhen(s3_valid && request_satisfied) {
+      write_meta := policy.update_meta(s3_meta, s3_access_index)
+      write_meta(s3_access_index).valid := true.B
+      write_meta(s3_access_index).tag := s3_tag
+      meta_index := s3_index
+      new_meta := write_meta
     }
     for (i <- 0 until nWays) {
       metaArray(i).write(flush_counter.value, new_meta(i))
     }
-    flush_counter.inc()
   }
 
   // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")

@@ -150,30 +150,28 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
   }
 
   val target_data = Mux(s3_hit, cacheline_data, fetched_vec)
+  val write_meta = Wire(Vec(nWays, new MetaData))
+  val new_data = Wire(new CacheLineData)
   result := DontCare
+  write_meta := DontCare
+  new_data := DontCare
   when(s3_valid) {
     when(request_satisfied) {
       when(s3_wen) {
-        val new_data = Wire(new CacheLineData)
         val write_data = Wire(Vec(nWays, new CacheLineData))
         new_data := target_data
         new_data.data(s3_lineoffset) := s3_data
         for (i <- 0 until nWays) {
           when(s3_access_index === i.U) {
             write_data(i) := new_data
-            dataArray(i).write(s3_index, new_data)
           }.otherwise {
             write_data(i) := s3_cacheline(i)
           }
         }
-        val write_meta = Wire(Vec(nWays, new MetaData))
         write_meta := policy.update_meta(s3_meta, s3_access_index)
         write_meta(s3_access_index).valid := true.B
         write_meta(s3_access_index).dirty := true.B
         write_meta(s3_access_index).tag := s3_tag
-        for (i <- 0 until nWays) {
-          metaArray(i).write(s3_index, write_meta(i))
-        }
         // printf(
         //   p"l2cache write: s3_index=${s3_index}, s3_access_index=${s3_access_index}\n"
         // )
@@ -184,31 +182,41 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
         val write_data = Wire(Vec(nWays, new CacheLineData))
         write_data := DontCare
         result := result_data
+        new_data := target_data
         when(!s3_hit) {
           for (i <- 0 until nWays) {
             when(s3_access_index === i.U) {
               write_data(i) := target_data
-              dataArray(i).write(s3_index, target_data)
             }.otherwise {
               write_data(i) := s3_cacheline(i)
             }
           }
         }
-        val write_meta = Wire(Vec(nWays, new MetaData))
         write_meta := policy.update_meta(s3_meta, s3_access_index)
         write_meta(s3_access_index).valid := true.B
         when(!s3_hit) {
           write_meta(s3_access_index).dirty := false.B
         }
         write_meta(s3_access_index).tag := s3_tag
-        for (i <- 0 until nWays) {
-          metaArray(i).write(s3_index, write_meta(i))
-        }
         // printf(
         //   p"l2cache read update: s3_index=${s3_index}, s3_access_index=${s3_access_index}\n"
         // )
         // printf(p"\ttarget_data=${target_data}\n")
         // printf(p"\twrite_meta=${write_meta}\n")
+      }
+    }
+  }
+
+  when(s3_valid && request_satisfied) {
+    for (i <- 0 until nWays) {
+      metaArray(i).write(s3_index, write_meta(i))
+    }
+  }
+
+  when(s3_valid && request_satisfied) {
+    for (i <- 0 until nWays) {
+      when(s3_access_index === i.U) {
+        dataArray(i).write(s3_index, new_data)
       }
     }
   }

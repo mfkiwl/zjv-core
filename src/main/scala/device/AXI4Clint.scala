@@ -6,7 +6,6 @@ import bus.AXI4Parameters
 import rv64_3stage.phvntomParams
 import bus.AXI4Slave
 import utils._
-import chisel3.util.experimental.BoringUtils
 
 class ClintIO extends Bundle with phvntomParams {
   val mtip = Output(Bool())

@@ -460,10 +460,12 @@ class DataPath extends Module with phvntomParams {
     }
     dtest_int := csrFile.io.int // dtest_expt & (io.int.msip | io.int.mtip)
 
-    BoringUtils.addSource(dtest_pc, "difftestPC")
-    BoringUtils.addSource(dtest_inst, "difftestInst")
-    BoringUtils.addSource(dtest_wbvalid, "difftestValid")
-    BoringUtils.addSource(dtest_int, "difftestInt")
+    if (diffTest) {
+      BoringUtils.addSource(dtest_pc, "difftestPC")
+      BoringUtils.addSource(dtest_inst, "difftestInst")
+      BoringUtils.addSource(dtest_wbvalid, "difftestValid")
+      BoringUtils.addSource(dtest_int, "difftestInt")
+    }
 
     when(pipeTrace.B && dtest_expt) {
       // printf(

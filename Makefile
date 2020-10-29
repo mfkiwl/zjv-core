@@ -81,6 +81,11 @@ generate_testcase:
 	mkdir -p $(TEST_DST_DIR)
 	$(MAKE) -C $(TEST_SRC_DIR) DEST_DIR=$(TEST_DST_DIR)
 
+generate_analysis:
+	mkdir -p $(WORK_DIR)
+	sbt "runMain $(TARGET_CORE).generate"
+	cd fpga && make clean && make generate_project
+
 how_verilator_work:
 	mkdir -p $(VERILATOR_DEST_DIR)/Hello
 	verilator --cc --exe -Wall -o $(VERILATOR_DEST_DIR)/Hello/Hello -Mdir $(VERILATOR_DEST_DIR)/Hello $(VERILATOR_SRC_DIR)/Hello/Hello.v $(VERILATOR_SRC_DIR)/Hello/Hello.cpp

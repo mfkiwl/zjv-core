@@ -23,9 +23,13 @@ class Tile extends Module with phvntomParams {
 
   // mem path
   val icache = Module(
-    new ICacheForwardSplitSync3Stage()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false))
+    new ICacheForwardSplitSync3Stage()(
+      CacheConfig(name = "icache", readOnly = true, hasMMIO = false)
+    )
   )
-  val dcache = Module(new DCacheWriteThroughSplit()(CacheConfig(name = "dcache")))
+  val dcache = Module(
+    new DCacheWriteThroughSplit3Stage()(CacheConfig(name = "dcache"))
+  )
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
 
   core.io.imem <> icache.io.in
@@ -76,7 +80,9 @@ class Tile extends Module with phvntomParams {
   // power off
   val poweroff = Module(new AXI4PowerOff)
   val poweroffSync = poweroff.io.extra.get.poweroff
-  BoringUtils.addSource(poweroffSync(31, 0), "poweroff")
+  if (diffTest) {
+    BoringUtils.addSource(poweroffSync(31, 0), "poweroff")
+  }
 
   // clint
   val clint = Module(new Clint)
@@ -84,8 +90,10 @@ class Tile extends Module with phvntomParams {
   val msipSync = clint.io.extra.get.msip
   core.io.int.msip := msipSync
   core.io.int.mtip := mtipSync
-  BoringUtils.addSource(mtipSync, "mtip")
-  BoringUtils.addSource(msipSync, "msip")
+  if (diffTest) {
+    BoringUtils.addSource(mtipSync, "mtip")
+    BoringUtils.addSource(msipSync, "msip")
+  }
 
   // plic
   val plic = Module(new AXI4PLIC)
@@ -94,9 +102,10 @@ class Tile extends Module with phvntomParams {
   val hart0_seipSync = plic.io.extra.get.meip(1)
   core.io.int.meip := hart0_meipSync
   core.io.int.seip := hart0_seipSync
-
-  BoringUtils.addSource(hart0_meipSync, "difftestmeip")
-  BoringUtils.addSource(hart0_seipSync, "difftestseip")
+  if (diffTest) {
+    BoringUtils.addSource(hart0_meipSync, "difftestmeip")
+    BoringUtils.addSource(hart0_seipSync, "difftestseip")
+  }
 
   // xbar
   val mmio_device = List(poweroff, clint, plic, uart)

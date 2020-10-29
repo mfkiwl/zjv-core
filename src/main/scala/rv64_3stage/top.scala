@@ -9,7 +9,7 @@ import common._
 
 class DiffTestIO extends Bundle with phvntomParams {
   val regs = Output(Vec(regNum, UInt(xlen.W)))
-  val pc   = Output(UInt(xlen.W))
+  val pc = Output(UInt(xlen.W))
   val inst = Output(UInt(xlen.W))
   val valid = Output(Bool())
   val csr_cmd = Output(UInt(ControlConst.wenBits.W))
@@ -30,20 +30,26 @@ class Top extends Module with phvntomParams {
   val tile = Module(new Tile)
 
   val difftest = WireInit(0.U.asTypeOf(new DiffTestIO))
-  BoringUtils.addSink(difftest.regs,    "difftestRegs")
-  BoringUtils.addSink(difftest.pc,      "difftestPC")
-  BoringUtils.addSink(difftest.inst,    "difftestInst")
-  BoringUtils.addSink(difftest.valid,   "difftestValid")
-  BoringUtils.addSink(difftest.csr_cmd, "difftestCSRCmd")
-  BoringUtils.addSink(difftest.int, "difftestInt")
+  if (diffTest) {
+    BoringUtils.addSink(difftest.regs, "difftestRegs")
+    BoringUtils.addSink(difftest.pc, "difftestPC")
+    BoringUtils.addSink(difftest.inst, "difftestInst")
+    BoringUtils.addSink(difftest.valid, "difftestValid")
+    BoringUtils.addSink(difftest.csr_cmd, "difftestCSRCmd")
+    BoringUtils.addSink(difftest.int, "difftestInt")
+  }
 
   val poweroff = WireInit(0.U(xlen.W))
-  BoringUtils.addSink(poweroff, "poweroff")
+  if (diffTest) {
+    BoringUtils.addSink(poweroff, "poweroff")
+  }
 
   val mtip = WireInit(false.B)
   val msip = WireInit(false.B)
-  BoringUtils.addSink(mtip, "mtip")
-  BoringUtils.addSink(msip, "msip")
+  if (diffTest) {
+    BoringUtils.addSink(mtip, "mtip")
+    BoringUtils.addSink(msip, "msip")
+  }
 
   io.difftest := difftest
   io.poweroff := poweroff
@@ -55,10 +61,11 @@ object elaborate {
 
     if (args.isEmpty)
       (new chisel3.stage.ChiselStage).execute(
-      Array("-td", "build/verilog/"+packageName, "-X", "verilog"),
-      Seq(ChiselGeneratorAnnotation(() => new Top)))
+        Array("-td", "build/verilog/" + packageName, "-X", "verilog"),
+        Seq(ChiselGeneratorAnnotation(() => new Top))
+      )
     else
-      (new chisel3.stage.ChiselStage).execute(args,
-      Seq(ChiselGeneratorAnnotation(() => new Top)))    
+      (new chisel3.stage.ChiselStage)
+        .execute(args, Seq(ChiselGeneratorAnnotation(() => new Top)))
   }
 }
