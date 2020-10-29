@@ -35,9 +35,11 @@ class Tile extends Module with phvntomParams {
 
   if (hasL2Cache) {
     val mem_source = List(icache, dcache)
+    val dcache_wb = Module(new WriteBuffer()(WBConfig(wb_name = "dcache write buffer", dataWidth = dcache.lineBits)))
+    dcache_wb.io.in <> dcache.io.mem
     val memxbar = Module(new CrossbarNto1(1))
     val l2cache = Module(
-      new L2CacheSplit3Stage(4)(
+      new L2CacheSplit3Stage(5)(
         CacheConfig(
           name = "l2cache",
           blockBits = dcache.lineBits,
@@ -46,11 +48,14 @@ class Tile extends Module with phvntomParams {
       )
     )
     val l2cacheBus = Module(new DUncache(l2cache.lineBits, "mem uncache"))
-    for (i <- 0 until mem_source.length) {
-      mem_source(i).io.mem <> l2cache.io.in(i)
-    }
-    core.io.immu <> l2cache.io.in(2)
-    core.io.dmmu <> l2cache.io.in(3)
+    icache.io.mem <> l2cache.io.in(0)
+    dcache_wb.io.readChannel <> l2cache.io.in(1)
+    dcache_wb.io.writeChannel <> l2cache.io.in(2)
+    // for (i <- 0 until mem_source.length) {
+    //   mem_source(i).io.mem <> l2cache.io.in(i)
+    // }
+    core.io.immu <> l2cache.io.in(3)
+    core.io.dmmu <> l2cache.io.in(4)
     l2cache.io.mem <> l2cacheBus.io.in
     l2cacheBus.io.out <> memxbar.io.in(0)
     memxbar.io.out <> mem.io.in
