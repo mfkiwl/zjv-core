@@ -6,6 +6,9 @@
 #include <fstream>
 #include <iostream>
 
+#include <unistd.h>
+#include <sys/ioctl.h>
+
 std::ifstream file_fifo; 
 
 static char interrupt_enable;               // b001
@@ -33,6 +36,14 @@ void init_uart (const std::string file_path) {
     }
 }
 
+bool data_in_keyboard() {
+    int amt;
+    if ((ioctl(0, FIONREAD, &amt) == 0) && (amt > 0))
+        return true;
+    else
+        return false;
+}
+
 static void uart_dequeue(char* data) {
     if (file_fifo.is_open()) {
         if (!file_fifo.eof()) 
@@ -42,13 +53,15 @@ static void uart_dequeue(char* data) {
             fprintf(stderr, "[UART] close fifo \n");
         }
     }
+    else {
+        if (data_in_keyboard())
+            read(0, data, 1);
+    }
 }
 
-extern "C" void uart_getc(char addr, char *data) // read
-{
+extern "C" void uart_getc(char addr, char *data) {
     *data = 0;
-    switch (addr)
-    {
+    switch (addr) {
     case UART_RHR: // 0
         if (line_control < 0)
             *data = divisor_latch_low;
@@ -72,8 +85,8 @@ extern "C" void uart_getc(char addr, char *data) // read
         break;
     case UART_LSR: // 5
         *data = 0x40 | 0x20;
-        if (file_fifo.is_open()) {
-            *data |= !file_fifo.eof(); 
+        if ((file_fifo.is_open() && !file_fifo.eof()) || data_in_keyboard()) {
+            *data |= 1; 
         }
         break;
     case UART_MSR: // 6
@@ -132,7 +145,11 @@ extern "C" void uart_putc(char addr, char data) // write
 }
 
 extern "C"  void uart_irq (char* irq) {
+
     if (file_fifo.is_open() && !file_fifo.eof()) {
+        *irq = -1;
+    }
+    else if (data_in_keyboard()) {
         *irq = -1;
     }
     else {
