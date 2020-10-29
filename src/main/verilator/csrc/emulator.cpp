@@ -79,7 +79,7 @@ int main(int argc, char** argv)
 
       #ifdef ZJV_DEBUG
       //  fprintf(stderr, "\t\t\t\t [ ROUND %lx %lx ]\n", engine.trace_count, engine.emu_get_mcycle());
-      //  fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx): %s\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
+//        fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx): %s\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
       #endif
 
       if (engine.is_finish()) {
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
 
 
             fprintf(stderr, "\n");
-            if (faultExitLatency == 10)
+            if (faultExitLatency == 1)
                 exit(-1);
          }
          else {

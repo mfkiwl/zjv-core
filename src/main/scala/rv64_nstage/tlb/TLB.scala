@@ -69,7 +69,19 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
                              is_store: Bool,
                              mxr: Bool
                            ): Bool = {
-    Mux(is_inst, pte(3), Mux(is_load, pte(1) || (mxr && pte(3)), Mux(is_store, pte(2), true.B)))
+    Mux(is_inst,
+      pte(3),
+      Mux(is_load && is_store,
+        (pte(1) | (mxr & pte(3))) & pte(2),
+        Mux(is_load,
+          pte(1) | (mxr & pte(3)),
+          Mux(is_store,
+            pte(2),
+            true.B
+          )
+        )
+      )
+    )
   }
 
   def misaligned_spage(lev: UInt, last_pte: UInt): Bool = {
@@ -97,6 +109,10 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
       false.B,
       Mux(current_p === CSR.PRV_S || (force_s_mode && mpp_s), last_pte(4), false.B)
     )
+  }
+
+  def check_user_prot(current_p: UInt, last_pte: UInt): Bool = {
+    Mux(current_p === CSR.PRV_U, last_pte(4), true.B)
   }
 
   val entryArray =
@@ -165,7 +181,7 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
       io.in.mpp_s,
       io.in.current_p,
       current_pte
-    )
+    ) && check_user_prot(io.in.current_p, current_pte)
 
   io.in.pf := need_translate && request_satisfied && (io.out.resp.bits.pf || illegal_va(
     io.in.va
