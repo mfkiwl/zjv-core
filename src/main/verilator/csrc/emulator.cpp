@@ -113,7 +113,7 @@ int main(int argc, char** argv)
          engine.sim_step(1);
          sim_cnt++;
 
-            // fprintf(stderr,"zjv   pc: 0x%016lX (0x%08X): %s\n",  engine.emu_get_pc(), (unsigned int)engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
+            // fprintf(stderr,"zjv   pc: 0x%016lX (0x%08X): %s\n",  engine.emu_get_pc(), (unsigned int)engine.emu_get_inst(), engine.disasm((signed int)engine.emu_get_inst()).c_str());
             // fprintf(stderr,"spike pc: 0x%016lx (0x%08x): %s\n",  engine.sim_get_pc(), (unsigned int)engine.sim_get_inst(), engine.disasm(engine.sim_get_inst()).c_str());
 
             // difftest_check_point(pc);        difftest_check_point(priv, "\n");
@@ -132,13 +132,12 @@ int main(int argc, char** argv)
             // difftest_check_general_register();
 
       if((faultExitLatency || (engine.emu_get_pc() != engine.sim_get_pc()) ||
-         // (engine.get_emu_state()->plicip != sim_ip) ||
 	      (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
 
             faultExitLatency++;
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
 
-            fprintf(stderr,"zjv   pc: 0x%016lX (0x%08X): %s\n",  engine.emu_get_pc(), (unsigned int)engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
+            fprintf(stderr,"zjv   pc: 0x%016lX (0x%08X): %s\n",  engine.emu_get_pc(), (unsigned int)engine.emu_get_inst(), engine.disasm((signed int)engine.emu_get_inst()).c_str());
             fprintf(stderr,"spike pc: 0x%016lx (0x%08x): %s\n",  engine.sim_get_pc(), (unsigned int)engine.sim_get_inst(), engine.disasm(engine.sim_get_inst()).c_str());
 
             difftest_check_point(pc);        difftest_check_point(priv, "\n");
@@ -158,7 +157,7 @@ int main(int argc, char** argv)
 
 
             fprintf(stderr, "\n");
-            if (faultExitLatency == 10)
+            if (faultExitLatency == 1)
                 exit(-1);
          }
          else {
