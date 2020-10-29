@@ -230,7 +230,7 @@ class DataPath extends Module with phvntomParams {
   reg_id_exe.io.bsrio.pc_in := reg_if2_id.io.bsrio.pc_out
   reg_id_exe.io.iiio.inst_info_in := io.ctrl.inst_info_out
   reg_id_exe.io.ifio.inst_af_in := reg_if2_id.io.ifio.inst_af_out
-  reg_id_exe.io.bsrio.next_stage_flush_req := br_jump_flush
+  reg_id_exe.io.bsrio.next_stage_flush_req := (br_jump_flush && !(expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush))
   reg_id_exe.io.ifio.inst_pf_in := reg_if2_id.io.ifio.inst_pf_out
   reg_id_exe.io.bpio.predict_taken_in := reg_if2_id.io.bpio.predict_taken_out
   reg_id_exe.io.bpio.target_in := reg_if2_id.io.bpio.target_out
