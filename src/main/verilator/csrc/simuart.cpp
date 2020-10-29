@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "uart.h"
+#include "simuart.h"
 #include <fstream>
 #include <iostream>
 
@@ -46,6 +46,7 @@ static void uart_dequeue(char* data) {
 
 extern "C" void uart_getc(char addr, char *data) // read
 {
+    *data = 0;
     switch (addr)
     {
     case UART_RHR: // 0
