@@ -14,7 +14,6 @@ VIVADO_FLAG = -nolog -nojournal -notrace
 PRJ_ROOT = board/$(BOARD)/build/$(PRJ_FULL)
 XPR_FILE = $(PRJ_ROOT)/$(PRJ_FULL).xpr
 $(XPR_FILE):
-	make -C .. 
 	vivado $(VIVADO_FLAG) -mode batch -source generate_project.tcl -tclargs $(PRJ_ROOT) $(BOARD)
 
 generate_bitstream:

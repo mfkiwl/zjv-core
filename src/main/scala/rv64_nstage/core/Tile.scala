@@ -41,7 +41,7 @@ class Tile extends Module with phvntomParams {
         CacheConfig(
           name = "l2cache",
           blockBits = dcache.lineBits,
-          totalSize = 2
+          totalSize = 128
         )
       )
     )
@@ -107,7 +107,6 @@ class Tile extends Module with phvntomParams {
   val mmio_device = List(poweroff, clint, plic, uart)
   val mmioBus = Module(new Uncache(mname = "mmio uncache"))
   val mmioxbar = Module(new Crossbar1toN(AddressSpace.mmio))
-  // val xbar = Module(new AXI4Xbar(2, addrSpace))
 
   dcache.io.mmio <> mmioBus.io.in
   mmioBus.io.out <> mmioxbar.io.in
