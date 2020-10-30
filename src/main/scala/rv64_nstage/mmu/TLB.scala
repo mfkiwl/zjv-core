@@ -1,4 +1,4 @@
-package rv64_nstage.tlb
+package rv64_nstage.mmu
 
 import chisel3._
 import chisel3.util._
