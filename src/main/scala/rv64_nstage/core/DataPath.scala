@@ -435,8 +435,12 @@ class DataPath extends Module with phvntomParams {
   dmmu.io.front.satp_val := csr.io.satp_val
   dmmu.io.front.current_p := csr.io.current_p
   dmmu.io.front.is_inst := false.B
-  dmmu.io.front.is_load := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR && reg_exe_dtlb.io.iiio.inst_info_out.wbSelect === wbMEM
-  dmmu.io.front.is_store := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR && reg_exe_dtlb.io.iiio.inst_info_out.wbSelect =/= wbMEM
+  dmmu.io.front.is_load := (reg_exe_dtlb.io.iiio.inst_info_out.memType.orR &&
+    reg_exe_dtlb.io.iiio.inst_info_out.wbEnable =/= wenMem &&
+    reg_exe_dtlb.io.iiio.inst_info_out.amoSelect === amoXXX)
+  dmmu.io.front.is_store := ((reg_exe_dtlb.io.iiio.inst_info_out.memType.orR &&
+    reg_exe_dtlb.io.iiio.inst_info_out.wbEnable === wenMem) ||
+    reg_exe_dtlb.io.iiio.inst_info_out.amoSelect.orR)
   io.dmmu <> dmmu.io.back.mmu
 
   stall_req_dtlb_atomic := dmmu.io.front.stall_req
@@ -495,9 +499,9 @@ class DataPath extends Module with phvntomParams {
   csr.io.inst := reg_dtlb_mem1.io.instio.inst_out
   csr.io.illegal := reg_dtlb_mem1.io.iiio.inst_info_out.instType === Illegal
   csr.io.is_load := (reg_dtlb_mem1.io.iiio.inst_info_out.memType.orR &&
-    reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable =/= wenMem)
+    reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable =/= wenMem) && reg_dtlb_mem1.io.iiio.inst_info_out.amoSelect === amoXXX
   csr.io.is_store := (reg_dtlb_mem1.io.iiio.inst_info_out.memType.orR &&
-    reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenMem)
+    reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenMem) || reg_dtlb_mem1.io.iiio.inst_info_out.amoSelect.orR
   csr.io.inst_access_fault := reg_dtlb_mem1.io.ifio.inst_af_out
   csr.io.inst_page_fault := reg_dtlb_mem1.io.ifio.inst_pf_out
   csr.io.mem_access_fault := reg_dtlb_mem1.io.intio.mem_af_out
@@ -556,7 +560,7 @@ class DataPath extends Module with phvntomParams {
   reg_mem2_mem3.io.csrio.comp_res_in := reg_mem1_mem2.io.csrio.comp_res_out
   reg_mem2_mem3.io.csrio.af_in := reg_mem1_mem2.io.csrio.af_out
 
-//printf("DMEM valid %x, write %x, write_what %x, write where %x ", io.dmem.req.valid, io.dmem.req.bits.wen,
+  //printf("DMEM valid %x, write %x, write_what %x, write where %x ", io.dmem.req.valid, io.dmem.req.bits.wen,
   //  io.dmem.req.bits.data, io.dmem.req.bits.addr)
   //  printf("DMEM resp %x\n", io.dmem.resp.valid)
 
@@ -589,7 +593,6 @@ class DataPath extends Module with phvntomParams {
 
   stall_req_mem3_atomic := !io.dmem.req.ready || amo_arbiter.io.stall_req
 
-  amo_arbiter.io.early_amo_op := reg_dtlb_mem1.io.iiio.inst_info_out.amoSelect
   amo_arbiter.io.exception_or_int := reg_mem2_mem3.io.csrio.expt_out
   amo_arbiter.io.amo_op := reg_mem2_mem3.io.iiio.inst_info_out.amoSelect
   amo_arbiter.io.dmem_valid := io.dmem.resp.valid
@@ -597,10 +600,10 @@ class DataPath extends Module with phvntomParams {
   amo_arbiter.io.reg_val := reg_mem2_mem3.io.aluio.mem_wdata_out
   amo_arbiter.io.mem_type := reg_mem2_mem3.io.iiio.inst_info_out.memType
 
-  reservation.io.push := reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenRes
+  reservation.io.push := reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenRes && !csr.io.expt
   reservation.io.push_is_word := reg_dtlb_mem1.io.iiio.inst_info_out.memType === memWord
   reservation.io.push_addr := reg_dtlb_mem1.io.aluio.alu_val_out
-  reservation.io.compare := reg_dtlb_mem1.io.iiio.inst_info_out.wbSelect === wbCond
+  reservation.io.compare := reg_dtlb_mem1.io.iiio.inst_info_out.wbSelect === wbCond && !csr.io.expt
   reservation.io.compare_is_word := reg_dtlb_mem1.io.iiio.inst_info_out.memType === memWord
   reservation.io.compare_addr := reg_dtlb_mem1.io.aluio.alu_val_out
   reservation.io.flush := false.B

@@ -10,7 +10,7 @@ import mem._
 import device._
 
 class TLBEntry(implicit val mmuConfig: MMUConfig)
-    extends Bundle
+  extends Bundle
     with MMUParameters {
   val valid = Bool()
   val meta = UInt(log2Ceil(nEntry).W)
@@ -20,9 +20,11 @@ class TLBEntry(implicit val mmuConfig: MMUConfig)
   val pte = UInt(xlen.W)
 
   override def toPrintable: Printable =
-    p"TLBEntry(valid=${valid}, meta=${meta}, level=${level}, vpn = 0x${Hexadecimal(
-      vpn
-    )}, asid = 0x${Hexadecimal(asid)}, pte = 0x${Hexadecimal(pte)})"
+    p"TLBEntry(valid=${valid}, meta=${meta}, level=${level}, vpn = 0x${
+      Hexadecimal(
+        vpn
+      )
+    }, asid = 0x${Hexadecimal(asid)}, pte = 0x${Hexadecimal(pte)})"
 }
 
 class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
@@ -62,15 +64,27 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     )
   }
 
-  def pass_protection_check(
-                             pte: UInt,
-                             is_inst: Bool,
-                             is_load: Bool,
-                             is_store: Bool,
-                             mxr: Bool
-                           ): Bool = {
-    Mux(is_inst, pte(3), Mux(is_load, pte(1) || (mxr && pte(3)), Mux(is_store, pte(2), true.B)))
-  }
+  //  def pass_protection_check(
+  //                             pte: UInt,
+  //                             is_inst: Bool,
+  //                             is_load: Bool,
+  //                             is_store: Bool,
+  //                             mxr: Bool
+  //                           ): Bool = {
+  //    Mux(is_inst,
+  //      pte(3),
+  //      Mux(is_load && is_store,
+  //        (pte(1) | (mxr & pte(3))) & pte(2),
+  //        Mux(is_load,
+  //          pte(1) | (mxr & pte(3)),
+  //          Mux(is_store,
+  //            pte(2),
+  //            true.B
+  //          )
+  //        )
+  //      )
+  //    )
+  //  }
 
   def misaligned_spage(lev: UInt, last_pte: UInt): Bool = {
     Mux(
@@ -85,18 +99,36 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     true.B
   }
 
-  def sum_is_zero_fault(
-                         sum: UInt,
-                         force_s_mode: Bool,
-                         mpp_s: Bool,
-                         current_p: UInt,
-                         last_pte: UInt
-                       ): Bool = {
-    Mux(
-      sum === 1.U,
-      false.B,
-      Mux(current_p === CSR.PRV_S || (force_s_mode && mpp_s), last_pte(4), false.B)
-    )
+  //  def sum_is_zero_fault(
+  //                         sum: UInt,
+  //                         force_s_mode: Bool,
+  //                         mpp_s: Bool,
+  //                         current_p: UInt,
+  //                         last_pte: UInt
+  //                       ): Bool = {
+  //    Mux(
+  //      sum === 1.U,
+  //      false.B,
+  //      Mux(current_p === CSR.PRV_S || (force_s_mode && mpp_s), last_pte(4), false.B)
+  //    )
+  //  }
+
+  def violate_pte_u_prot(current_p: UInt, last_pte: UInt, is_fetch: Bool, sum: UInt, mprv: Bool, mpp_s: Bool): Bool = {
+    Mux(last_pte(4),
+      (current_p === CSR.PRV_S || (!is_fetch && mprv && mpp_s)) && (is_fetch || !sum.asBool),
+      current_p === CSR.PRV_U)
+  }
+
+  def violate_pte_v_rw(last_pte: UInt): Bool = {
+    !last_pte(0) || (!last_pte(1) && last_pte(2))
+  }
+
+  def violate_pte_ad(last_pte: UInt, is_store: Bool): Bool = {
+    !last_pte(6) || (!last_pte(7) && is_store)
+  }
+
+  def violate_pte_rwx(last_pte: UInt, is_inst: Bool, is_load: Bool, mxr: UInt): Bool = {
+    Mux(is_inst, !last_pte(3), Mux(is_load, !last_pte(1) && !(mxr.asBool && last_pte(3)), !(last_pte(2) && last_pte(1))))
   }
 
   val entryArray =
@@ -150,22 +182,31 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     io.in.va(11, 0)
   )
 
-  val prot_check = pass_protection_check(
-    current_pte,
-    io.in.is_inst,
-    io.in.is_load,
-    io.in.is_store,
-    io.in.mxr.orR,
-  ) &&
+  val prot_check = (
+    !violate_pte_u_prot(io.in.current_p, current_pte, io.in.is_inst, io.in.sum, io.in.force_s_mode, io.in.mpp_s) &&
+    !violate_pte_v_rw(current_pte) &&
+    !violate_pte_ad(current_pte, io.in.is_store) &&
+    !violate_pte_rwx(current_pte, io.in.is_inst, io.in.is_load, io.in.mxr) &&
     !misaligned_spage(current_level, current_pte) &&
-    pass_pmp_pma(current_pte) &&
-    !sum_is_zero_fault(
-      io.in.sum,
-      io.in.force_s_mode,
-      io.in.mpp_s,
-      io.in.current_p,
-      current_pte
+    pass_pmp_pma(current_pte)
     )
+
+  //  val prot_check = pass_protection_check(
+  //    current_pte,
+  //    io.in.is_inst,
+  //    io.in.is_load,
+  //    io.in.is_store,
+  //    io.in.mxr.orR,
+  //  ) &&
+  //    !misaligned_spage(current_level, current_pte) &&
+  //    pass_pmp_pma(current_pte) &&
+  //    !sum_is_zero_fault(
+  //      io.in.sum,
+  //      io.in.force_s_mode,
+  //      io.in.mpp_s,
+  //      io.in.current_p,
+  //      current_pte
+  //    ) && check_user_prot(io.in.current_p, current_pte)
 
   io.in.pf := need_translate && request_satisfied && (io.out.resp.bits.pf || illegal_va(
     io.in.va

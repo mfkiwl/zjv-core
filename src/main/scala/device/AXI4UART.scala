@@ -40,7 +40,7 @@ class AXI4UART(name: String = "uart") extends AXI4Slave(new UARTIO, name) with A
   uart_sim.io.ren := ren
   uart_sim.io.raddr := Cat(Fill(5, 0.U), io.in.ar.bits.addr(2, 0))
   val rdata = uart_sim.io.rdata << (io.in.ar.bits.addr(2, 0) << 3)
-  io.in.r.bits.data := RegEnable(rdata, ren)
+  io.in.r.bits.data := rdata
 
   io.extra.get.irq := uart_sim.io.irq
 

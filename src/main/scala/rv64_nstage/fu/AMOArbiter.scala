@@ -10,7 +10,6 @@ class AMOArbiterIO extends Bundle with phvntomParams {
   val exception_or_int = Input(Bool())
   // AMO and basic informations from RegExeMem1
   val amo_op = Input(UInt(amoBits.W))
-  val early_amo_op = Input(UInt(amoBits.W))
   val dmem_valid = Input(Bool())
   val dmem_data = Input(UInt(xlen.W))
   val reg_val = Input(UInt(xlen.W))

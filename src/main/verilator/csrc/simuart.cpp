@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "uart.h"
+#include "simuart.h"
 #include <fstream>
 #include <iostream>
 
@@ -24,7 +24,7 @@ void init_uart (const std::string file_path) {
 
     std::ofstream init_cmd;
     init_cmd.open (file_path, std::ios::out | std::ios::trunc);
-    init_cmd << "ls\nps\nhelp\n";
+    init_cmd << "echo zjv\nls\nps\n";
     init_cmd.close();
 
     file_fifo.open(file_path);
@@ -46,6 +46,7 @@ static void uart_dequeue(char* data) {
 
 extern "C" void uart_getc(char addr, char *data) // read
 {
+    *data = 0;
     switch (addr)
     {
     case UART_RHR: // 0
