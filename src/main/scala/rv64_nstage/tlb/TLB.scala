@@ -113,8 +113,10 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
 //    )
 //  }
 
-  def violate_pte_u_prot(current_p: UInt, last_pte: UInt, is_fetch: Bool, sum: UInt): Bool = {
-    Mux(last_pte(4), current_p === CSR.PRV_S && (is_fetch || !sum.asBool), current_p === CSR.PRV_U)
+  def violate_pte_u_prot(current_p: UInt, last_pte: UInt, is_fetch: Bool, sum: UInt, mprv: Bool, mpp_s: Bool): Bool = {
+    Mux(last_pte(4),
+      (current_p === CSR.PRV_S || (!is_fetch && mprv && mpp_s)) && (is_fetch || !sum.asBool),
+      current_p === CSR.PRV_U)
   }
 
   def violate_pte_v_rw(last_pte: UInt): Bool = {
@@ -180,7 +182,8 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     io.in.va(11, 0)
   )
 
-  val prot_check = (!violate_pte_u_prot(io.in.current_p, current_pte, io.in.is_inst, io.in.sum) &&
+  val prot_check = (
+    !violate_pte_u_prot(io.in.current_p, current_pte, io.in.is_inst, io.in.sum, io.in.force_s_mode, io.in.mpp_s) &&
     !violate_pte_v_rw(current_pte) &&
     !violate_pte_ad(current_pte, io.in.is_store) &&
     !violate_pte_rwx(current_pte, io.in.is_inst, io.in.is_load, io.in.mxr) &&
