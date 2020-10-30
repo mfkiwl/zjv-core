@@ -436,8 +436,8 @@ class DataPath extends Module with phvntomParams {
   dmmu.io.front.current_p := csr.io.current_p
   dmmu.io.front.is_inst := false.B
   dmmu.io.front.is_load := (reg_exe_dtlb.io.iiio.inst_info_out.memType.orR &&
-    reg_exe_dtlb.io.iiio.inst_info_out.wbEnable =/= wenMem ||
-    reg_exe_dtlb.io.iiio.inst_info_out.amoSelect.orR)
+    reg_exe_dtlb.io.iiio.inst_info_out.wbEnable =/= wenMem &&
+    reg_exe_dtlb.io.iiio.inst_info_out.amoSelect === amoXXX)
   dmmu.io.front.is_store := ((reg_exe_dtlb.io.iiio.inst_info_out.memType.orR &&
     reg_exe_dtlb.io.iiio.inst_info_out.wbEnable === wenMem) ||
     reg_exe_dtlb.io.iiio.inst_info_out.amoSelect.orR)
@@ -471,7 +471,7 @@ class DataPath extends Module with phvntomParams {
   reg_dtlb_mem1.io.intio.mem_af_in := mem_af
   reg_dtlb_mem1.io.intio.mem_pf_in := dmmu.io.front.pf
 
-  amo_bubble_insert := (reg_dtlb_mem1.io.iiio.inst_info_out.amoSelect.orR||
+  amo_bubble_insert := (reg_dtlb_mem1.io.iiio.inst_info_out.amoSelect.orR ||
     reg_mem1_mem2.io.iiio.inst_info_out.amoSelect.orR)
 
   // CSR
@@ -560,7 +560,7 @@ class DataPath extends Module with phvntomParams {
   reg_mem2_mem3.io.csrio.comp_res_in := reg_mem1_mem2.io.csrio.comp_res_out
   reg_mem2_mem3.io.csrio.af_in := reg_mem1_mem2.io.csrio.af_out
 
-//printf("DMEM valid %x, write %x, write_what %x, write where %x ", io.dmem.req.valid, io.dmem.req.bits.wen,
+  //printf("DMEM valid %x, write %x, write_what %x, write where %x ", io.dmem.req.valid, io.dmem.req.bits.wen,
   //  io.dmem.req.bits.data, io.dmem.req.bits.addr)
   //  printf("DMEM resp %x\n", io.dmem.resp.valid)
 
