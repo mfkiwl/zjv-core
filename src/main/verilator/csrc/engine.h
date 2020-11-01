@@ -39,6 +39,7 @@ extern void init_ram(const std::string img);
 
 struct difftest_state_t {
     reg_t regs[32];
+    reg_t streqs[10];
     reg_t pc, inst;
     reg_t npc;
     reg_t priv;

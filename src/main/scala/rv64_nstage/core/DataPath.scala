@@ -101,6 +101,7 @@ class DataPath extends Module with phvntomParams {
   val wrong_target = WireInit(Bool(), false.B)
   val predict_taken_but_not_br = WireInit(Bool(), false.B)
   val jump_flush = WireInit(Bool(), false.B)
+  val branch_jump_flush_comb = WireInit(Bool(), false.B)
 
   // Mem Signals
   val mem_addr_misaligned = WireInit(Bool(), false.B)
@@ -245,7 +246,7 @@ class DataPath extends Module with phvntomParams {
   reg_id_exe.io.bsrio.pc_in := reg_if3_id.io.bsrio.pc_out
   reg_id_exe.io.iiio.inst_info_in := io.ctrl.inst_info_out
   reg_id_exe.io.ifio.inst_af_in := reg_if3_id.io.ifio.inst_af_out
-  reg_id_exe.io.bsrio.next_stage_flush_req := (br_jump_flush && !(expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush))
+  reg_id_exe.io.bsrio.next_stage_flush_req := false.B
   reg_id_exe.io.ifio.inst_pf_in := reg_if3_id.io.ifio.inst_pf_out
   reg_id_exe.io.bpio.predict_taken_in := reg_if3_id.io.bpio.predict_taken_out
   reg_id_exe.io.bpio.target_in := reg_if3_id.io.bpio.target_out
@@ -291,7 +292,7 @@ class DataPath extends Module with phvntomParams {
   wrong_target := branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out && alu.io.out =/= reg_id_exe.io.bpio.target_out
   jump_flush := reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump && (!reg_id_exe.io.bpio.predict_taken_out ||
     alu.io.out =/= reg_id_exe.io.bpio.target_out)
-  br_jump_flush := ((misprediction || wrong_target || predict_taken_but_not_br ||
+  branch_jump_flush_comb := ((misprediction || wrong_target || predict_taken_but_not_br ||
     jump_flush) && !scheduler.io.stall_req)
   inst_addr_misaligned := alu.io.out(1) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
 
@@ -308,40 +309,15 @@ class DataPath extends Module with phvntomParams {
     .inst_out(24, 20)
     .orR
   scheduler.io.rs2_addr_exe := reg_id_exe.io.instio.inst_out(24, 20)
-  scheduler.io.rd_used_dtlb := (reg_exe_dtlb.io.iiio.inst_info_out.wbEnable === wenReg ||
-    reg_exe_dtlb.io.iiio.inst_info_out.wbEnable === wenCSRC ||
-    reg_exe_dtlb.io.iiio.inst_info_out.wbEnable === wenCSRS ||
-    reg_exe_dtlb.io.iiio.inst_info_out.wbEnable === wenCSRW ||
-    reg_exe_dtlb.io.iiio.inst_info_out.wbEnable === wenRes ||
-    reg_exe_dtlb.io.iiio.inst_info_out.wbSelect === wbCond)
+  scheduler.io.rd_used_dtlb := reg_exe_dtlb.io.iiio.inst_info_out.modifyRd
   scheduler.io.rd_addr_dtlb := reg_exe_dtlb.io.instio.inst_out(11, 7)
-  scheduler.io.rd_used_mem1 := (reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenReg ||
-    reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenCSRC ||
-    reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenCSRS ||
-    reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenCSRW ||
-    reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenRes ||
-    reg_dtlb_mem1.io.iiio.inst_info_out.wbSelect === wbCond)
+  scheduler.io.rd_used_mem1 := reg_dtlb_mem1.io.iiio.inst_info_out.modifyRd
   scheduler.io.rd_addr_mem1 := reg_dtlb_mem1.io.instio.inst_out(11, 7)
-  scheduler.io.rd_used_mem2 := (reg_mem1_mem2.io.iiio.inst_info_out.wbEnable === wenReg ||
-    reg_mem1_mem2.io.iiio.inst_info_out.wbEnable === wenCSRC ||
-    reg_mem1_mem2.io.iiio.inst_info_out.wbEnable === wenCSRS ||
-    reg_mem1_mem2.io.iiio.inst_info_out.wbEnable === wenCSRW ||
-    reg_mem1_mem2.io.iiio.inst_info_out.wbEnable === wenRes ||
-    reg_mem1_mem2.io.iiio.inst_info_out.wbSelect === wbCond)
+  scheduler.io.rd_used_mem2 := reg_mem1_mem2.io.iiio.inst_info_out.modifyRd && !reg_mem1_mem2.io.csrio.expt_out
   scheduler.io.rd_addr_mem2 := reg_mem1_mem2.io.instio.inst_out(11, 7)
-  scheduler.io.rd_used_mem3 := (reg_mem2_mem3.io.iiio.inst_info_out.wbEnable === wenReg ||
-    reg_mem2_mem3.io.iiio.inst_info_out.wbEnable === wenCSRC ||
-    reg_mem2_mem3.io.iiio.inst_info_out.wbEnable === wenCSRS ||
-    reg_mem2_mem3.io.iiio.inst_info_out.wbEnable === wenCSRW ||
-    reg_mem2_mem3.io.iiio.inst_info_out.wbEnable === wenRes ||
-    reg_mem2_mem3.io.iiio.inst_info_out.wbSelect === wbCond)
+  scheduler.io.rd_used_mem3 := reg_mem2_mem3.io.iiio.inst_info_out.modifyRd && !reg_mem2_mem3.io.csrio.expt_out
   scheduler.io.rd_addr_mem3 := reg_mem2_mem3.io.instio.inst_out(11, 7)
-  scheduler.io.rd_used_wb := (reg_mem3_wb.io.iiio.inst_info_out.wbEnable === wenReg ||
-    reg_mem3_wb.io.iiio.inst_info_out.wbEnable === wenCSRC ||
-    reg_mem3_wb.io.iiio.inst_info_out.wbEnable === wenCSRS ||
-    reg_mem3_wb.io.iiio.inst_info_out.wbEnable === wenCSRW ||
-    reg_mem3_wb.io.iiio.inst_info_out.wbEnable === wenRes ||
-    reg_mem3_wb.io.iiio.inst_info_out.wbSelect === wbCond)
+  scheduler.io.rd_used_wb := reg_mem3_wb.io.iiio.inst_info_out.modifyRd && !reg_mem3_wb.io.csrio.expt_out
   scheduler.io.rd_addr_wb := reg_mem3_wb.io.instio.inst_out(11, 7)
   scheduler.io.rs1_from_reg := reg_file.io.rs1_data
   scheduler.io.rs2_from_reg := reg_file.io.rs2_data
@@ -419,8 +395,12 @@ class DataPath extends Module with phvntomParams {
   )
   reg_exe_dtlb.io.aluio.mem_wdata_in := rs2
   reg_exe_dtlb.io.ifio.inst_af_in := reg_id_exe.io.ifio.inst_af_out
-  reg_exe_dtlb.io.bsrio.next_stage_flush_req := false.B
+  reg_exe_dtlb.io.bsrio.next_stage_flush_req := (br_jump_flush && !(expt_int_flush || error_ret_flush ||
+    write_satp_flush || i_fence_flush || s_fence_flush))
   reg_exe_dtlb.io.ifio.inst_pf_in := reg_id_exe.io.ifio.inst_pf_out
+  reg_exe_dtlb.io.bjio.branch_jump_flush_in := branch_jump_flush_comb
+
+  br_jump_flush := reg_exe_dtlb.io.bjio.branch_jump_flush_out
 
   // DMMU
   mem_af := dmmu.io.front.af || (!is_legal_addr(reg_exe_dtlb.io.aluio.alu_val_out) &&
@@ -668,6 +648,19 @@ class DataPath extends Module with phvntomParams {
     val dtest_wbvalid = RegInit(Bool(), false.B)
     val dtest_expt = RegInit(false.B)
     val dtest_int = RegInit(false.B)
+    val stall_req_counters = RegInit(VecInit(Seq.fill(10)(0.U(xlen.W))))
+
+    stall_req_counters(0) := stall_req_counters(0) + Mux(stall_req_if1_atomic, 1.U, 0.U)
+    stall_req_counters(1) := stall_req_counters(1) + Mux(false.B, 1.U, 0.U)
+    stall_req_counters(2) := stall_req_counters(2) + Mux(stall_req_if3_atomic, 1.U, 0.U)
+    stall_req_counters(3) := stall_req_counters(3) + Mux(false.B, 1.U, 0.U)
+    stall_req_counters(4) := stall_req_counters(4) + Mux(stall_req_exe_atomic || stall_req_exe_interruptable, 1.U, 0.U)
+    stall_req_counters(5) := stall_req_counters(5) + Mux(stall_req_dtlb_atomic, 1.U, 0.U)
+    stall_req_counters(6) := stall_req_counters(6) + Mux(false.B, 1.U, 0.U)
+    stall_req_counters(7) := stall_req_counters(7) + Mux(reg_mem3_wb.io.iiio.inst_info_out.pcSelect === pcJump ||
+      reg_mem3_wb.io.iiio.inst_info_out.pcSelect === pcBranch, 1.U, 0.U)        // FixMe Total Jump Banch
+    stall_req_counters(8) := stall_req_counters(8) + Mux(stall_req_mem3_atomic, 1.U, 0.U)
+    stall_req_counters(9) := stall_req_counters(9) + Mux(br_jump_flush, 1.U, 0.U)   // Total Miss-prediction
 
     dtest_wbvalid := !reg_mem3_wb.io.bsrio.bubble_out && !reg_mem3_wb.io.csrio.int_resp_out
 
@@ -895,6 +888,29 @@ class DataPath extends Module with phvntomParams {
       //      }
       //      printf("Priv %x\t\tInstAddrO %x\t\tMemAddr0 %x\t\tMemFS %x\n",
       //        csr.io.current_p, immu.io.front.pa, dmmu.io.front.pa, csr.io.force_s_mode_mem)
+    }
+
+    if(prtHotSpot) {
+      if(!pipeTrace)
+        printf("\t\tIF1\tIF2\tIF3\tID\tEXE\tDTLB\tMEM1\tMEM2\tMEM3\tWB\n")
+      printf(
+        "BubbMaker\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+        stall_req_counters(0)(15, 0),
+        stall_req_counters(1)(15, 0),
+        stall_req_counters(2)(15, 0),
+        stall_req_counters(3)(15, 0),
+        stall_req_counters(4)(15, 0),
+        stall_req_counters(5)(15, 0),
+        stall_req_counters(6)(15, 0),
+        stall_req_counters(7)(15, 0),
+        stall_req_counters(8)(15, 0),
+        stall_req_counters(9)(15, 0)
+      )
+    }
+
+    BoringUtils.addSource(VecInit((0 to 9).map(i => stall_req_counters(i))), "difftestStreqs")
+
+    if(pipeTrace || prtHotSpot) {
       printf("\n")
     }
 

@@ -143,6 +143,18 @@ void dtengine_t::emu_update_state() {
             emu_get_reg( 8); emu_get_reg(18); emu_get_reg(28);
             emu_get_reg( 9); emu_get_reg(19); emu_get_reg(29);
     #undef emu_get_reg
+    #define emu_get_streq(n) emu_state->streqs[n] = zjv->io_difftest_streqs_##n
+            emu_get_streq( 0);
+            emu_get_streq( 1);
+            emu_get_streq( 2);
+            emu_get_streq( 3);
+            emu_get_streq( 4);
+            emu_get_streq( 5);
+            emu_get_streq( 6);
+            emu_get_streq( 7);
+            emu_get_streq( 8);
+            emu_get_streq( 9);
+    #undef emu_get_streq
     emu_state->pc        = zjv->io_difftest_pc;
     emu_state->inst      = zjv->io_difftest_inst;
     emu_state->valid     = zjv->io_difftest_valid;

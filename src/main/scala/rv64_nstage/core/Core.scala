@@ -13,6 +13,7 @@ trait phvntomParams {
   val regWidth      = log2Ceil(regNum)
   val diffTest      = true
   val pipeTrace     = false
+  val prtHotSpot    = false
   val vscode        = false
   val rtThread      = true
   val only_M        = false

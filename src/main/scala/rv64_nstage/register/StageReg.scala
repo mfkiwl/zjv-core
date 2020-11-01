@@ -57,6 +57,11 @@ class ExeInfoIO extends Bundle with phvntomParams {
   val mem_wdata_out = Output(UInt(xlen.W))
 }
 
+class BrJumpDelayIO extends Bundle with phvntomParams {
+  val branch_jump_flush_in = Input(Bool())
+  val branch_jump_flush_out = Output(Bool())
+}
+
 class IntMemPfIO extends Bundle with phvntomParams {
   val s_external_int_in = Input(Bool())
   val external_int_in = Input(Bool())
@@ -250,10 +255,10 @@ class RegIdExe extends Module with phvntomParams {
   val predict_tk = RegInit(Bool(), false.B)
   val ptar = RegInit(UInt(xlen.W), 0.U)
   val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1).W),
     default_inst_info)
 
   val delay_flush = RegInit(Bool(), false.B)
@@ -319,6 +324,7 @@ class RegExeDTLBIO extends Bundle with phvntomParams {
   val instio = Flipped(Flipped(new InstIO))
   val iiio = Flipped(Flipped(new InstInfoIO))
   val aluio = Flipped(Flipped(new ExeInfoIO))
+  val bjio = Flipped(Flipped(new BrJumpDelayIO))
 }
 
 class RegExeDTLB extends Module with phvntomParams {
@@ -329,10 +335,10 @@ class RegExeDTLB extends Module with phvntomParams {
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -414,10 +420,10 @@ class RegDTLBMem1 extends Module with phvntomParams {
   val inst_pf = RegInit(Bool(), false.B)
   val mem_af = RegInit(Bool(), false.B)
   val mem_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -527,10 +533,10 @@ class RegMem1Mem2 extends Module with phvntomParams {
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -630,10 +636,10 @@ class RegMem3Wb extends Module with phvntomParams {
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)

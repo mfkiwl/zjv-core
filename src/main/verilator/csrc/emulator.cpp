@@ -85,6 +85,13 @@ int main(int argc, char** argv)
       if (engine.is_finish()) {
          if (engine.emu_difftest_poweroff() == (long)PROGRAM_PASS) {
             fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS with IPC %f ] ==========\x1b[0m\n", argv[1], 1.0 * sim_cnt / engine.trace_count);
+            fprintf(stderr, "\t\t \x1b[32msr_itlb %ld, sr_i$ %ld, sr_exe %ld, sr_dtlb %ld, sr_d$ %ld, bj_flush %f\x1b[0m\n",
+                engine.get_emu_state()->streqs[0],
+                engine.get_emu_state()->streqs[2],
+                engine.get_emu_state()->streqs[4],
+                engine.get_emu_state()->streqs[5],
+                engine.get_emu_state()->streqs[8],
+                1.0 * engine.get_emu_state()->streqs[9] / engine.get_emu_state()->streqs[7]);
             //sleep(5);
          }
          else
@@ -98,6 +105,13 @@ int main(int argc, char** argv)
          int_total_cnt++;
          if (int_total_cnt > 50) {
             fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS with IPC %f ] ==========\x1b[0m\n", argv[1], 1.0 * sim_cnt / engine.trace_count);
+            fprintf(stderr, "\t\t \x1b[32msr_itlb %ld, sr_i$ %ld, sr_exe %ld, sr_dtlb %ld, sr_d$ %ld, bj_flush %lf\x1b[0m\n",
+                engine.get_emu_state()->streqs[0],
+                engine.get_emu_state()->streqs[2],
+                engine.get_emu_state()->streqs[4],
+                engine.get_emu_state()->streqs[5],
+                engine.get_emu_state()->streqs[8],
+                1.0 * engine.get_emu_state()->streqs[9] / engine.get_emu_state()->streqs[7]);
             printf("Total Int Cnt is %d!\n", int_total_cnt);
             //sleep(5);
             exit(0);

@@ -8,6 +8,7 @@ import common._
 import rv64_nstage.control.ControlConst
 
 class DiffTestIO extends Bundle with phvntomParams {
+  val streqs   = Output(Vec(10, UInt(xlen.W)))
   val regs     = Output(Vec(regNum, UInt(xlen.W)))
   val pc       = Output(UInt(xlen.W))
   val inst     = Output(UInt(xlen.W))
@@ -56,6 +57,7 @@ class Top extends Module with phvntomParams {
   val tile = Module(new Tile)
 
   val difftest = WireInit(0.U.asTypeOf(new DiffTestIO))
+  BoringUtils.addSink(difftest.streqs,  "difftestStreqs")
   BoringUtils.addSink(difftest.regs,    "difftestRegs")
   BoringUtils.addSink(difftest.pc,      "difftestPC")
   BoringUtils.addSink(difftest.inst,    "difftestInst")
