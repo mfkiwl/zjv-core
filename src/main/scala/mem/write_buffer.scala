@@ -168,21 +168,21 @@ class WriteBuffer(implicit val wbConfig: WBConfig)
     }
   }
 
-  printf(p"[${GTimer()}] ${wb_name} Debug Info----------\n")
-  printf(p"req_state=${req_state}, write_state=${write_state}\n")
-  printf(p"hit_vec=${hit_vec}, hit_index=${hit_index}, hit=${hit}\n")
-  printf(
-    p"available_vec=${available_vec}, available_index=${available_index}, available=${available}\n"
-  )
-  printf(
-    p"need_write_vec=${need_write_vec}, write_index=${write_index}, need_write=${need_write}, need_write_next=${need_write_next}\n"
-  )
-  printf(p"entryArray=${entryArray}\n")
-  printf(p"----------io.in----------\n")
-  printf(p"${io.in}\n")
-  printf(p"----------io.readChannel----------\n")
-  printf(p"${io.readChannel}\n")
-  printf(p"----------io.writeChannel----------\n")
-  printf(p"${io.writeChannel}\n")
-  printf("-----------------------------------------------\n")
+  // printf(p"[${GTimer()}] ${wb_name} Debug Info----------\n")
+  // printf(p"req_state=${req_state}, write_state=${write_state}\n")
+  // printf(p"hit_vec=${hit_vec}, hit_index=${hit_index}, hit=${hit}\n")
+  // printf(
+  //   p"available_vec=${available_vec}, available_index=${available_index}, available=${available}\n"
+  // )
+  // printf(
+  //   p"need_write_vec=${need_write_vec}, write_index=${write_index}, need_write=${need_write}, need_write_next=${need_write_next}\n"
+  // )
+  // printf(p"entryArray=${entryArray}\n")
+  // printf(p"----------io.in----------\n")
+  // printf(p"${io.in}\n")
+  // printf(p"----------io.readChannel----------\n")
+  // printf(p"${io.readChannel}\n")
+  // printf(p"----------io.writeChannel----------\n")
+  // printf(p"${io.writeChannel}\n")
+  // printf("-----------------------------------------------\n")
 }

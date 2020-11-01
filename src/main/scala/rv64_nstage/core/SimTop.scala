@@ -10,7 +10,10 @@ import device._
 import mem._
 
 class SimTopIO extends Bundle with phvntomParams {
-  // TODO
+  val mmio = new AXI4Bundle
+  val clint = Flipped(new AXI4Bundle)
+  val plic = Flipped(new AXI4Bundle)
+  val uart_irq = Input(Bool())
 }
 
 class SimTop extends Module with phvntomParams {
@@ -31,47 +34,28 @@ class SimTop extends Module with phvntomParams {
   core.io.imem <> icache.io.in
   core.io.dmem <> dcache.io.in
 
-  if (hasL2Cache) {
-    val mem_source = List(icache, dcache)
-    val memxbar = Module(new CrossbarNto1(1))
-    val l2cache = Module(
-      new L2CacheSplit3Stage(4)(
-        CacheConfig(
-          name = "l2cache",
-          blockBits = dcache.lineBits,
-          totalSize = 128
-        )
+  val mem_source = List(icache, dcache)
+  val memxbar = Module(new CrossbarNto1(1))
+  val l2cache = Module(
+    new L2CacheSplit3Stage(4)(
+      CacheConfig(
+        name = "l2cache",
+        blockBits = dcache.lineBits,
+        totalSize = 128
       )
     )
-    val l2cacheBus = Module(new DUncache(l2cache.lineBits, "mem uncache"))
-    for (i <- 0 until mem_source.length) {
-      mem_source(i).io.mem <> l2cache.io.in(i)
-    }
-    core.io.immu <> l2cache.io.in(2)
-    core.io.dmmu <> l2cache.io.in(3)
-    l2cache.io.mem <> l2cacheBus.io.in
-    l2cacheBus.io.out <> memxbar.io.in(0)
-    memxbar.io.out <> mem.io.in
-  } else {
-    val icacheBus = Module(new DUncache(icache.lineBits, "inst uncache"))
-    val dcacheBus = Module(new DUncache(dcache.lineBits, "mem uncache"))
-    val immuBus = Module(new DUncache(icache.lineBits))
-    val dmmuBus = Module(new DUncache(dcache.lineBits))
-    val mem_source = List(icacheBus, dcacheBus, immuBus, dmmuBus)
-    val memxbar = Module(new CrossbarNto1(mem_source.length))
-    icache.io.mem <> icacheBus.io.in
-    dcache.io.mem <> dcacheBus.io.in
-    core.io.immu <> immuBus.io.in
-    core.io.dmmu <> dmmuBus.io.in
-    memxbar.io.out <> mem.io.in
-    for (i <- 0 until mem_source.length) {
-      mem_source(i).io.out <> memxbar.io.in(i)
-    }
+  )
+  val l2cacheBus = Module(new DUncache(l2cache.lineBits, "mem uncache"))
+  for (i <- 0 until mem_source.length) {
+    mem_source(i).io.mem <> l2cache.io.in(i)
   }
+  core.io.immu <> l2cache.io.in(2)
+  core.io.dmmu <> l2cache.io.in(3)
+  l2cache.io.mem <> l2cacheBus.io.in
+  l2cacheBus.io.out <> memxbar.io.in(0)
+  memxbar.io.out <> mem.io.in
 
   // mmio path
-  // uart
-  val uart = Module(new AXI4UART)
 
   // clint
   val clint = Module(new Clint)
@@ -82,7 +66,7 @@ class SimTop extends Module with phvntomParams {
 
   // plic
   val plic = Module(new AXI4PLIC)
-  val uart_irqSync = uart.io.extra.get.irq
+  val uart_irqSync = io.uart_irq
   val hart0_meipSync = plic.io.extra.get.meip(0)
   val hart0_seipSync = plic.io.extra.get.meip(1)
   plic.io.extra.get.intrVec := uart_irqSync
@@ -90,15 +74,11 @@ class SimTop extends Module with phvntomParams {
   core.io.int.seip := hart0_seipSync
   
   // xbar
-  val mmio_device = List(clint, plic, uart)
   val mmioBus = Module(new Uncache(mname = "mmio uncache"))
-  val mmioxbar = Module(new Crossbar1toN(AddressSpace.mmio))
-
   dcache.io.mmio <> mmioBus.io.in
-  mmioBus.io.out <> mmioxbar.io.in
-  for (i <- 0 until mmio_device.length) {
-    mmio_device(i).io.in <> mmioxbar.io.out(i)
-  }
+  mmioBus.io.out <> io.mmio
+  clint.io.in <> io.clint
+  plic.io.in <> io.plic
 }
 
 object generate {
@@ -106,8 +86,8 @@ object generate {
     val packageName = this.getClass.getPackage.getName
 
     (new chisel3.stage.ChiselStage).execute(
-      Array("-td", "build/verilog/" + packageName, "-X", "mverilog"),
-      Seq(ChiselGeneratorAnnotation(() => new Tile))
+      Array("-td", "build/verilog/" + packageName, "-X", "verilog"),
+      Seq(ChiselGeneratorAnnotation(() => new SimTop))
     )
   }
 }
