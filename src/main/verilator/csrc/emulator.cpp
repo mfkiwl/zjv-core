@@ -96,7 +96,7 @@ int main(int argc, char** argv)
       if(engine.emu_get_interrupt()) {
          engine.sim_check_interrupt();
          int_total_cnt++;
-         if (int_total_cnt > 50) {
+         if (int_total_cnt > 250) {
             fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS with IPC %f ] ==========\x1b[0m\n", argv[1], 1.0 * sim_cnt / engine.trace_count);
             printf("Total Int Cnt is %d!\n", int_total_cnt);
             //sleep(5);
