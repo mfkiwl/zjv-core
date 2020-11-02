@@ -689,7 +689,7 @@ import mem._
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_int, "difftestInt")
 
-    if (pipeTrace || !vscode) {
+    if (pipeTrace) {
       if (vscode) {
         printf("\t\tIF1\t\tIF2\t\tIF3\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n")
         printf(
