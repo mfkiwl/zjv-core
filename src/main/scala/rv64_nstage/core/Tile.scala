@@ -23,7 +23,9 @@ class Tile extends Module with phvntomParams {
 
   // mem path
   val icache = Module(
-    new ICacheForwardSplitSync3Stage()(CacheConfig(name = "icache", readOnly = true, hasMMIO = false))
+    new ICacheForwardSplitSync3Stage()(
+      CacheConfig(name = "icache", readOnly = true, hasMMIO = false)
+    )
   )
   val dcache = Module(new DCacheWriteThroughSplit3Stage()(CacheConfig(name = "dcache")))
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
@@ -33,6 +35,8 @@ class Tile extends Module with phvntomParams {
 
   if (hasL2Cache) {
     val mem_source = List(icache, dcache)
+    // val dcache_wb = Module(new WriteBuffer()(WBConfig(wb_name = "dcache write buffer", dataWidth = dcache.lineBits)))
+    // dcache_wb.io.in <> dcache.io.mem
     val memxbar = Module(new CrossbarNto1(1))
     val l2cache = Module(
       new L2CacheSplit3Stage(4)(
@@ -44,6 +48,9 @@ class Tile extends Module with phvntomParams {
       )
     )
     val l2cacheBus = Module(new DUncache(l2cache.lineBits, "mem uncache"))
+    // icache.io.mem <> l2cache.io.in(0)
+    // dcache_wb.io.readChannel <> l2cache.io.in(1)
+    // dcache_wb.io.writeChannel <> l2cache.io.in(2)
     for (i <- 0 until mem_source.length) {
       mem_source(i).io.mem <> l2cache.io.in(i)
     }
@@ -76,7 +83,9 @@ class Tile extends Module with phvntomParams {
   // power off
   val poweroff = Module(new AXI4PowerOff)
   val poweroffSync = poweroff.io.extra.get.poweroff
-  BoringUtils.addSource(poweroffSync(31, 0), "difftestpoweroff")
+  if (diffTest) {
+    BoringUtils.addSource(poweroffSync(31, 0), "difftestpoweroff")
+  }
 
   // clint
   val clint = Module(new Clint)
@@ -84,7 +93,6 @@ class Tile extends Module with phvntomParams {
   val msipSync = clint.io.extra.get.msip
   core.io.int.msip := msipSync
   core.io.int.mtip := mtipSync
-
 
   // plic
   val plic = Module(new AXI4PLIC)
@@ -94,16 +102,16 @@ class Tile extends Module with phvntomParams {
   plic.io.extra.get.intrVec := uart_irqSync
   core.io.int.meip := hart0_meipSync
   core.io.int.seip := hart0_seipSync
-
-  BoringUtils.addSource(uart_irqSync,   "difftestuartirq")
-  BoringUtils.addSource(hart0_meipSync, "difftestplicmeip")
-  BoringUtils.addSource(hart0_seipSync, "difftestplicseip")
+  if (diffTest) {
+    BoringUtils.addSource(uart_irqSync,   "difftestuartirq")
+    BoringUtils.addSource(hart0_meipSync, "difftestplicmeip")
+    BoringUtils.addSource(hart0_seipSync, "difftestplicseip")
+  }
 
   // xbar
   val mmio_device = List(poweroff, clint, plic, uart)
   val mmioBus = Module(new Uncache(mname = "mmio uncache"))
   val mmioxbar = Module(new Crossbar1toN(AddressSpace.mmio))
-  // val xbar = Module(new AXI4Xbar(2, addrSpace))
 
   dcache.io.mmio <> mmioBus.io.in
   mmioBus.io.out <> mmioxbar.io.in

@@ -10,7 +10,7 @@ trait phvntomParams {
   val bitWidth   = log2Ceil(xlen)
   val regNum     = 32
   val regWidth   = log2Ceil(regNum)
-  val diffTest   = true
+  val diffTest   = false
   val pipeTrace  = false
 }
 

@@ -276,7 +276,7 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
       p"satp_mode=${satp_mode}, satp_asid=${Hexadecimal(satp_asid)}, satp_ppn=${Hexadecimal(satp_ppn)}\n"
     )
     printf(p"io.in: ${io.in}\n")
-    //    printf(p"io.out: ${io.out}\n")
+    printf(p"io.out: ${io.out}\n")
     printf(p"entryArray=${entryArray}\n")
     printf("-----------------------------------------------\n")
   }

@@ -684,10 +684,12 @@ import mem._
     }
     dtest_int := reg_mem3_wb.io.csrio.int_resp_out // dtest_expt & (io.int.msip | io.int.mtip)
 
-    BoringUtils.addSource(dtest_pc, "difftestPC")
-    BoringUtils.addSource(dtest_inst, "difftestInst")
-    BoringUtils.addSource(dtest_wbvalid, "difftestValid")
-    BoringUtils.addSource(dtest_int, "difftestInt")
+    if (diffTest) {
+      BoringUtils.addSource(dtest_pc, "difftestPC")
+      BoringUtils.addSource(dtest_inst, "difftestInst")
+      BoringUtils.addSource(dtest_wbvalid, "difftestValid")
+      BoringUtils.addSource(dtest_int, "difftestInt")
+    }
 
     if (pipeTrace) {
       if (vscode) {

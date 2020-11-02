@@ -103,6 +103,7 @@ int main(int argc, char** argv)
       if(engine.emu_get_interrupt()) {
          engine.sim_check_interrupt();
          int_total_cnt++;
+
          if (int_total_cnt > 250) {
             fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS with IPC %f ] ==========\x1b[0m\n", argv[1], 1.0 * sim_cnt / engine.trace_count);
             fprintf(stderr, "\t\t \x1b[32msr_itlb %ld, sr_i$ %ld, sr_exe %ld, sr_dtlb %ld, sr_d$ %ld, bj_flush %lf\x1b[0m\n",

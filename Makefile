@@ -7,7 +7,7 @@ SRC_DIR		:=	$(CURDIR)/src
 
 TARGET_CORE ?= rv64_nstage.core
 VSRC_DIR := $(WORK_DIR)/verilog/$(TARGET_CORE)
-N ?= 1
+N ?= 2
 
 # Test ELF 
 TEST_SRC_DIR  := $(CURDIR)/zjv-soc-test
@@ -80,6 +80,11 @@ $(VERILATOR_DEST_DIR)/emulator: $(VSRC_DIR)/Top.v $(libspike) $(VERILATOR_SOURCE
 generate_testcase:
 	mkdir -p $(TEST_DST_DIR)
 	$(MAKE) -C $(TEST_SRC_DIR) DEST_DIR=$(TEST_DST_DIR)
+
+generate_analysis:
+	mkdir -p $(WORK_DIR)
+	sbt "runMain $(TARGET_CORE).generate"
+	cd fpga && make clean && make generate_project
 
 how_verilator_work:
 	mkdir -p $(VERILATOR_DEST_DIR)/Hello
