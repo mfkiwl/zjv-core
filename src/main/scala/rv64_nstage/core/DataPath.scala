@@ -3,6 +3,7 @@ package rv64_nstage.core
 import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
+import chisel3.experimental.chiselName
 import common.Str
 import device.MemIO
 import rv64_nstage.control._
@@ -13,7 +14,7 @@ import rv64_nstage.mmu._
 import utils._
 import mem._
 
-class DataPathIO extends Bundle with phvntomParams {
+@chiselName class DataPathIO extends Bundle with phvntomParams {
   val ctrl = Flipped(new ControlPathIO)
   val imem = Flipped(new MemIO)
   val dmem = Flipped(new MemIO)
@@ -24,7 +25,7 @@ class DataPathIO extends Bundle with phvntomParams {
 
 // TODO This is a 10-stage pipeline
 // TODO IF1 IF2 IF3 ID EXE DTLB MEM1 MEM2 MEM3 WB
-class DataPath extends Module with phvntomParams {
+@chiselName class DataPath extends Module with phvntomParams {
   val io = IO(new DataPathIO)
 
   val pc_gen = Module(new PcGen)
@@ -137,21 +138,17 @@ class DataPath extends Module with phvntomParams {
   pc_gen.io.tvec := csr.io.evec
   pc_gen.io.pc_plus := (reg_dtlb_mem1.io.bsrio.pc_out + 4.U(3.W))
   pc_gen.io.branch_jump := br_jump_flush
-  pc_gen.io.branch_pc := Mux(
-    predict_taken_but_not || (predict_taken_but_not_br && !jump_flush),
-    (reg_id_exe.io.bsrio.pc_out + 4.U),
-    alu.io.out
-  )
-  pc_gen.io.inst_addr_misaligned := inst_addr_misaligned
+  pc_gen.io.branch_pc := reg_exe_dtlb.io.bjio.bjpc_out
+  pc_gen.io.inst_addr_misaligned := reg_exe_dtlb.io.aluio.inst_addr_misaligned_out
 
   // BPU
   bpu.io.pc_to_predict := pc_gen.io.pc_out
-  bpu.io.feedback_pc := feedback_pc
-  bpu.io.feedback_xored_index := feedback_xored_index
-  bpu.io.feedback_is_br := feedback_is_br
-  bpu.io.feedback_target_pc := feedback_target_pc
-  bpu.io.feedback_br_taken := feedback_br_taken
-  bpu.io.stall_update := scheduler.io.stall_req
+  bpu.io.feedback_pc := reg_exe_dtlb.io.bjio.feedback_pc_out
+  bpu.io.feedback_xored_index := reg_exe_dtlb.io.bjio.feedback_xored_index_out
+  bpu.io.feedback_is_br := reg_exe_dtlb.io.bjio.feedback_is_br_out
+  bpu.io.feedback_target_pc := reg_exe_dtlb.io.bjio.feedback_target_pc_out
+  bpu.io.feedback_br_taken := reg_exe_dtlb.io.bjio.feedback_br_taken_out
+  bpu.io.stall_update := stall_dtlb_mem1
 
   // IMMU
   inst_af := !is_legal_addr(pc_gen.io.pc_out) || immu.io.front.af // TODO
@@ -268,18 +265,14 @@ class DataPath extends Module with phvntomParams {
     rs2
   )
 
-  multiplier.io.start := reg_id_exe.io.iiio.inst_info_out.mult && !scheduler.io.stall_req
-  multiplier.io.a := rs1
-  multiplier.io.b := rs2
-  multiplier.io.op := reg_id_exe.io.iiio.inst_info_out.aluType
-
   branch_cond.io.rs1 := rs1
   branch_cond.io.rs2 := rs2
   branch_cond.io.brType := reg_id_exe.io.iiio.inst_info_out.brType
 
   feedback_pc := reg_id_exe.io.bsrio.pc_out
   feedback_xored_index := reg_id_exe.io.bpio.xored_index_out
-  feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || jump_flush) && !scheduler.io.stall_req
+//  feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || jump_flush) && !scheduler.io.stall_req
+  feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || jump_flush)
   feedback_target_pc := alu.io.out
   feedback_br_taken := branch_cond.io.branch || jump_flush
 
@@ -292,8 +285,10 @@ class DataPath extends Module with phvntomParams {
   wrong_target := branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out && alu.io.out =/= reg_id_exe.io.bpio.target_out
   jump_flush := reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump && (!reg_id_exe.io.bpio.predict_taken_out ||
     alu.io.out =/= reg_id_exe.io.bpio.target_out)
+//  branch_jump_flush_comb := ((misprediction || wrong_target || predict_taken_but_not_br ||
+//    jump_flush) && !scheduler.io.stall_req)
   branch_jump_flush_comb := ((misprediction || wrong_target || predict_taken_but_not_br ||
-    jump_flush) && !scheduler.io.stall_req)
+    jump_flush))
   inst_addr_misaligned := alu.io.out(1) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
 
   scheduler.io.is_bubble := reg_id_exe.io.bsrio.bubble_out
@@ -321,7 +316,7 @@ class DataPath extends Module with phvntomParams {
   scheduler.io.rd_addr_wb := reg_mem3_wb.io.instio.inst_out(11, 7)
   scheduler.io.rs1_from_reg := reg_file.io.rs1_data
   scheduler.io.rs2_from_reg := reg_file.io.rs2_data
-  scheduler.io.rd_fen_from_dtlb := reg_exe_dtlb.io.iiio.inst_info_out.fwd_stage <= fwdMem1
+  scheduler.io.rd_fen_from_dtlb := reg_exe_dtlb.io.iiio.inst_info_out.fwd_stage <= fwdDTLB
   scheduler.io.rd_from_dtlb := MuxLookup(
     reg_exe_dtlb.io.iiio.inst_info_out.wbSelect,
     "hdeadbeef".U,
@@ -372,7 +367,7 @@ class DataPath extends Module with phvntomParams {
     )
   )
 
-  stall_req_exe_atomic := multiplier.io.stall_req
+  stall_req_exe_atomic := false.B
   stall_req_exe_interruptable := scheduler.io.stall_req
   rs1 := scheduler.io.rs1_val
   rs2 := scheduler.io.rs2_val
@@ -381,26 +376,40 @@ class DataPath extends Module with phvntomParams {
   reg_exe_dtlb.io.bsrio.last_stage_atomic_stall_req := stall_req_exe_atomic
   reg_exe_dtlb.io.bsrio.next_stage_atomic_stall_req := stall_req_dtlb_atomic
   reg_exe_dtlb.io.bsrio.stall := stall_exe_dtlb
-  reg_exe_dtlb.io.bsrio.flush_one := expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
+  reg_exe_dtlb.io.bsrio.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
   reg_exe_dtlb.io.bsrio.bubble_in := (reg_id_exe.io.bsrio.bubble_out || stall_req_exe_atomic ||
     stall_req_exe_interruptable)
   reg_exe_dtlb.io.instio.inst_in := reg_id_exe.io.instio.inst_out
   reg_exe_dtlb.io.bsrio.pc_in := reg_id_exe.io.bsrio.pc_out
   reg_exe_dtlb.io.iiio.inst_info_in := reg_id_exe.io.iiio.inst_info_out
   reg_exe_dtlb.io.aluio.inst_addr_misaligned_in := inst_addr_misaligned
-  reg_exe_dtlb.io.aluio.alu_val_in := Mux(
-    reg_id_exe.io.iiio.inst_info_out.mult,
-    multiplier.io.mult_out,
-    alu.io.out
-  )
+  reg_exe_dtlb.io.aluio.alu_val_in := alu.io.out
   reg_exe_dtlb.io.aluio.mem_wdata_in := rs2
   reg_exe_dtlb.io.ifio.inst_af_in := reg_id_exe.io.ifio.inst_af_out
   reg_exe_dtlb.io.bsrio.next_stage_flush_req := (br_jump_flush && !(expt_int_flush || error_ret_flush ||
     write_satp_flush || i_fence_flush || s_fence_flush))
   reg_exe_dtlb.io.ifio.inst_pf_in := reg_id_exe.io.ifio.inst_pf_out
   reg_exe_dtlb.io.bjio.branch_jump_flush_in := branch_jump_flush_comb
+  reg_exe_dtlb.io.bjio.bjpc_in := Mux(
+    predict_taken_but_not || (predict_taken_but_not_br && !jump_flush),
+    (reg_id_exe.io.bsrio.pc_out + 4.U),
+    alu.io.out
+  )
+  reg_exe_dtlb.io.bjio.feedback_pc_in := feedback_pc
+  reg_exe_dtlb.io.bjio.feedback_xored_index_in := feedback_xored_index
+  reg_exe_dtlb.io.bjio.feedback_is_br_in := feedback_is_br
+  reg_exe_dtlb.io.bjio.feedback_target_pc_in := feedback_target_pc
+  reg_exe_dtlb.io.bjio.feedback_br_taken_in := feedback_br_taken
+  reg_exe_dtlb.io.mdio.rs1_after_fwd_in := rs1
+  reg_exe_dtlb.io.mdio.rs2_after_fwd_in := rs2
 
   br_jump_flush := reg_exe_dtlb.io.bjio.branch_jump_flush_out
+
+  // MUL DIV
+  multiplier.io.start := reg_exe_dtlb.io.iiio.inst_info_out.mult
+  multiplier.io.a := reg_exe_dtlb.io.mdio.rs1_after_fwd_out
+  multiplier.io.b := reg_exe_dtlb.io.mdio.rs2_after_fwd_out
+  multiplier.io.op := reg_exe_dtlb.io.iiio.inst_info_out.aluType
 
   // DMMU
   mem_af := dmmu.io.front.af || (!is_legal_addr(reg_exe_dtlb.io.aluio.alu_val_out) &&
@@ -423,7 +432,7 @@ class DataPath extends Module with phvntomParams {
     reg_exe_dtlb.io.iiio.inst_info_out.amoSelect.orR)
   io.dmmu <> dmmu.io.back.mmu
 
-  stall_req_dtlb_atomic := dmmu.io.front.stall_req
+  stall_req_dtlb_atomic := dmmu.io.front.stall_req || multiplier.io.stall_req
 
   // Reg DTLB MEM1
   reg_dtlb_mem1.io.bsrio.last_stage_atomic_stall_req := stall_req_dtlb_atomic
@@ -436,9 +445,13 @@ class DataPath extends Module with phvntomParams {
   reg_dtlb_mem1.io.iiio.inst_info_in := reg_exe_dtlb.io.iiio.inst_info_out
   reg_dtlb_mem1.io.aluio.inst_addr_misaligned_in := reg_exe_dtlb.io.aluio.inst_addr_misaligned_out
   reg_dtlb_mem1.io.aluio.alu_val_in := Mux(
-    reg_exe_dtlb.io.iiio.inst_info_out.memType.orR,
-    dmmu.io.front.pa,
-    reg_exe_dtlb.io.aluio.alu_val_out
+    reg_exe_dtlb.io.iiio.inst_info_out.mult,
+    multiplier.io.mult_out,
+    Mux(
+      reg_exe_dtlb.io.iiio.inst_info_out.memType.orR,
+      dmmu.io.front.pa,
+      reg_exe_dtlb.io.aluio.alu_val_out
+    )
   )
   reg_dtlb_mem1.io.aluio.mem_wdata_in := reg_exe_dtlb.io.aluio.mem_wdata_out
   reg_dtlb_mem1.io.intio.timer_int_in := io.int.mtip
@@ -539,10 +552,6 @@ class DataPath extends Module with phvntomParams {
   reg_mem2_mem3.io.csrio.compare_in := reg_mem1_mem2.io.csrio.compare_out
   reg_mem2_mem3.io.csrio.comp_res_in := reg_mem1_mem2.io.csrio.comp_res_out
   reg_mem2_mem3.io.csrio.af_in := reg_mem1_mem2.io.csrio.af_out
-
-  //printf("DMEM valid %x, write %x, write_what %x, write where %x ", io.dmem.req.valid, io.dmem.req.bits.wen,
-  //  io.dmem.req.bits.data, io.dmem.req.bits.addr)
-  //  printf("DMEM resp %x\n", io.dmem.resp.valid)
 
   io.dmem.flush := false.B
   io.dmem.stall := !io.dmem.req.ready
@@ -680,7 +689,7 @@ class DataPath extends Module with phvntomParams {
     BoringUtils.addSource(dtest_wbvalid, "difftestValid")
     BoringUtils.addSource(dtest_int, "difftestInt")
 
-    if (pipeTrace) {
+    if (pipeTrace || !vscode) {
       if (vscode) {
         printf("\t\tIF1\t\tIF2\t\tIF3\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n")
         printf(
@@ -860,6 +869,14 @@ class DataPath extends Module with phvntomParams {
           reg_mem2_mem3.io.bsrio.bubble_out,
           reg_mem3_wb.io.bsrio.bubble_out
         )
+        printf("PC to dmem %x, Valid to dmem %x, Wen to dmem %x, PA to dmem %x, dmem PC out %x, dmem Data out %x\n",
+        reg_dtlb_mem1.io.bsrio.pc_out,
+        io.dmem.req.valid,
+        io.dmem.req.bits.wen,
+        io.dmem.req.bits.addr,
+        reg_mem2_mem3.io.bsrio.pc_out,
+        io.dmem.resp.bits.data)
+        printf("\n")
       }
 
       //      if(traceBPU) {

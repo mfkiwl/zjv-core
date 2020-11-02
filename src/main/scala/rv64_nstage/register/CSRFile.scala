@@ -5,10 +5,11 @@ import chisel3.util._
 import rv64_nstage.control._
 import rv64_nstage.core._
 import rv64_nstage.control.ISA._
+import chisel3.experimental.chiselName
 
 import chisel3.util.experimental.BoringUtils
 
-class InterruptIO extends Bundle with phvntomParams {
+@chiselName class InterruptIO extends Bundle with phvntomParams {
   val mtip = Input(Bool())
   val msip = Input(Bool())
   val meip = Input(Bool())
@@ -133,13 +134,13 @@ object Interrupt {
 }
 
 
-class InterruptJudgerIO extends Bundle with phvntomParams {
+@chiselName class InterruptJudgerIO extends Bundle with phvntomParams {
   val int_vec = Input(UInt(12.W))
   val int_out = Output(UInt(4.W))
   val has_int = Output(Bool())
 }
 
-class InterruptJudger extends Module with phvntomParams {
+@chiselName class InterruptJudger extends Module with phvntomParams {
   val io = IO(new InterruptJudgerIO)
 
   when(io.int_vec(11)) {
@@ -167,7 +168,7 @@ class InterruptJudger extends Module with phvntomParams {
 }
 
 
-class ExceptionJudgerIO extends Bundle with phvntomParams {
+@chiselName class ExceptionJudgerIO extends Bundle with phvntomParams {
   val breakpoint = Input(Bool())
   val inst_pf = Input(Bool())
   val inst_af = Input(Bool())
@@ -186,7 +187,7 @@ class ExceptionJudgerIO extends Bundle with phvntomParams {
   val except_out = Output(UInt(4.W))
 }
 
-class ExceptionJudger extends Module with phvntomParams {
+@chiselName class ExceptionJudger extends Module with phvntomParams {
   val io = IO(new ExceptionJudgerIO)
 
   when(io.breakpoint) {
@@ -237,7 +238,7 @@ class ExceptionJudger extends Module with phvntomParams {
   }
 }
 
-class CSRFileIO extends Bundle with phvntomParams {
+@chiselName class CSRFileIO extends Bundle with phvntomParams {
   // CSRRX
   val which_reg = Input(UInt(12.W))
   val wen = Input(Bool())
@@ -285,7 +286,7 @@ class CSRFileIO extends Bundle with phvntomParams {
   val is_mpp_s_mode = Output(Bool())
 }
 
-class CSRFile extends Module with phvntomParams {
+@chiselName class CSRFile extends Module with phvntomParams {
   val io = IO(new CSRFileIO)
 
   // Special CSR Register Bit
@@ -1167,7 +1168,7 @@ class CSRFile extends Module with phvntomParams {
   }
 }
 
-class CSRIO extends Bundle with phvntomParams {
+@chiselName class CSRIO extends Bundle with phvntomParams {
   // CSRXX
   val stall = Input(Bool())
   val bubble = Input(Bool())
@@ -1209,7 +1210,7 @@ class CSRIO extends Bundle with phvntomParams {
   val s_external_int = Input(Bool())
 }
 
-class CSR extends Module with phvntomParams {
+@chiselName class CSR extends Module with phvntomParams {
   val io = IO(new CSRIO)
   val csr_regfile = Module(new CSRFile)
 

@@ -124,15 +124,15 @@ class BPU extends Module with phvntomParams {
   val io = IO(new BPUIO)
 
 //  val pht = Module(new PHT)
-  val bht = Module(new BHT)
-  val btb = Module(new BTB)
+//  val bht = Module(new BHT)
+//  val btb = Module(new BTB)
 
 //  printf("pc %x, predict_tkn %x, tar_pc %x\n", io.pc_to_predict,
 //  io.branch_taken, io.pc_in_btb)
 
 //  val history_from_pht = pht.io.history_out
-  val predict_taken_from_bht = bht.io.predit_taken
-  val xored_index = io.pc_to_predict(bpuEntryBits + 1, 2) // ^ history_from_pht
+//  val predict_taken_from_bht = bht.io.predit_taken
+//  val xored_index = io.pc_to_predict(bpuEntryBits + 1, 2) // ^ history_from_pht
 
   // TODO Here, we do not care C Extension for now
 //  pht.io.index_in := io.pc_to_predict(bpuEntryBits + 1, 2)
@@ -140,18 +140,18 @@ class BPU extends Module with phvntomParams {
 //  pht.io.update_index_in := io.feedback_pc(bpuEntryBits + 1, 2)
 //  pht.io.update_taken_in := io.feedback_br_taken
 
-  bht.io.xored_index_in := xored_index
-  bht.io.update_valid := io.feedback_is_br
-  bht.io.update_xored_index_in := io.feedback_xored_index
-  bht.io.update_taken_in := io.feedback_br_taken
-  bht.io.stall_update := io.stall_update
+//  bht.io.xored_index_in := xored_index
+//  bht.io.update_valid := io.feedback_is_br
+//  bht.io.update_xored_index_in := io.feedback_xored_index
+//  bht.io.update_taken_in := io.feedback_br_taken
+//  bht.io.stall_update := io.stall_update
+//
+//  btb.io.index_in := io.pc_to_predict(bpuEntryBits + 1, 2)
+//  btb.io.update_valid := io.feedback_is_br && io.feedback_br_taken
+//  btb.io.update_index := io.feedback_pc(bpuEntryBits + 1, 2)
+//  btb.io.update_target := io.feedback_target_pc
 
-  btb.io.index_in := io.pc_to_predict(bpuEntryBits + 1, 2)
-  btb.io.update_valid := io.feedback_is_br && io.feedback_br_taken
-  btb.io.update_index := io.feedback_pc(bpuEntryBits + 1, 2)
-  btb.io.update_target := io.feedback_target_pc
-
-  io.branch_taken := predict_taken_from_bht
-  io.pc_in_btb := btb.io.target_out
-  io.xored_index_out := xored_index
+  io.branch_taken := false.B//predict_taken_from_bht
+  io.pc_in_btb := 0.U//btb.io.target_out
+  io.xored_index_out := 0.U//xored_index
 }

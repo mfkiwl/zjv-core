@@ -79,7 +79,7 @@ int main(int argc, char** argv)
 
       #ifdef ZJV_DEBUG
       //  fprintf(stderr, "\t\t\t\t [ ROUND %lx %lx ]\n", engine.trace_count, engine.emu_get_mcycle());
-      //  fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx): %s\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
+//        fprintf(stderr,"zjv   pc: 0x%016lx (0x%08lx): %s\n",  engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
       #endif
 
       if (engine.is_finish()) {
@@ -103,7 +103,7 @@ int main(int argc, char** argv)
       if(engine.emu_get_interrupt()) {
          engine.sim_check_interrupt();
          int_total_cnt++;
-         if (int_total_cnt > 50) {
+         if (int_total_cnt > 250) {
             fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS with IPC %f ] ==========\x1b[0m\n", argv[1], 1.0 * sim_cnt / engine.trace_count);
             fprintf(stderr, "\t\t \x1b[32msr_itlb %ld, sr_i$ %ld, sr_exe %ld, sr_dtlb %ld, sr_d$ %ld, bj_flush %lf\x1b[0m\n",
                 engine.get_emu_state()->streqs[0],
