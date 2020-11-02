@@ -71,7 +71,6 @@ class AXI4PLIC(nrIntr: Int = 31, nrConxt: Int = 2) extends AXI4Slave(new PlicIO(
 
   // 0x0200004 => claim(0) context 0 claim/completion
   // 0x0201004 => claim(1) context 1 claim/completion
-
   val inHandle = RegInit(0.U.asTypeOf(Vec(nrIntr + 1, Bool())))
   def completionFn(wdata: UInt) = {
     inHandle(wdata(31,0)) := false.B

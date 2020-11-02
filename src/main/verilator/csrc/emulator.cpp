@@ -132,6 +132,7 @@ int main(int argc, char** argv)
             // difftest_check_general_register();
 
       if((faultExitLatency || (engine.emu_get_pc() != engine.sim_get_pc()) ||
+         (engine.get_emu_state()->plicmeip != ((engine.sim_get_mip() & MIP_MEIP) != 0)) ||
 	      (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
 
             faultExitLatency++;
