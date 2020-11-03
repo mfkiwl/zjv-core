@@ -136,14 +136,16 @@ class PTWalker(implicit val mmuConfig: MMUConfig)
     }
   }
 
-  if (pipeTrace) {
-    printf(p"[${GTimer()}]: ${mmuName} PTW Debug Info\n")
-    printf(p"state=${state}, lev=${lev}, last_pte=${Hexadecimal(last_pte)}\n")
-    printf(
-      p"cache_rdata=${Hexadecimal(cache_rdata)}, pte_ppn=${Hexadecimal(pte_ppn)}\n"
-    )
-    printf(p"io.in: ${io.in}\n")
-    printf(p"io.out: ${io.out}\n")
-    printf("-----------------------------------------------\n")
-  }
+  // if (pipeTrace || isdmmu) {
+  //   when(GTimer() > 480000000.U) {
+  //     printf(p"[${GTimer()}]: ${mmuName} PTW Debug Info\n")
+  //     printf(p"state=${state}, lev=${lev}, last_pte=${Hexadecimal(last_pte)}\n")
+  //     printf(
+  //       p"cache_rdata=${Hexadecimal(cache_rdata)}, pte_ppn=${Hexadecimal(pte_ppn)}\n"
+  //     )
+  //     printf(p"io.in: ${io.in}\n")
+  //     printf(p"io.out: ${io.out}\n")
+  //     printf("-----------------------------------------------\n")
+  //   }
+  // }
 }

@@ -57,15 +57,17 @@ class L2CacheXbar(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
     is(s_writeResp) { when(io.out.resp.fire()) { state := s_idle } }
   }
 
-  // printf(p"[${GTimer()}]: L2CacheXbar Debug Start-----------\n")
-  // printf(p"state=${state},inflightSrc=${inflightSrc}\n")
-  // for (i <- 0 until n_sources) {
-  //   printf(p"----------l2cache io.in(${i})----------\n")
-  //   printf(p"${io.in(i)}\n")
+  // when(GTimer() > 480000000.U) {
+  //   printf(p"[${GTimer()}]: L2CacheXbar Debug Start-----------\n")
+  //   printf(p"state=${state},inflightSrc=${inflightSrc}\n")
+  //   for (i <- 0 until n_sources) {
+  //     printf(p"----------l2cache io.in(${i})----------\n")
+  //     printf(p"${io.in(i)}\n")
+  //   }
+  //   printf(p"----------l2cache io.out----------\n")
+  //   printf(p"${io.out}\n")
+  //   printf("--------------------------------\n")
   // }
-  // printf(p"----------l2cache io.out----------\n")
-  // printf(p"${io.out}\n")
-  // printf("--------------------------------\n")
 }
 
 class L2Cache(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
