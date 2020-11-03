@@ -500,19 +500,15 @@ object Interrupt {
   val has_expt_comb = expt_judger.io.has_except
   val expt_num_comb = expt_judger.io.except_out
 
-  //  printf("In CSR: ill %x; wfi %x; sfence %x; tsr %x; csr_ne %x; bad_csr_ac %x; wen %x; sen %x; cen %x\n", io.illegal_inst,
-  //    tw_wfi_illegal, tvm_sfence_illegal, tsr_sret_illegal, csr_not_exists, bad_csr_access, io.wen, io.sen, io.cen)
-
   // Combinational Logic for Trap-Ret Delegations and Addresses
   val trap_addr = WireInit(0.U(xlen.W))
   val eret_addr = WireInit(0.U(xlen.W))
-  val deleg = Mux(has_int_comb, midelegr, medelegr)
-  val deleg_2_s = Mux(has_int_comb, deleg(int_num_comb), deleg(expt_num_comb)) && current_p < CSR.PRV_M
+  val deleg_2_s = Mux(has_int_comb, midelegr(int_num_comb), medelegr(expt_num_comb)) && current_p < CSR.PRV_M
   val eret = io.is_mret || io.is_sret || io.is_uret
   val check_bit = Mux(deleg_2_s, stvecr(0), mtvecr(0))
   trap_addr := Mux(deleg_2_s, Cat(stvecr(xlen - 1, 2), Fill(2, 0.U)), Cat(mtvecr(xlen - 1, 2), Fill(2, 0.U)))
   eret_addr := Mux(io.is_mret, mepcr, Mux(io.is_sret, sepcr, uepcr))
-  //printf("In CSR mtvec %x, tveco %x, has_expt %x, exno %x\n", mtvecr, io.tvec_out, has_expt_comb, expt_num_comb)
+
   // Output Comb Logic
   io.tvec_out := Mux(check_bit && has_int_comb, trap_addr + (int_num_comb << 2.U), trap_addr)
   io.epc_out := eret_addr

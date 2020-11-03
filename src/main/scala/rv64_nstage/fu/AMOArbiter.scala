@@ -30,9 +30,10 @@ class AMOArbiter extends Module with phvntomParams {
 
   val s_idle = 0.U(3.W)
   val s_amo  = 1.U(3.W)
-  val s_write = 2.U(3.W)
-  val s_write_wait = 3.U(3.W)
-  val s_finish = 4.U(3.W)
+  val s_amo_res = 2.U(3.W)
+  val s_write = 3.U(3.W)
+  val s_write_wait = 4.U(3.W)
+  val s_finish = 5.U(3.W)
 
   val state = RegInit(UInt(s_idle.getWidth.W), s_idle)
   val next_state = WireInit(UInt(s_idle.getWidth.W), s_idle)
@@ -48,6 +49,8 @@ class AMOArbiter extends Module with phvntomParams {
       next_state := state
     }
   }.elsewhen(state === s_amo) {
+    next_state := s_amo_res
+  }.elsewhen(state === s_amo_res) {
     next_state := s_write
   }.elsewhen(state === s_write) {
     next_state := s_write_wait
@@ -61,12 +64,12 @@ class AMOArbiter extends Module with phvntomParams {
     next_state := s_idle
   }
 
-  amo_alu.io.a := io.dmem_data
+  amo_alu.io.a := mem_val
   amo_alu.io.b := io.reg_val
   amo_alu.io.op := io.amo_op
   amo_alu.io.is_word := io.mem_type
 
-  when(next_state === s_amo) {
+  when(next_state === s_amo_res) {
     amo_res := amo_alu.io.ret
   }
 
@@ -78,7 +81,7 @@ class AMOArbiter extends Module with phvntomParams {
 
   io.write_what := amo_res
   io.write_now := state === s_write
-  io.dont_read_again := state === s_amo
+  io.dont_read_again := state === s_amo || state === s_amo_res
   io.stall_req := next_state =/= s_idle && next_state =/= s_finish
   io.mem_val_out := mem_val
   io.force_mem_val_out := last_stall_req && !io.stall_req

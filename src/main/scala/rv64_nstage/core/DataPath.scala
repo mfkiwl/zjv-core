@@ -553,22 +553,22 @@ import mem._
   reg_mem2_mem3.io.csrio.comp_res_in := reg_mem1_mem2.io.csrio.comp_res_out
   reg_mem2_mem3.io.csrio.af_in := reg_mem1_mem2.io.csrio.af_out
 
-  val regs = WireInit(VecInit(Seq.fill(regNum)(0.U(xlen.W))))
-  BoringUtils.addSink(regs,    "difftestRegs")
-  when(dmmu.io.front.valid && dmmu.io.front.is_store &&
-    reg_dtlb_mem1.io.bsrio.pc_out === "hffffffff80601608".U) {
-    printf("stall %x, stall_req %x, va %x, pa %x, inst %x\n",
-      stall_exe_dtlb, stall_req_dtlb_atomic, dmmu.io.front.va, dmmu.io.front.pa, reg_exe_dtlb.io.instio.inst_out
-    )
-  }
-  when(io.dmem.req.valid && io.dmem.req.ready &&
-    (io.dmem.req.bits.addr(31, 4) === "h80e03e5".U || reg_dtlb_mem1.io.bsrio.pc_out === "hffffffff80601608".U)) {
-    printf("addr %x, type %x, wen %x, wdata %x, pc %x, inst %x, expt %x, ra %x, sp %x\n\n",
-      io.dmem.req.bits.addr, io.dmem.req.bits.memtype,
-      io.dmem.req.bits.wen, io.dmem.req.bits.data,
-      reg_dtlb_mem1.io.bsrio.pc_out, reg_dtlb_mem1.io.instio.inst_out, csr.io.expt, regs(1), regs(2)
-    )
-  }
+//  val regs = WireInit(VecInit(Seq.fill(regNum)(0.U(xlen.W))))
+//  BoringUtils.addSink(regs,    "difftestRegs")
+//  when(dmmu.io.front.valid && dmmu.io.front.is_store &&
+//    reg_dtlb_mem1.io.bsrio.pc_out === "hffffffff80601608".U) {
+//    printf("stall %x, stall_req %x, va %x, pa %x, inst %x\n",
+//      stall_exe_dtlb, stall_req_dtlb_atomic, dmmu.io.front.va, dmmu.io.front.pa, reg_exe_dtlb.io.instio.inst_out
+//    )
+//  }
+//  when(io.dmem.req.valid && io.dmem.req.ready &&
+//    (io.dmem.req.bits.addr(31, 4) === "h80e03e5".U || reg_dtlb_mem1.io.bsrio.pc_out === "hffffffff80601608".U)) {
+//    printf("addr %x, type %x, wen %x, wdata %x, pc %x, inst %x, expt %x, ra %x, sp %x\n\n",
+//      io.dmem.req.bits.addr, io.dmem.req.bits.memtype,
+//      io.dmem.req.bits.wen, io.dmem.req.bits.data,
+//      reg_dtlb_mem1.io.bsrio.pc_out, reg_dtlb_mem1.io.instio.inst_out, csr.io.expt, regs(1), regs(2)
+//    )
+//  }
 
   io.dmem.flush := false.B
   io.dmem.stall := !io.dmem.req.ready
