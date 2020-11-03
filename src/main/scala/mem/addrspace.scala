@@ -7,7 +7,11 @@ import common.projectConfig
 
 object AddressSpace extends phvntomParams with projectConfig{
   def mmio =
-    if (fpga) {
+    if (chiplink) {
+      List( // (start, size)
+        (0x40000000L, 0x7fffffffL) // MMIO
+      )
+    } else if (fpga) {
       List( // (start, size)
         (0x2000000L, 0x10000L), // CLINT
         (0xc000000L, 0x4000000L), // PLIC
