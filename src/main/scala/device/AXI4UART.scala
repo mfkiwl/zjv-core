@@ -44,5 +44,6 @@ class AXI4UART(name: String = "uart") extends AXI4Slave(new UARTIO, name) with A
 
   io.extra.get.irq := uart_sim.io.irq
 
+
 //   printf("In UART: wen = %d, waddr = %d, wdata = %d; ren = %d, raddr = %d, rdata = %d\n", uart_sim.io.wen, io.in.aw.bits.addr(2, 0), uart_sim.io.wdata, uart_sim.io.ren, io.in.ar.bits.addr(2, 0), rdata)
 }

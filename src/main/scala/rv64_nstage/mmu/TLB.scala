@@ -239,7 +239,7 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     io.in.va
   ) || !prot_check)
   io.in.af := false.B
-  io.in.stall_req := need_ptw && !io.out.resp.valid
+  io.in.stall_req := (need_ptw && !io.out.resp.valid) //|| state === s_flush
   io.in.pa := Mux(!need_translate || io.in.pf, io.in.va, final_pa)
 
   io.out.req.valid := state === s_req // || state === s_resp
@@ -269,7 +269,7 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     }
   }
 
-  when(request_satisfied) {
+  when(request_satisfied && !io.in.pf) {
     entryArray := update_meta(entryArray, access_index)
     when(!hit) {
       entryArray(victim_index).valid := true.B

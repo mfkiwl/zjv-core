@@ -7,7 +7,7 @@ SRC_DIR		:=	$(CURDIR)/src
 
 TARGET_CORE ?= rv64_nstage.core
 VSRC_DIR := $(WORK_DIR)/verilog/$(TARGET_CORE)
-N ?= 2
+N ?= 1
 
 # Test ELF 
 TEST_SRC_DIR  := $(CURDIR)/zjv-soc-test

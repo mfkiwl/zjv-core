@@ -159,7 +159,7 @@ import mem._
   immu.io.front.mxr := 0.U
   immu.io.front.mpp_s := false.B
   immu.io.front.va := pc_gen.io.pc_out
-  immu.io.front.flush_all := write_satp_flush || s_fence_flush
+  immu.io.front.flush_all := s_fence_flush
   immu.io.front.satp_val := csr.io.satp_val
   immu.io.front.current_p := csr.io.current_p
   immu.io.front.is_inst := true.B
@@ -420,7 +420,7 @@ import mem._
   dmmu.io.front.mxr := csr.io.mstatus_mxr
   dmmu.io.front.mpp_s := csr.io.is_mpp_s_mode
   dmmu.io.front.va := reg_exe_dtlb.io.aluio.alu_val_out
-  dmmu.io.front.flush_all := write_satp_flush || s_fence_flush
+  dmmu.io.front.flush_all := s_fence_flush
   dmmu.io.front.satp_val := csr.io.satp_val
   dmmu.io.front.current_p := csr.io.current_p
   dmmu.io.front.is_inst := false.B
@@ -553,22 +553,25 @@ import mem._
   reg_mem2_mem3.io.csrio.comp_res_in := reg_mem1_mem2.io.csrio.comp_res_out
   reg_mem2_mem3.io.csrio.af_in := reg_mem1_mem2.io.csrio.af_out
 
-  val regs = WireInit(VecInit(Seq.fill(regNum)(0.U(xlen.W))))
-  BoringUtils.addSink(regs,    "difftestRegs")
-  // when(GTimer() > 480000000.U && dmmu.io.front.valid && dmmu.io.front.is_store &&
-  //   reg_dtlb_mem1.io.bsrio.pc_out === "hffffffff80601608".U) {
-  //   printf("[%d] stall %x, stall_req %x, va %x, pa %x, inst %x\n", GTimer(), 
-  //     stall_exe_dtlb, stall_req_dtlb_atomic, dmmu.io.front.va, dmmu.io.front.pa, reg_exe_dtlb.io.instio.inst_out
-  //   )
-  // }
-  // when(GTimer() > 480000000.U && io.dmem.req.valid && io.dmem.req.ready &&
-  //   (io.dmem.req.bits.addr(31, 4) === "h80e03e5".U || reg_dtlb_mem1.io.bsrio.pc_out === "hffffffff80601608".U)) {
-  //   printf("[%d] addr %x, type %x, wen %x, wdata %x, pc %x, inst %x, expt %x, ra %x, sp %x\n\n", GTimer(),
-  //     io.dmem.req.bits.addr, io.dmem.req.bits.memtype,
-  //     io.dmem.req.bits.wen, io.dmem.req.bits.data,
-  //     reg_dtlb_mem1.io.bsrio.pc_out, reg_dtlb_mem1.io.instio.inst_out, csr.io.expt, regs(1), regs(2)
-  //   )
-  // }
+//  val regs = WireInit(VecInit(Seq.fill(regNum)(0.U(xlen.W))))
+//  BoringUtils.addSink(regs,    "difftestRegs")
+//  when(dmmu.io.front.valid && dmmu.io.front.is_store &&
+//    reg_dtlb_mem1.io.bsrio.pc_out === "hffffffff80601608".U) {
+//    printf("[%x] stall %x, stall_req %x, va %x, pa %x, inst %x\n",
+//      GTimer.apply(), stall_exe_dtlb, stall_req_dtlb_atomic, dmmu.io.front.va, dmmu.io.front.pa, reg_exe_dtlb.io.instio.inst_out
+//    )
+//  }
+//  when(io.dmem.req.valid && io.dmem.req.ready &&
+//    (io.dmem.req.bits.addr(31, 4) === "h80e03e5".U || reg_dtlb_mem1.io.bsrio.pc_out === "hffffffff80601608".U)) {
+//    printf("[%x] addr %x, type %x, wen %x, wdata %x, pc %x, inst %x, expt %x, ra %x, sp %x\n",
+//      GTimer.apply(), io.dmem.req.bits.addr, io.dmem.req.bits.memtype,
+//      io.dmem.req.bits.wen, io.dmem.req.bits.data,
+//      reg_dtlb_mem1.io.bsrio.pc_out, reg_dtlb_mem1.io.instio.inst_out, csr.io.expt, regs(1), regs(2)
+//    )
+//  }
+//  when(dmmu.io.front.flush_all) {
+//    printf("[%x] satp_flush, mem1_pc %x, mem1_inst %x\n", GTimer.apply(), reg_dtlb_mem1.io.bsrio.pc_out, reg_dtlb_mem1.io.instio.inst_out)
+//  }
 
   io.dmem.flush := false.B
   io.dmem.stall := !io.dmem.req.ready
