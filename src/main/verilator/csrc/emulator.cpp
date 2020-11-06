@@ -58,13 +58,13 @@ int main(int argc, char** argv)
    int int_total_cnt = 0;
    long sim_cnt = 0;
 
-//    while (!engine.is_finish()) {
-//          engine.emu_step(1);
-//    }
+   // while (!engine.is_finish()) {
+   //       engine.emu_step(1);
+   // }
 
-    while (!engine.is_finish()) {
-          engine.sim_solo();
-    }
+   //  while (!engine.is_finish()) {
+   //        engine.sim_solo();
+   //  }
 
    while (!engine.is_finish()) {
       engine.emu_step(1);
