@@ -294,12 +294,12 @@ import mem._
   feedback_target_pc := alu.io.out
   feedback_br_taken := branch_cond.io.branch || jump_flush
   when((misprediction || wrong_target)){
-    printf("misp\n")
+    // printf("misp\n")
   }.elsewhen((branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out) || (!branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out &&
     reg_id_exe.io.iiio.inst_info_out.brType.orR)){
-    printf("hit\n")
+    // printf("hit\n")
   }.elsewhen(predict_taken_but_not_br){
-    printf("backward\n")
+    // printf("backward\n")
   }
   predict_taken_but_not_br := (!reg_id_exe.io.iiio.inst_info_out.brType.orR &&
     reg_id_exe.io.iiio.inst_info_out.pcSelect =/= pcJump && reg_id_exe.io.bpio.predict_taken_out)

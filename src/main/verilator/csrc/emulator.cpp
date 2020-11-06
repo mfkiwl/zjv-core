@@ -2,6 +2,7 @@
 
 
 extern unsigned int sim_uart_irq, sim_prio, sim_ie, sim_ip, sim_thrs, sim_claim;
+extern reg_t physic_addr;
 
 int main(int argc, char** argv)
 {
@@ -146,8 +147,9 @@ int main(int argc, char** argv)
             //                  sim_prio, sim_ie, sim_ip, sim_thrs, sim_claim);
             // difftest_check_general_register();
 
+
       if((faultExitLatency || (engine.emu_get_pc() != engine.sim_get_pc()) || 
-         // (engine.emu_get_mem() && engine.emu_get_pa() != engine.sim_get_pa()) ||
+         (engine.emu_get_mem() && (engine.emu_get_pa() != physic_addr)) ||
          (engine.get_emu_state()->plicmeip != ((engine.sim_get_mip() & MIP_MEIP) != 0)) ||
 	      (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
 
