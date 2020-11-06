@@ -71,8 +71,10 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
 
     when(state === s_WB_WAIT_AWREADY) {
       io.out.aw.valid := true.B
+      io.out.w.valid := true.B
       when(io.out.aw.ready) {
         state := s_WB_WRITE
+        writeBeatCnt.inc()
       }
     }.elsewhen(state === s_WB_WRITE) {
       io.out.w.valid := true.B

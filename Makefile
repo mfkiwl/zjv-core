@@ -86,6 +86,10 @@ generate_analysis:
 	sbt "runMain $(TARGET_CORE).generate"
 	cd fpga && make clean && make generate_project
 
+generate_chiplink:
+	sbt "runMain $(TARGET_CORE).chiplink"
+	scp -P 2234 ./build/verilog/rv64_nstage.core/ZJV_SOC.v oscpu@159.226.41.100:~
+
 how_verilator_work:
 	mkdir -p $(VERILATOR_DEST_DIR)/Hello
 	verilator --cc --exe -Wall -o $(VERILATOR_DEST_DIR)/Hello/Hello -Mdir $(VERILATOR_DEST_DIR)/Hello $(VERILATOR_SRC_DIR)/Hello/Hello.v $(VERILATOR_SRC_DIR)/Hello/Hello.cpp

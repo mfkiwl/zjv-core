@@ -18,7 +18,7 @@ trait AXI4Parameters extends phvntomParams{
 
   // These are not fixed:
   val idBits = 1
-  val addrBits = xlen // PAddrBits
+  val addrBits = 32 // PAddrBits
   val dataBits = xlen // DataBits
   val userBits = 1
 
