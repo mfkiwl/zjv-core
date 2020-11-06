@@ -42,6 +42,8 @@ class DiffTestIO extends Bundle with phvntomParams {
   val plicprio = Output(UInt(32.W))
   val plicthrs = Output(UInt(32.W))
   val plicclaim = Output(UInt(32.W))
+  val alu_val  = Output(UInt(xlen.W))
+  val is_mem   = Output(Bool())
 }
 
 class TopIO extends Bundle with phvntomParams {
@@ -96,6 +98,9 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.plicprio,    "difftestplicpriority")
   BoringUtils.addSink(difftest.plicthrs,    "difftestplicthreshold")
   BoringUtils.addSink(difftest.plicclaim,   "difftestplicclaimed")
+
+  BoringUtils.addSink(difftest.alu_val, "difftestALU")
+  BoringUtils.addSink(difftest.is_mem,  "difftestMem")
 
   io.difftest := difftest
   io.poweroff := poweroff

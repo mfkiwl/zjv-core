@@ -87,6 +87,10 @@ import mem._
   val feedback_is_br = WireInit(Bool(), false.B)
   val feedback_target_pc = WireInit(UInt(xlen.W), 0.U)
   val feedback_br_taken = WireInit(Bool(), false.B)
+  val is_immu_idle = WireInit(Bool(), true.B)
+  val is_immu_idle_last = RegInit(Bool(), true.B)
+  val immu_delay_flush_signal = RegInit(Bool(), false.B)
+  val immu_flush = WireInit(Bool(), false.B)
 
   // If2 Signals
   val inst_if3 = WireInit(UInt(32.W), BUBBLE)
@@ -103,6 +107,12 @@ import mem._
   val predict_taken_but_not_br = WireInit(Bool(), false.B)
   val jump_flush = WireInit(Bool(), false.B)
   val branch_jump_flush_comb = WireInit(Bool(), false.B)
+  
+  // DTLB Signals
+  val is_dmmu_idle = WireInit(Bool(), true.B)
+  val is_dmmu_idle_last = RegInit(Bool(), true.B)
+  val dmmu_delay_flush_signal = RegInit(Bool(), false.B)
+  val dmmu_flush = WireInit(Bool(), false.B)
 
   // Mem Signals
   val mem_addr_misaligned = WireInit(Bool(), false.B)
@@ -148,7 +158,7 @@ import mem._
   bpu.io.feedback_is_br := reg_exe_dtlb.io.bjio.feedback_is_br_out
   bpu.io.feedback_target_pc := reg_exe_dtlb.io.bjio.feedback_target_pc_out
   bpu.io.feedback_br_taken := reg_exe_dtlb.io.bjio.feedback_br_taken_out
-  bpu.io.stall_update := stall_dtlb_mem1
+  bpu.io.stall_update := reg_exe_dtlb.io.bpufb_stall_update
 
   // IMMU
   inst_af := !is_legal_addr(pc_gen.io.pc_out) || immu.io.front.af // TODO
@@ -159,13 +169,22 @@ import mem._
   immu.io.front.mxr := 0.U
   immu.io.front.mpp_s := false.B
   immu.io.front.va := pc_gen.io.pc_out
-  immu.io.front.flush_all := s_fence_flush
+  immu.io.front.flush_all := immu_flush
   immu.io.front.satp_val := csr.io.satp_val
   immu.io.front.current_p := csr.io.current_p
   immu.io.front.is_inst := true.B
   immu.io.front.is_load := false.B
   immu.io.front.is_store := false.B
   io.immu <> immu.io.back.mmu
+
+  immu_flush := Mux(!is_immu_idle_last && is_immu_idle, immu_delay_flush_signal, false.B) || s_fence_flush
+  is_immu_idle_last := is_immu_idle
+  is_immu_idle := immu.io.front.is_idle
+  when(is_immu_idle_last && !is_immu_idle) {
+    immu_delay_flush_signal := s_fence_flush
+  }.elsewhen(!is_immu_idle && s_fence_flush) {
+    immu_delay_flush_signal := true.B
+  }
 
   stall_req_if1_atomic := immu.io.front.stall_req
 
@@ -271,11 +290,17 @@ import mem._
 
   feedback_pc := reg_id_exe.io.bsrio.pc_out
   feedback_xored_index := reg_id_exe.io.bpio.xored_index_out
-//  feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || jump_flush) && !scheduler.io.stall_req
   feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || jump_flush)
   feedback_target_pc := alu.io.out
   feedback_br_taken := branch_cond.io.branch || jump_flush
-
+  when((misprediction || wrong_target)){
+    printf("misp\n")
+  }.elsewhen((branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out) || (!branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out &&
+    reg_id_exe.io.iiio.inst_info_out.brType.orR)){
+    printf("hit\n")
+  }.elsewhen(predict_taken_but_not_br){
+    printf("backward\n")
+  }
   predict_taken_but_not_br := (!reg_id_exe.io.iiio.inst_info_out.brType.orR &&
     reg_id_exe.io.iiio.inst_info_out.pcSelect =/= pcJump && reg_id_exe.io.bpio.predict_taken_out)
   predict_not_but_taken := branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out
@@ -285,8 +310,6 @@ import mem._
   wrong_target := branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out && alu.io.out =/= reg_id_exe.io.bpio.target_out
   jump_flush := reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump && (!reg_id_exe.io.bpio.predict_taken_out ||
     alu.io.out =/= reg_id_exe.io.bpio.target_out)
-//  branch_jump_flush_comb := ((misprediction || wrong_target || predict_taken_but_not_br ||
-//    jump_flush) && !scheduler.io.stall_req)
   branch_jump_flush_comb := ((misprediction || wrong_target || predict_taken_but_not_br ||
     jump_flush))
   inst_addr_misaligned := alu.io.out(1) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
@@ -413,14 +436,14 @@ import mem._
 
   // DMMU
   mem_af := dmmu.io.front.af || (!is_legal_addr(reg_exe_dtlb.io.aluio.alu_val_out) &&
-    reg_exe_dtlb.io.iiio.inst_info_out.memType.orR) // TODO
+    reg_exe_dtlb.io.iiio.inst_info_out.memType.orR)
   dmmu.io.front.valid := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR // && !stall_dtlb_mem1
   dmmu.io.front.force_s_mode := csr.io.force_s_mode_mem
   dmmu.io.front.sum := csr.io.mstatus_sum
   dmmu.io.front.mxr := csr.io.mstatus_mxr
   dmmu.io.front.mpp_s := csr.io.is_mpp_s_mode
   dmmu.io.front.va := reg_exe_dtlb.io.aluio.alu_val_out
-  dmmu.io.front.flush_all := s_fence_flush
+  dmmu.io.front.flush_all := dmmu_flush
   dmmu.io.front.satp_val := csr.io.satp_val
   dmmu.io.front.current_p := csr.io.current_p
   dmmu.io.front.is_inst := false.B
@@ -431,6 +454,15 @@ import mem._
     reg_exe_dtlb.io.iiio.inst_info_out.wbEnable === wenMem) ||
     reg_exe_dtlb.io.iiio.inst_info_out.amoSelect.orR)
   io.dmmu <> dmmu.io.back.mmu
+
+  dmmu_flush := Mux(!is_dmmu_idle_last && is_dmmu_idle, dmmu_delay_flush_signal, false.B) || s_fence_flush
+  is_dmmu_idle_last := is_dmmu_idle
+  is_dmmu_idle := dmmu.io.front.is_idle
+  when(is_dmmu_idle_last && !is_dmmu_idle) {
+    dmmu_delay_flush_signal := s_fence_flush
+  }.elsewhen(!is_dmmu_idle && s_fence_flush) {
+    dmmu_delay_flush_signal := true.B
+  }
 
   stall_req_dtlb_atomic := dmmu.io.front.stall_req || multiplier.io.stall_req
 
@@ -677,6 +709,8 @@ import mem._
     val dtest_wbvalid = RegInit(Bool(), false.B)
     val dtest_expt = RegInit(false.B)
     val dtest_int = RegInit(false.B)
+    val dtest_alu = RegInit(UInt(xlen.W), "hdeadbeef".U)
+    val dtest_mem = RegInit(false.B)
     val stall_req_counters = RegInit(VecInit(Seq.fill(10)(0.U(xlen.W))))
 
     stall_req_counters(0) := stall_req_counters(0) + Mux(stall_req_if1_atomic, 1.U, 0.U)
@@ -701,6 +735,8 @@ import mem._
       )
       dtest_inst := reg_mem3_wb.io.instio.inst_out
       dtest_expt := reg_mem3_wb.io.csrio.int_resp_out
+      dtest_alu  := reg_mem3_wb.io.aluio.alu_val_out
+      dtest_mem  := reg_mem3_wb.io.iiio.inst_info_out.memType.orR
     }
     dtest_int := reg_mem3_wb.io.csrio.int_resp_out // dtest_expt & (io.int.msip | io.int.mtip)
 
@@ -709,6 +745,8 @@ import mem._
       BoringUtils.addSource(dtest_inst, "difftestInst")
       BoringUtils.addSource(dtest_wbvalid, "difftestValid")
       BoringUtils.addSource(dtest_int, "difftestInt")
+      BoringUtils.addSource(dtest_alu, "difftestALU")
+      BoringUtils.addSource(dtest_mem, "difftestMem")
     }
 
     if (pipeTrace) {

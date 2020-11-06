@@ -55,6 +55,7 @@ class MMUFrontIO(implicit val mmuConfig: MMUConfig)
   val pa = Output(UInt(xlen.W))
   val pf = Output(Bool())
   val af = Output(Bool()) // TODO PMA PMP to generate access fault
+  val is_idle = Output(Bool())
 
   override def toPrintable: Printable = p"valid = ${valid}, va = 0x${Hexadecimal(va)}, flush_all = ${flush_all}\nsatp_val=0x${Hexadecimal(satp_val)}, current_p = ${current_p}, force_s_mode=${force_s_mode}, sum=${sum}\nis_inst=${is_inst}, is_load=${is_load}, is_store=${is_store}\nstall_req=${stall_req}, pa=0x${Hexadecimal(pa)}, pf=${pf}, af=${af}"
 }
