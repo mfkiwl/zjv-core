@@ -201,6 +201,93 @@ class CrossbarNto1(n: Int) extends Module {
   // printf("--------------------------------\n")
 }
 
+class CrossbarNto1Lite(n: Int) extends Module {
+  val io = IO(new Bundle {
+    val in = Flipped(Vec(n, new AXI4Bundle))
+    val out = new AXI4Bundle
+  })
+
+  val s_idle :: s_readResp :: s_writeResp :: Nil = Enum(3)
+  val r_state = RegInit(s_idle)
+  val inputArb_r = Module(new Arbiter(new AXI4BundleAR, n))
+  (inputArb_r.io.in zip io.in.map(_.ar)).map { case (arb, in) => arb <> in }
+  val thisReq_r = inputArb_r.io.out
+  val inflightSrc_r = Reg(UInt(log2Ceil(n).W))
+
+  io.out.ar.bits := thisReq_r.bits
+  // bind correct valid and ready signals
+  io.out.ar.valid := thisReq_r.valid && (r_state === s_idle)
+  thisReq_r.ready := io.out.ar.ready && (r_state === s_idle)
+
+  io.in.map(_.r.bits := io.out.r.bits)
+  io.in.map(_.r.valid := false.B)
+  (io.in(inflightSrc_r).r, io.out.r) match {
+    case (l, r) => {
+      l.valid := r.valid
+      r.ready := l.ready
+    }
+  }
+
+  switch(r_state) {
+    is(s_idle) {
+      when(thisReq_r.fire()) {
+        inflightSrc_r := inputArb_r.io.chosen
+        r_state := s_readResp
+      }
+    }
+    is(s_readResp) {
+      when(io.out.r.fire()) { r_state := s_idle }
+    }
+  }
+
+  val w_state = RegInit(s_idle)
+  val inputArb_w = Module(new Arbiter(new AXI4BundleAW, n))
+  (inputArb_w.io.in zip io.in.map(_.aw)).map { case (arb, in) => arb <> in }
+  val thisReq_w = inputArb_w.io.out
+  val inflightSrc_w = Reg(UInt(log2Ceil(n).W))
+
+  io.out.aw.bits := thisReq_w.bits
+  // bind correct valid and ready signals
+  io.out.aw.valid := thisReq_w.valid && (w_state === s_idle)
+  thisReq_w.ready := io.out.aw.ready && (w_state === s_idle)
+
+  io.out.w.valid := io.in(inflightSrc_w).w.valid
+  io.out.w.bits := io.in(inflightSrc_w).w.bits
+  io.in.map(_.w.ready := false.B)
+  io.in(inflightSrc_w).w.ready := io.out.w.ready
+
+  io.in.map(_.b.bits := io.out.b.bits)
+  io.in.map(_.b.valid := false.B)
+  (io.in(inflightSrc_w).b, io.out.b) match {
+    case (l, r) => {
+      l.valid := r.valid
+      r.ready := l.ready
+    }
+  }
+
+  switch(w_state) {
+    is(s_idle) {
+      when(thisReq_w.fire()) {
+        inflightSrc_w := inputArb_w.io.chosen
+        w_state := s_writeResp
+      }
+    }
+    is(s_writeResp) {
+      when(io.out.b.fire()) { w_state := s_idle }
+    }
+  }
+
+  // printf(p"[${GTimer()}]: XbarNto1 Debug Start-----------\n")
+  // printf(
+  //   p"r_state=${r_state},inflightSrc_r=${inflightSrc_r},w_state=${w_state},inflightSrc_w=${inflightSrc_w}\n"
+  // )
+  // for (i <- 0 until n) {
+  //   printf(p"io.in(${i}): \n${io.in(i)}\n")
+  // }
+  // printf(p"io.out: \n${io.out}\n")
+  // printf("--------------------------------\n")
+}
+
 class AXI4Xbar(n: Int, addressSpace: List[(Long, Long)]) extends Module {
   val io = IO(new Bundle {
     val in = Flipped(Vec(n, new AXI4Bundle))

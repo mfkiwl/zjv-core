@@ -16,7 +16,7 @@ class ChiplinkIO extends Bundle with phvntomParams {
   val meip = Input(Bool())
 }
 
-class ZJV_SOC extends Module with phvntomParams {
+class ysys_zjv extends Module with phvntomParams {
   val io = IO(new ChiplinkIO)
 
   val core = Module(new Core)
@@ -33,8 +33,8 @@ class ZJV_SOC extends Module with phvntomParams {
 
   // mem path
   val icache = Module(
-    new ICacheForwardSplitSync3Stage()(
-      CacheConfig(name = "icache", readOnly = true, hasMMIO = false)
+    new ICacheForwardSplitSync3StageMMIO()(
+      CacheConfig(name = "icache", readOnly = true)
     )
   )
   val dcache = Module(new DCacheWriteThroughSplit3Stage()(CacheConfig(name = "dcache")))
@@ -53,11 +53,10 @@ class ZJV_SOC extends Module with phvntomParams {
     )
   )
   val l2cacheBus = Module(new DUncache(l2cache.lineBits, "mem uncache"))
-  for (i <- 0 until mem_source.length) {
-    mem_source(i).io.mem <> l2cache.io.in(i)
-  }
-  core.io.immu <> l2cache.io.in(2)
-  core.io.dmmu <> l2cache.io.in(3)
+  dcache.io.mem <> l2cache.io.in(0)
+  core.io.dmmu <> l2cache.io.in(1)
+  icache.io.mem <> l2cache.io.in(2)
+  core.io.immu <> l2cache.io.in(3)
   l2cache.io.mem <> l2cacheBus.io.in
   l2cacheBus.io.out <> io.mem
 
@@ -69,9 +68,14 @@ class ZJV_SOC extends Module with phvntomParams {
   core.io.int.seip := false.B
 
   // xbar
-  val mmioBus = Module(new Uncache(mname = "mmio uncache"))
-  dcache.io.mmio <> mmioBus.io.in
-  mmioBus.io.out <> io.mmio
+  val immioBus = Module(new Uncache(mname = "immio uncache"))
+  icache.io.mmio <> immioBus.io.in
+  val dmmioBus = Module(new Uncache(mname = "dmmio uncache"))
+  dcache.io.mmio <> dmmioBus.io.in
+  val mmioxbar = Module(new CrossbarNto1Lite(2))  
+  mmioxbar.io.in(0) <> dmmioBus.io.out
+  mmioxbar.io.in(1) <> immioBus.io.out
+  mmioxbar.io.out <> io.mmio
 }
 
 object chiplink {
@@ -80,7 +84,7 @@ object chiplink {
 
     (new chisel3.stage.ChiselStage).execute(
       Array("-td", "build/verilog/" + packageName, "-X", "verilog"),
-      Seq(ChiselGeneratorAnnotation(() => new ZJV_SOC))
+      Seq(ChiselGeneratorAnnotation(() => new ysys_zjv))
     )
   }
 }

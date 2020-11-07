@@ -9,7 +9,7 @@ object AddressSpace extends phvntomParams with projectConfig{
   def mmio =
     if (chiplink) {
       List( // (start, size)
-        (0x40000000L, 0x7fffffffL) // MMIO
+        (0x40000000L, 0x40000000L) // MMIO
       )
     } else if (fpga) {
       List( // (start, size)

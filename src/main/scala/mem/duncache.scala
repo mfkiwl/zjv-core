@@ -71,10 +71,10 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
 
     when(state === s_WB_WAIT_AWREADY) {
       io.out.aw.valid := true.B
-      io.out.w.valid := true.B
+      // io.out.w.valid := true.B
       when(io.out.aw.ready) {
         state := s_WB_WRITE
-        writeBeatCnt.inc()
+        // writeBeatCnt.inc()
       }
     }.elsewhen(state === s_WB_WRITE) {
       io.out.w.valid := true.B
@@ -93,13 +93,13 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
       }
     }
   }.otherwise {
+    io.out.ar.bits.addr := io.in.req.bits.addr
     io.out.ar.bits.len := (burst_length - 1).U // len - 1
     io.out.ar.bits.size := "b011".U // 8 bytes
     io.out.ar.bits.burst := BURST_INCR
     io.out.ar.valid := false.B
     when(state === s_WAIT_AXI_READY) {
-      io.out.ar.valid := true.B
-      io.out.ar.bits.addr := io.in.req.bits.addr
+      io.out.ar.valid := true.B      
       when(io.out.ar.ready) {
         state := s_RECEIVING
       }

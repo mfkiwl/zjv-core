@@ -158,7 +158,7 @@ class DCacheSplit3Stsge(implicit val cacheConfig: CacheConfig)
         state := Mux(
           ismmio,
           s_mmioReq,
-          Mux(cacheline_meta.dirty, s_memWriteReq, s_memReadReq)
+          Mux(cacheline_meta.valid && cacheline_meta.dirty, s_memWriteReq, s_memReadReq)
         )
       }
     }

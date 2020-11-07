@@ -88,7 +88,8 @@ generate_analysis:
 
 generate_chiplink:
 	sbt "runMain $(TARGET_CORE).chiplink"
-	scp -P 2234 ./build/verilog/rv64_nstage.core/ZJV_SOC.v oscpu@159.226.41.100:~
+	sed -i '1 i\`define RANDOMIZE_DELAY 0' ./build/verilog/rv64_nstage.core/ysys_zjv.v
+	cp ./build/verilog/rv64_nstage.core/ysys_zjv.v /mnt/c/Users/zhxj9823/Downloads/
 
 how_verilator_work:
 	mkdir -p $(VERILATOR_DEST_DIR)/Hello

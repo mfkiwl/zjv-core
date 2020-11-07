@@ -600,7 +600,7 @@ import mem._
   )
   io.dmem.resp.ready := true.B
 
-  stall_req_mem3_atomic := !io.dmem.req.ready || amo_arbiter.io.stall_req
+  stall_req_mem3_atomic := !io.dmem.req.ready || amo_arbiter.io.stall_req || !io.dmem.flush_ready
 
   amo_arbiter.io.exception_or_int := reg_mem2_mem3.io.csrio.expt_out
   amo_arbiter.io.amo_op := reg_mem2_mem3.io.iiio.inst_info_out.amoSelect

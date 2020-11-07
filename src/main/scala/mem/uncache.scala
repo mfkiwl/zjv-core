@@ -96,9 +96,8 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
 
     when(state === s_WB_WAIT_AWREADY) {
       io.out.aw.valid := true.B
-      io.out.w.valid := true.B
       when(io.out.aw.ready) {
-        state := s_WB_WAIT_BVALID // s_WB_WRITE
+        state := s_WB_WRITE
       }
     }.elsewhen(state === s_WB_WRITE) {
       io.out.w.valid := true.B
@@ -114,22 +113,22 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
       }
     }
   }.otherwise {
+    io.out.ar.bits.addr := io.in.req.bits.addr
     io.out.ar.bits.len := 0.U // one word
     io.out.ar.bits.size := "b011".U // 8 bytes
     io.out.ar.bits.burst := BURST_INCR
     io.out.ar.valid := false.B
     when(state === s_WAIT_AXI_READY) {
       io.out.ar.valid := true.B
-      io.out.ar.bits.addr := io.in.req.bits.addr
       when(io.out.ar.ready) {
         state := s_RECEIVING
       }
     }.elsewhen(state === s_RECEIVING) {
       when(io.out.r.valid) {
         io.out.r.ready := true.B
-        when(io.out.r.bits.last) {
+        // when(io.out.r.bits.last) {
           state := s_FINISH
-        }
+        // }
       }
     }.elsewhen(state === s_REFILL) {
       state := s_FINISH

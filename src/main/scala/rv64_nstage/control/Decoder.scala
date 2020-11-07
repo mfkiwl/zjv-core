@@ -11,7 +11,7 @@ object ControlConst {
   val True  = true.B
   val False = false.B
 
-  val startAddr = "h80000000".U
+  val startAddr = if(false) {"h40000000".U} else {"h80000000".U}
 
   // io.pcSelect
   val pcPlus4  = 0.U(2.W)
