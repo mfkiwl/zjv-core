@@ -346,6 +346,7 @@ import chisel3.experimental.chiselName
   val aluio = Flipped(Flipped(new ExeInfoIO))
   val bjio = Flipped(Flipped(new BrJumpDelayIO))
   val mdio = Flipped(Flipped(new MultDivIO))
+  val bpufb_stall_update = Output(Bool())
 }
 
 @chiselName class RegExeDTLB extends Module with phvntomParams {
@@ -373,6 +374,7 @@ import chisel3.experimental.chiselName
   val feedback_br_taken = RegInit(Bool(), false.B)
   val rs1_after_fwd = RegInit(UInt(xlen.W), 0.U)
   val rs2_after_fwd = RegInit(UInt(xlen.W), 0.U)
+  val bpufb_stall_update = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -406,6 +408,7 @@ import chisel3.experimental.chiselName
       feedback_br_taken := false.B
       rs1_after_fwd := 0.U
       rs2_after_fwd := 0.U
+      bpufb_stall_update := true.B
     }.otherwise {
       pc := io.bsrio.pc_in
       bubble := false.B
@@ -425,6 +428,7 @@ import chisel3.experimental.chiselName
       feedback_br_taken := io.bjio.feedback_br_taken_in
       rs1_after_fwd := io.mdio.rs1_after_fwd_in
       rs2_after_fwd := io.mdio.rs2_after_fwd_in
+      bpufb_stall_update := false.B
     }
   }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
     pc := 0.U
@@ -445,6 +449,10 @@ import chisel3.experimental.chiselName
     feedback_br_taken := false.B
     rs1_after_fwd := 0.U
     rs2_after_fwd := 0.U
+    bpufb_stall_update := true.B
+  }.elsewhen(io.bsrio.flush_one) {
+    bpufb_stall_update := true.B
+    branch_jump_flush := false.B
   }
 
   io.bsrio.bubble_out := bubble
@@ -465,6 +473,7 @@ import chisel3.experimental.chiselName
   io.bjio.feedback_br_taken_out := feedback_br_taken
   io.mdio.rs1_after_fwd_out := rs1_after_fwd
   io.mdio.rs2_after_fwd_out := rs2_after_fwd
+  io.bpufb_stall_update := bpufb_stall_update
 }
 
 @chiselName class RegDTLBMem1IO extends Bundle with phvntomParams {

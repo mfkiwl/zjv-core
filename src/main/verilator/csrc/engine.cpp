@@ -189,7 +189,8 @@ void dtengine_t::emu_update_state() {
     emu_state->plicthrs  = zjv->io_difftest_plicthrs;
     emu_state->plicclaim = zjv->io_difftest_plicclaim;
 
-
+    emu_state->mem       = zjv->io_difftest_is_mem;
+    emu_state->pa        = zjv->io_difftest_alu_val;
 }
 
 void dtengine_t::sim_update_state() {
@@ -221,6 +222,9 @@ void dtengine_t::sim_update_state() {
     sim_state->mie     = s->mie;
     sim_state->sip     = s->mip & ~(MIP_MSIP | MIP_MTIP | MIP_MEIP);
     sim_state->sie     = s->mie & ~(MIP_MSIP | MIP_MTIP | MIP_MEIP);
+
+    // sim_state->is_mem  = false;     // DontCare
+    // sim_state->pa      = spike->get_mmu()
 }
 
 unsigned long dtengine_t::emu_difftest_valid() {
