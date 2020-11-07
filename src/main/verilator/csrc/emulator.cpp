@@ -2,6 +2,7 @@
 
 
 extern unsigned int sim_uart_irq, sim_prio, sim_ie, sim_ip, sim_thrs, sim_claim;
+extern reg_t physic_addr;
 
 int main(int argc, char** argv)
 {
@@ -146,11 +147,11 @@ int main(int argc, char** argv)
             //                  sim_prio, sim_ie, sim_ip, sim_thrs, sim_claim);
             // difftest_check_general_register();
 
+
       if((faultExitLatency || (engine.emu_get_pc() != engine.sim_get_pc()) || 
-         // (engine.emu_get_mem() && engine.emu_get_pa() != engine.sim_get_pa()) ||
+         (engine.emu_get_mem() && (engine.emu_get_pa() != physic_addr)) ||
          (engine.get_emu_state()->plicmeip != ((engine.sim_get_mip() & MIP_MEIP) != 0)) ||
 	      (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
-
             faultExitLatency++;
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
 
@@ -164,7 +165,7 @@ int main(int argc, char** argv)
             difftest_check_point(sstatus);   difftest_check_point(sepc, "\n");
             difftest_check_point(stval);     difftest_check_point(scause);          difftest_check_point(stvec, "\n");
             difftest_check_point(mip);       difftest_check_point(sip, "\n");
-            // difftest_check_point(pa, "\n");
+            fprintf(stderr, "emu: pa 0x%016lX, sim: pa 0x%016lX\n", engine.emu_get_pa(), physic_addr);
             fprintf(stderr, "emu: uart %d plic0 %d plic1 %d prio %x ie %x ip %x thrs %x claim %x\n", 
                              engine.get_emu_state()->uartirq, engine.get_emu_state()->plicmeip, engine.get_emu_state()->plicseip,
                              engine.get_emu_state()->plicprio, engine.get_emu_state()->plicie, engine.get_emu_state()->plicip, engine.get_emu_state()->plicthrs, engine.get_emu_state()->plicclaim);

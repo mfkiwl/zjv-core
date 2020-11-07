@@ -310,6 +310,7 @@ import mem._
   //     reg_exe_dtlb.io.bjio.feedback_target_pc_out
   //   )
   // }
+
   predict_taken_but_not_br := (!reg_id_exe.io.iiio.inst_info_out.brType.orR &&
     reg_id_exe.io.iiio.inst_info_out.pcSelect =/= pcJump && reg_id_exe.io.bpio.predict_taken_out)
   predict_not_but_taken := branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out
@@ -547,11 +548,11 @@ import mem._
 
   expt_int_flush := csr.io.expt
   error_ret_flush := csr.io.ret
-  write_satp_flush := csr.io.write_satp
+  write_satp_flush := csr.io.write_satp || csr.io.write_status
   i_fence_flush := (reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushI ||
     reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushAll) && !expt_int_flush
   s_fence_flush := (reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushAll ||
-    reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushTLB) && !expt_int_flush
+    reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushTLB || csr.io.write_satp) && !expt_int_flush
 
   // TODO af is ONLY for Difftest
   // REG MEM1 MEM2
@@ -745,7 +746,8 @@ import mem._
       dtest_inst := reg_mem3_wb.io.instio.inst_out
       dtest_expt := reg_mem3_wb.io.csrio.int_resp_out
       dtest_alu  := reg_mem3_wb.io.aluio.alu_val_out
-      dtest_mem  := reg_mem3_wb.io.iiio.inst_info_out.memType.orR
+      dtest_mem  := (reg_mem3_wb.io.iiio.inst_info_out.memType.orR && !reg_mem3_wb.io.csrio.expt_out &&
+        reg_mem3_wb.io.iiio.inst_info_out.wbEnable =/= wenRes && reg_mem3_wb.io.iiio.inst_info_out.wbSelect =/= wbCond)
     }
     dtest_int := reg_mem3_wb.io.csrio.int_resp_out // dtest_expt & (io.int.msip | io.int.mtip)
 

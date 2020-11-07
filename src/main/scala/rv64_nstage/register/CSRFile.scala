@@ -278,6 +278,7 @@ object Interrupt {
   val tvec_out = Output(UInt(xlen.W))
   val epc_out = Output(UInt(xlen.W))
   val write_satp = Output(Bool())
+  val write_status = Output(Bool())
   val satp_val = Output(UInt(xlen.W))
   val current_p = Output(UInt(2.W))
   val force_s_mode_mem = Output(Bool())
@@ -1133,7 +1134,9 @@ object Interrupt {
     }
   }
 
-  io.write_satp := (((io.which_reg === CSR.satp || io.which_reg === CSR.mstatus || io.which_reg === CSR.sstatus) &&
+  io.write_satp := ((io.which_reg === CSR.satp &&
+    (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
+  io.write_status := (((io.which_reg === CSR.mstatus || io.which_reg === CSR.sstatus) &&
     (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
   io.satp_val := satpr
   io.current_p := current_p
@@ -1190,6 +1193,7 @@ object Interrupt {
   val int = Output(Bool())
   val ret = Output(Bool())
   val write_satp = Output(Bool())
+  val write_status = Output(Bool())
   val evec = Output(UInt(xlen.W))
   val epc = Output(UInt(xlen.W))
   val pc_plus = Output(UInt(xlen.W))
@@ -1251,6 +1255,7 @@ object Interrupt {
   io.ret := csr_regfile.io.is_ret_out
   io.stall_req := false.B
   io.write_satp := csr_regfile.io.write_satp
+  io.write_status := csr_regfile.io.write_status
   io.pc_plus := io.pc + 4.U(3.W)
   io.satp_val := csr_regfile.io.satp_val
   io.current_p := csr_regfile.io.current_p
