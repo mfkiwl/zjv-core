@@ -51,11 +51,13 @@ class Tile extends Module with phvntomParams {
     // icache.io.mem <> l2cache.io.in(0)
     // dcache_wb.io.readChannel <> l2cache.io.in(1)
     // dcache_wb.io.writeChannel <> l2cache.io.in(2)
-    for (i <- 0 until mem_source.length) {
-      mem_source(i).io.mem <> l2cache.io.in(i)
-    }
-    core.io.immu <> l2cache.io.in(2)
-    core.io.dmmu <> l2cache.io.in(3)
+    // for (i <- 0 until mem_source.length) {
+    //   mem_source(i).io.mem <> l2cache.io.in(i)
+    // }
+    dcache.io.mem <> l2cache.io.in(0)
+    core.io.dmmu <> l2cache.io.in(1)
+    icache.io.mem <> l2cache.io.in(2)
+    core.io.immu <> l2cache.io.in(3)    
     l2cache.io.mem <> l2cacheBus.io.in
     l2cacheBus.io.out <> memxbar.io.in(0)
     memxbar.io.out <> mem.io.in

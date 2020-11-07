@@ -163,7 +163,7 @@ import mem._
   // IMMU
   inst_af := !is_legal_addr(pc_gen.io.pc_out) || immu.io.front.af // TODO
   inst_pf := immu.io.front.pf
-  immu.io.front.valid := true.B // !stall_if1_if2
+  immu.io.front.valid := !bpu.io.stall_req
   immu.io.front.force_s_mode := false.B
   immu.io.front.sum := 0.U
   immu.io.front.mxr := 0.U
@@ -186,7 +186,7 @@ import mem._
     immu_delay_flush_signal := true.B
   }
 
-  stall_req_if1_atomic := immu.io.front.stall_req
+  stall_req_if1_atomic := immu.io.front.stall_req || bpu.io.stall_req
 
   reg_if1_if2.io.bsrio.stall := stall_if1_if2
   reg_if1_if2.io.bsrio.flush_one := (br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush ||
@@ -290,17 +290,26 @@ import mem._
 
   feedback_pc := reg_id_exe.io.bsrio.pc_out
   feedback_xored_index := reg_id_exe.io.bpio.xored_index_out
-  feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || jump_flush)
+  feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump)
   feedback_target_pc := alu.io.out
-  feedback_br_taken := branch_cond.io.branch || jump_flush
-  when((misprediction || wrong_target)){
-    printf("misp\n")
-  }.elsewhen((branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out) || (!branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out &&
-    reg_id_exe.io.iiio.inst_info_out.brType.orR)){
-    printf("hit\n")
-  }.elsewhen(predict_taken_but_not_br){
-    printf("backward\n")
-  }
+  feedback_br_taken := branch_cond.io.branch || reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump
+  // when((misprediction || wrong_target)){
+  //   printf("misp ntbt %x, tkbnt %x, wt %x, pc %x, stall %x\n", predict_not_but_taken, predict_taken_but_not, wrong_target, reg_id_exe.io.bsrio.pc_out,
+  //   stall_id_exe)
+  // }.elsewhen((branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out) || (!branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out &&
+  //   reg_id_exe.io.iiio.inst_info_out.brType.orR)){
+  //   printf("hit\n")
+  // }.elsewhen(predict_taken_but_not_br){
+  //   printf("backward\n")
+  // }
+  // when(!reg_exe_dtlb.io.bpufb_stall_update) {
+  //     printf("GB fbpc %x, fbbr %x, fbtk %x, fbtar %x\n",
+  //     reg_exe_dtlb.io.bjio.feedback_pc_out,
+  //     reg_exe_dtlb.io.bjio.feedback_is_br_out,
+  //     reg_exe_dtlb.io.bjio.feedback_br_taken_out,
+  //     reg_exe_dtlb.io.bjio.feedback_target_pc_out
+  //   )
+  // }
   predict_taken_but_not_br := (!reg_id_exe.io.iiio.inst_info_out.brType.orR &&
     reg_id_exe.io.iiio.inst_info_out.pcSelect =/= pcJump && reg_id_exe.io.bpio.predict_taken_out)
   predict_not_but_taken := branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out
@@ -437,7 +446,7 @@ import mem._
   // DMMU
   mem_af := dmmu.io.front.af || (!is_legal_addr(reg_exe_dtlb.io.aluio.alu_val_out) &&
     reg_exe_dtlb.io.iiio.inst_info_out.memType.orR)
-  dmmu.io.front.valid := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR // && !stall_dtlb_mem1
+  dmmu.io.front.valid := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR
   dmmu.io.front.force_s_mode := csr.io.force_s_mode_mem
   dmmu.io.front.sum := csr.io.mstatus_sum
   dmmu.io.front.mxr := csr.io.mstatus_mxr
@@ -749,6 +758,10 @@ import mem._
       BoringUtils.addSource(dtest_mem, "difftestMem")
     }
 
+//    printf("REG IF1 IF2 pc %x, tar %x\n", reg_if1_if2.io.bsrio.pc_in, reg_if1_if2.io.bpio.target_in)
+//    printf("WT wrong target %x, is_br %x, predict_tk %x, alu %x, sup_tar %x\n",
+//      wrong_target, branch_cond.io.branch, reg_id_exe.io.bpio.predict_taken_out, alu.io.out, reg_id_exe.io.bpio.target_out)
+
     if (pipeTrace) {
       if (vscode) {
         printf("\t\tIF1\t\tIF2\t\tIF3\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n")
@@ -929,10 +942,13 @@ import mem._
           reg_mem2_mem3.io.bsrio.bubble_out,
           reg_mem3_wb.io.bsrio.bubble_out
         )
-        printf("PC to dmem %x, Valid to dmem %x, Wen to dmem %x, PA to dmem %x, dmem PC out %x, dmem Data out %x\n",
+        printf("VA To DMMU %x, VA valid %x, brj_flush %x, PA %x\n", 
+        dmmu.io.front.va, dmmu.io.front.valid, br_jump_flush, dmmu.io.front.pa)
+        printf("PC to dmem %x, Valid to dmem %x, Wen to dmem %x, Wdata to dmem %x, PA to dmem %x, dmem PC out %x, dmem Data out %x\n",
         reg_dtlb_mem1.io.bsrio.pc_out,
         io.dmem.req.valid,
         io.dmem.req.bits.wen,
+        io.dmem.req.bits.data,
         io.dmem.req.bits.addr,
         reg_mem2_mem3.io.bsrio.pc_out,
         io.dmem.resp.bits.data)
