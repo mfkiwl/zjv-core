@@ -61,9 +61,6 @@ class ysys_zjv extends Module with phvntomParams {
   l2cacheBus.io.out <> io.mem
 
   // mmio path
-  core.io.int.msip := false.B
-  core.io.int.mtip := false.B
-
   core.io.int.meip := io.meip
   core.io.int.seip := false.B
 
@@ -72,10 +69,21 @@ class ysys_zjv extends Module with phvntomParams {
   icache.io.mmio <> immioBus.io.in
   val dmmioBus = Module(new Uncache(mname = "dmmio uncache"))
   dcache.io.mmio <> dmmioBus.io.in
-  val mmioxbar = Module(new CrossbarNto1Lite(2))  
-  mmioxbar.io.in(0) <> dmmioBus.io.out
-  mmioxbar.io.in(1) <> immioBus.io.out
-  mmioxbar.io.out <> io.mmio
+  val mmioxbar_internal = Module(new CrossbarNto1Lite(2))  
+  mmioxbar_internal.io.in(0) <> dmmioBus.io.out
+  mmioxbar_internal.io.in(1) <> immioBus.io.out
+
+  // clint
+  val clint = Module(new Clint)
+  val mtipSync = clint.io.extra.get.mtip
+  val msipSync = clint.io.extra.get.msip
+  core.io.int.msip := msipSync
+  core.io.int.mtip := mtipSync
+
+  val mmioxbar_external = Module(new Crossbar1toNLite(AddressSpace.mmio))
+  mmioxbar_internal.io.out <> mmioxbar_external.io.in
+  mmioxbar_external.io.out(0) <> io.mmio
+  mmioxbar_external.io.out(1) <> clint.io.in
 }
 
 object chiplink {
