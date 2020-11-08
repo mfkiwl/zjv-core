@@ -90,12 +90,13 @@ class BTBIO extends Bundle with phvntomParams {
 class BTB extends Module with phvntomParams {
   val io = IO(new BTBIO)
 
-  val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(xlen.W))
+  val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(39.W))
+  val read_data = btb_entries.read(io.index_in, true.B)
 
-  io.target_out := btb_entries.read(io.index_in, true.B)
+  io.target_out := Cat(Fill(xlen - 39, read_data(38)), read_data)
 
   when(io.update_valid) {
-    btb_entries.write(io.update_index, io.update_target)
+    btb_entries.write(io.update_index, io.update_target(38, 0))
   }
 
   // val btb_entries = RegInit(VecInit(Seq.fill(1 << bpuEntryBits)("h80000000".U)))

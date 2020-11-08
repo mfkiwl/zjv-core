@@ -239,7 +239,8 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     io.in.va
   ) || !prot_check)
   io.in.af := false.B
-  io.in.stall_req := (need_ptw && !io.out.resp.valid) || state === s_flush
+  io.in.stall_req := ((need_ptw || state =/= s_idle) && !(state === s_resp && io.out.resp.valid))
+  // io.in.stall_req := (need_ptw && !io.out.resp.valid) || state === s_flush
   io.in.pa := Mux(!need_translate || io.in.pf, io.in.va, final_pa)
   io.in.is_idle := state === s_idle
 
