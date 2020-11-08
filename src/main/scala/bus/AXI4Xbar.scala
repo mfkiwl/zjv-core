@@ -201,6 +201,115 @@ class CrossbarNto1(n: Int) extends Module {
   // printf("--------------------------------\n")
 }
 
+class Crossbar1toNLite(addressSpace: List[(Long, Long)]) extends Module {
+  val io = IO(new Bundle {
+    val in = Flipped(new AXI4Bundle)
+    val out = Vec(addressSpace.length, new AXI4Bundle)
+  })
+
+  val s_idle :: s_resp :: s_error :: Nil = Enum(3)
+  val r_state = RegInit(s_idle)
+  val w_state = RegInit(s_idle)
+
+  // read channel
+  // select the output channel according to the address
+  val raddr = io.in.ar.bits.addr
+  val routSelVec = VecInit(
+    addressSpace.map(range =>
+      (raddr >= range._1.U && raddr < (range._1 + range._2).U)
+    )
+  )
+  val routSelIdx = PriorityEncoder(routSelVec)
+  val routSel = io.out(routSelIdx)
+  val routSelIdxResp =
+    RegEnable(routSelIdx, routSel.ar.fire() && (r_state === s_idle))
+  val routSelResp = io.out(routSelIdxResp)
+  val rreqInvalidAddr = io.in.ar.valid && !routSelVec.asUInt.orR
+
+  // bind out.req channel
+  (io.out zip routSelVec).map {
+    case (o, v) => {
+      o.ar.bits := io.in.ar.bits
+      o.ar.valid := v && (io.in.ar.valid && (r_state === s_idle))
+      o.r.ready := v
+    }
+  }
+  for (i <- 0 until addressSpace.length) {
+    when(routSelIdx === i.U && routSelIdx =/= 0.U) { // minus base addr
+      io.out(i).ar.bits.addr := io.in.ar.bits.addr - addressSpace(i)._1.U
+    }
+  }
+
+  switch(r_state) {
+    is(s_idle) {
+      when(routSel.ar.fire()) { r_state := s_resp }
+      when(rreqInvalidAddr) { r_state := s_error }
+    }
+    is(s_resp) { when(routSelResp.r.fire()) { r_state := s_idle } }
+    is(s_error) { when(io.in.r.fire()) { r_state := s_idle } }
+  }
+
+  io.in.r.valid := routSelResp.r.valid || r_state === s_error
+  io.in.r.bits <> routSelResp.r.bits
+  // io.in.resp.bits.exc.get := r_state === s_error
+  routSelResp.r.ready := io.in.r.ready
+  io.in.ar.ready := (routSel.ar.ready && r_state === s_idle) || rreqInvalidAddr
+
+  // write channel
+  // select the output channel according to the address
+  val waddr = io.in.aw.bits.addr
+  val woutSelVec = VecInit(
+    addressSpace.map(range =>
+      (waddr >= range._1.U && waddr < (range._1 + range._2).U)
+    )
+  )
+  val woutSelIdx = PriorityEncoder(woutSelVec)
+  val woutSel = io.out(woutSelIdx)
+  val woutSelIdxResp =
+    RegEnable(woutSelIdx, woutSel.aw.fire() && (w_state === s_idle))
+  val woutSelResp = io.out(woutSelIdxResp)
+  val wreqInvalidAddr = io.in.aw.valid && !woutSelVec.asUInt.orR
+
+  // bind out.req channel
+  (io.out zip woutSelVec).map {
+    case (o, v) => {
+      o.aw.bits := io.in.aw.bits
+      o.aw.valid := v && (io.in.aw.valid && (w_state === s_idle))
+      o.w.bits := io.in.w.bits
+      o.w.valid := v && io.in.w.valid
+      o.b.ready := v
+    }
+  }
+  for (i <- 0 until addressSpace.length) {
+    when(woutSelIdx === i.U && woutSelIdx =/= 0.U) { // minus base addr
+      io.out(i).aw.bits.addr := io.in.aw.bits.addr - addressSpace(i)._1.U
+    }
+  }
+
+  switch(w_state) {
+    is(s_idle) {
+      when(woutSel.aw.fire()) { w_state := s_resp }
+      when(wreqInvalidAddr) { w_state := s_error }
+    }
+    is(s_resp) { when(woutSelResp.b.fire()) { w_state := s_idle } }
+    is(s_error) { when(io.in.b.fire()) { w_state := s_idle } }
+  }
+
+  io.in.b.valid := woutSelResp.b.valid || w_state === s_error
+  io.in.b.bits <> woutSelResp.b.bits
+  // io.in.resp.bits.exc.get := w_state === s_error
+  woutSelResp.b.ready := io.in.b.ready
+  io.in.aw.ready := (woutSel.aw.ready && w_state === s_idle) || wreqInvalidAddr
+  io.in.w.ready := woutSel.w.ready
+
+  // printf(p"[${GTimer()}]: Xbar1toN Debug Start-----------\n")
+  // printf(p"r_state = ${r_state}, routSelVec = ${routSelVec}, routSelIdx = ${routSelIdx}, rreqInvalidAddr = ${rreqInvalidAddr}\n")
+  // printf(p"routSel: \n${woutSel}\n")
+  // printf("--------------------------------------------------------\n")
+  // printf(p"w_state = ${w_state}, woutSelVec = ${woutSelVec}, woutSelIdx = ${woutSelIdx}, wreqInvalidAddr = ${wreqInvalidAddr}\n")
+  // printf(p"woutSel: \n${woutSel}\n")
+  // printf("-----------Xbar1toN Debug Done-----------\n")
+}
 class CrossbarNto1Lite(n: Int) extends Module {
   val io = IO(new Bundle {
     val in = Flipped(Vec(n, new AXI4Bundle))
