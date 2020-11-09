@@ -2,8 +2,8 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
-import rv64_3stage.ControlConst._
+import rv64_nstage.core._
+import rv64_nstage.control.ControlConst._
 import bus._
 import device._
 import utils._
@@ -106,7 +106,7 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
   val flush_counter = Counter(nSets)
   val flush_finish = flush_counter.value === (nSets - 1).U
 
-  val s_idle :: s_memReadReq :: s_memReadResp :: s_memWriteReq :: s_memWriteResp:: s_flush :: Nil =
+  val s_idle :: s_memReadReq :: s_memReadResp :: s_memWriteReq :: s_memWriteResp :: s_flush :: Nil =
     Enum(6)
   val state = RegInit(s_idle)
   val read_address = Cat(s3_tag, s3_index, 0.U(offsetLength.W))
@@ -138,7 +138,11 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
       when(reset.asBool) {
         state := s_flush
       }.elsewhen(!s3_hit && s3_valid) {
-        state := Mux(cacheline_meta.valid && cacheline_meta.dirty, s_memWriteReq, s_memReadReq)
+        state := Mux(
+          cacheline_meta.valid && cacheline_meta.dirty,
+          s_memWriteReq,
+          s_memReadReq
+        )
       }
     }
     is(s_memReadReq) { when(io.mem.req.fire()) { state := s_memReadResp } }

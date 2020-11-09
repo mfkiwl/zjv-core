@@ -2,8 +2,8 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
-import rv64_3stage.ControlConst._
+import rv64_nstage.core._
+import rv64_nstage.control.ControlConst._
 import bus._
 import device._
 import utils._
@@ -130,9 +130,17 @@ class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
   stall := s3_valid && !request_satisfied && state =/= s_finish // wait for data
   val external_stall = io.in.stall && !stall
   val hold_assert = external_stall && request_satisfied
-  need_forward := HoldCond(hazard && mem_request_satisfied, hold_assert, state === s_finish)
+  need_forward := HoldCond(
+    hazard && mem_request_satisfied,
+    hold_assert,
+    state === s_finish
+  )
 
-  io.in.resp.valid := HoldCond(s3_valid && request_satisfied, hold_assert, state === s_finish)
+  io.in.resp.valid := HoldCond(
+    s3_valid && request_satisfied,
+    hold_assert,
+    state === s_finish
+  )
   io.in.resp.bits.data := HoldCond(result, hold_assert, state === s_finish)
   io.in.req.ready := !stall
   io.in.flush_ready := state =/= s_flush || (state === s_flush && flush_finish)

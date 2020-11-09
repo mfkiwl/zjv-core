@@ -333,7 +333,7 @@ class Crossbar1toNLite(addressSpace: List[(Long, Long)])
   //   p"w_state = ${w_state}, woutSelVec = ${woutSelVec}, woutSelIdx = ${woutSelIdx}, woutSelIdxResp=${woutSelIdxResp}, wreqInvalidAddr = ${wreqInvalidAddr}\n"
   // )
   // printf(p"woutSel: \n${woutSel}\n")
-  // printf("-----------Xbar1toN Debug Done-----------\n")
+  // printf("-----------Xbar1toNLite Debug Done-----------\n")
 }
 class CrossbarNto1Lite(n: Int) extends Module with projectConfig {
   val io = IO(new Bundle {
@@ -349,7 +349,7 @@ class CrossbarNto1Lite(n: Int) extends Module with projectConfig {
   val inflightSrc_r = Reg(UInt(log2Ceil(n).W))
 
   io.out.ar.bits := Mux(
-    r_state === s_idle,    
+    r_state === s_idle,
     thisReq_r.bits,
     io.in(inflightSrc_r).ar.bits
   )
@@ -419,7 +419,7 @@ class CrossbarNto1Lite(n: Int) extends Module with projectConfig {
     }
   }
 
-  // printf(p"[${GTimer()}]: XbarNto1 Debug Start-----------\n")
+  // printf(p"[${GTimer()}]: XbarNto1Lite Debug Start-----------\n")
   // printf(
   //   p"r_state=${r_state},inflightSrc_r=${inflightSrc_r},w_state=${w_state},inflightSrc_w=${inflightSrc_w}\n"
   // )

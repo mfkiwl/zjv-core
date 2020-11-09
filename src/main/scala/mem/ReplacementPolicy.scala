@@ -3,7 +3,6 @@ package mem
 import chisel3._
 import chisel3.util._
 import chisel3.util.random.LFSR
-import rv64_3stage._
 
 abstract class ReplacementPolicyBase {
   def choose_victim(array: Vec[MetaData]): UInt

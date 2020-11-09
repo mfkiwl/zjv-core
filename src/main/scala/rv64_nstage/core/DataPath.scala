@@ -4,7 +4,6 @@ import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
 import chisel3.experimental.chiselName
-import common.Str
 import device.MemIO
 import rv64_nstage.control._
 import rv64_nstage.control.ControlConst._

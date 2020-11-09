@@ -2,17 +2,16 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
+import rv64_nstage.core._
+import rv64_nstage.control.ControlConst._
 import bus._
 import device._
 import utils._
-import ControlConst._
 import scala.annotation.switch
 
 class UncacheIO(val dataWidth: Int = 64) extends Bundle with phvntomParams {
   val in = new MemIO(dataWidth)
   val out = new AXI4Bundle
-  // val offset = Output(UInt(xlen.W))
 }
 
 // serve as a simple convertor from MemIO to AXI4 interface
@@ -129,7 +128,7 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
         io.out.r.ready := true.B
         io.in.resp.valid := true.B
         // when(io.out.r.bits.last) {
-          state := s_FINISH
+        state := s_FINISH
         // }
       }
     }.elsewhen(state === s_REFILL) {

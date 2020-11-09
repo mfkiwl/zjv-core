@@ -2,8 +2,8 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
-import rv64_3stage.ControlConst._
+import rv64_nstage.core._
+import rv64_nstage.control.ControlConst._
 import bus._
 import device._
 import utils._
@@ -62,7 +62,7 @@ class DCacheSplit3Stsge(implicit val cacheConfig: CacheConfig)
     array_cacheline(i) := dataArray(i).read(read_index, true.B)
   }
   s2_meta := Mux(need_forward, write_meta, array_meta)
-  s2_cacheline :=  Mux(need_forward, write_data, array_cacheline)
+  s2_cacheline := Mux(need_forward, write_data, array_cacheline)
   s2_index := s2_addr(indexLength + offsetLength - 1, offsetLength)
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
 
@@ -158,7 +158,11 @@ class DCacheSplit3Stsge(implicit val cacheConfig: CacheConfig)
         state := Mux(
           ismmio,
           s_mmioReq,
-          Mux(cacheline_meta.valid && cacheline_meta.dirty, s_memWriteReq, s_memReadReq)
+          Mux(
+            cacheline_meta.valid && cacheline_meta.dirty,
+            s_memWriteReq,
+            s_memReadReq
+          )
         )
       }
     }

@@ -2,18 +2,12 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
+import rv64_nstage.core._
+import rv64_nstage.control.ControlConst._
 import bus._
 import device._
 import utils._
-import ControlConst._
 import scala.annotation.switch
-
-// class UncacheIO extends Bundle with phvntomParams {
-//   val in = new MemIO
-//   val out = new AXI4Bundle
-//   val offset = Output(UInt(xlen.W))
-// }
 
 // serve as a simple convertor from MemIO to AXI4 interface
 class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
@@ -99,7 +93,7 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
     io.out.ar.bits.burst := BURST_INCR
     io.out.ar.valid := false.B
     when(state === s_WAIT_AXI_READY) {
-      io.out.ar.valid := true.B      
+      io.out.ar.valid := true.B
       when(io.out.ar.ready) {
         state := s_RECEIVING
       }

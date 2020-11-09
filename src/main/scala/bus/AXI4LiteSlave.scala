@@ -2,7 +2,7 @@ package bus
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
+import rv64_nstage.core._
 import utils._
 
 abstract class AXI4LiteSlave[B <: Data](
@@ -102,5 +102,5 @@ abstract class AXI4LiteSlave[B <: Data](
   //   p"readBeatCnt=${readBeatCnt}, writeBeatCnt=${writeBeatCnt}, rLast=${rLast}, wLast=${wLast}\n"
   // )
   // printf(p"io.in: \n${io.in}\n")
-  // printf("-----------AXI4Slave Debug Done-----------\n")
+  // printf("-----------AXI4LiteSlave Debug Done-----------\n")
 }

@@ -2,7 +2,7 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
+import rv64_nstage.core._
 import device._
 import utils._
 
@@ -71,7 +71,9 @@ class WriteBuffer(implicit val wbConfig: WBConfig)
 
   io.in.req.ready := req_state === r_idle
   io.in.resp.valid := (req_state === r_readReq && hit) || (req_state === r_readResp && io.readChannel.resp
-    .fire()) || (req_state === r_write && ((hit && !entryArray(hit_index).need_write) || (!hit && available)))
+    .fire()) || (req_state === r_write && ((hit && !entryArray(
+    hit_index
+  ).need_write) || (!hit && available)))
   io.in.resp.bits.data := Mux(
     hit,
     entryArray(hit_index).data,

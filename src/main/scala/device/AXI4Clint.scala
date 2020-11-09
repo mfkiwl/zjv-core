@@ -2,7 +2,7 @@ package device
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage.phvntomParams
+import rv64_nstage.core._
 import bus._
 import utils._
 

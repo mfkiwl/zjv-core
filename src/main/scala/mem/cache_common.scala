@@ -2,10 +2,10 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
+import rv64_nstage.core._
 import device._
 
-case class CacheConfig (
+case class CacheConfig(
     readOnly: Boolean = false,
     hasMMIO: Boolean = true,
     name: String = "cache", // used for debug info

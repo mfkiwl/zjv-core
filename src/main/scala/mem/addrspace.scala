@@ -2,16 +2,16 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
+import rv64_nstage.core._
 import common.projectConfig
 
-object AddressSpace extends phvntomParams with projectConfig{
+object AddressSpace extends phvntomParams with projectConfig {
   def mmio =
     if (chiplink) {
       List( // (start, size)
         (0x40000000L, 0x40000000L), // external devices
         (0x38000000L, 0x00010000L), // CLINT
-        (0x3c000000L, 0x04000000L)  // PLIC
+        (0x3c000000L, 0x04000000L) // PLIC
       )
     } else if (fpga) {
       List( // (start, size)

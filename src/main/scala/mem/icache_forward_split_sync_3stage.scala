@@ -2,8 +2,8 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
-import rv64_3stage.ControlConst._
+import rv64_nstage.core._
+import rv64_nstage.control.ControlConst._
 import bus._
 import device._
 import utils._
@@ -113,7 +113,8 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
   val cacheline_meta = s3_meta(s3_access_index)
   val cacheline_data = s3_cacheline(s3_access_index)
 
-  val s_idle :: s_memReadReq :: s_memReadResp:: s_finish :: s_flush :: Nil = Enum(5)
+  val s_idle :: s_memReadReq :: s_memReadResp :: s_finish :: s_flush :: Nil =
+    Enum(5)
   val state = RegInit(s_idle)
   val read_address = Cat(s3_tag, s3_index, 0.U(offsetLength.W))
   val flush_counter = Counter(nSets)
@@ -125,9 +126,17 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
   stall := s3_valid && !request_satisfied && state =/= s_finish // wait for data
   val external_stall = io.in.stall && !stall
   val hold_assert = external_stall && request_satisfied
-  need_forward := HoldCond(hazard && request_satisfied, hold_assert, state === s_finish)
+  need_forward := HoldCond(
+    hazard && request_satisfied,
+    hold_assert,
+    state === s_finish
+  )
 
-  io.in.resp.valid := HoldCond(s3_valid && request_satisfied, hold_assert, state === s_finish)
+  io.in.resp.valid := HoldCond(
+    s3_valid && request_satisfied,
+    hold_assert,
+    state === s_finish
+  )
   io.in.resp.bits.data := HoldCond(result, hold_assert, state === s_finish)
   io.in.req.ready := !stall
   io.in.flush_ready := state =/= s_flush || (state === s_flush && flush_finish)
