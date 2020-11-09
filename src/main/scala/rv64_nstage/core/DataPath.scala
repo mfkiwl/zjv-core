@@ -4,7 +4,6 @@ import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
 import chisel3.experimental.chiselName
-import common.Str
 import device.MemIO
 import rv64_nstage.control._
 import rv64_nstage.control.ControlConst._
@@ -106,7 +105,7 @@ import mem._
   val wrong_target = WireInit(Bool(), false.B)
   val predict_taken_but_not_br = WireInit(Bool(), false.B)
   val jump_flush = WireInit(Bool(), false.B)
-  
+
   // DTLB Signals
   val is_dmmu_idle = WireInit(Bool(), true.B)
   val is_dmmu_idle_last = RegInit(Bool(), true.B)
@@ -176,7 +175,11 @@ import mem._
   immu.io.front.is_store := false.B
   io.immu <> immu.io.back.mmu
 
-  immu_flush := Mux(!is_immu_idle_last && is_immu_idle, immu_delay_flush_signal, false.B) || s_fence_flush
+  immu_flush := Mux(
+    !is_immu_idle_last && is_immu_idle,
+    immu_delay_flush_signal,
+    false.B
+  ) || s_fence_flush
   is_immu_idle_last := is_immu_idle
   is_immu_idle := immu.io.front.is_idle
   when(is_immu_idle_last && !is_immu_idle) {
@@ -317,7 +320,9 @@ import mem._
     reg_id_exe.io.iiio.inst_info_out.brType.orR)
   misprediction := predict_not_but_taken || predict_taken_but_not
   wrong_target := branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out
-  inst_addr_misaligned := alu.io.out(1) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
+  inst_addr_misaligned := alu.io.out(
+    1
+  ) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
 
   scheduler.io.is_bubble := reg_id_exe.io.bsrio.bubble_out
   scheduler.io.rs1_used_exe := (reg_id_exe.io.iiio.inst_info_out.ASelect === ARS1 ||
@@ -450,7 +455,9 @@ import mem._
   multiplier.io.op := reg_exe_dtlb.io.iiio.inst_info_out.aluType
 
   // DMMU
-  mem_af := dmmu.io.front.af || (!is_legal_addr(reg_exe_dtlb.io.aluio.alu_val_out) &&
+  mem_af := dmmu.io.front.af || (!is_legal_addr(
+    reg_exe_dtlb.io.aluio.alu_val_out
+  ) &&
     reg_exe_dtlb.io.iiio.inst_info_out.memType.orR)
   dmmu.io.front.valid := reg_exe_dtlb.io.iiio.inst_info_out.memType.orR
   dmmu.io.front.force_s_mode := csr.io.force_s_mode_mem
@@ -470,7 +477,11 @@ import mem._
     reg_exe_dtlb.io.iiio.inst_info_out.amoSelect.orR)
   io.dmmu <> dmmu.io.back.mmu
 
-  dmmu_flush := Mux(!is_dmmu_idle_last && is_dmmu_idle, dmmu_delay_flush_signal, false.B) || s_fence_flush
+  dmmu_flush := Mux(
+    !is_dmmu_idle_last && is_dmmu_idle,
+    dmmu_delay_flush_signal,
+    false.B
+  ) || s_fence_flush
   is_dmmu_idle_last := is_dmmu_idle
   is_dmmu_idle := dmmu.io.front.is_idle
   when(is_dmmu_idle_last && !is_dmmu_idle) {
@@ -728,17 +739,45 @@ import mem._
     val dtest_mem = RegInit(false.B)
     val stall_req_counters = RegInit(VecInit(Seq.fill(10)(0.U(xlen.W))))
 
-    stall_req_counters(0) := stall_req_counters(0) + Mux(stall_req_if1_atomic, 1.U, 0.U)
+    stall_req_counters(0) := stall_req_counters(0) + Mux(
+      stall_req_if1_atomic,
+      1.U,
+      0.U
+    )
     stall_req_counters(1) := stall_req_counters(1) + Mux(false.B, 1.U, 0.U)
-    stall_req_counters(2) := stall_req_counters(2) + Mux(stall_req_if3_atomic, 1.U, 0.U)
+    stall_req_counters(2) := stall_req_counters(2) + Mux(
+      stall_req_if3_atomic,
+      1.U,
+      0.U
+    )
     stall_req_counters(3) := stall_req_counters(3) + Mux(false.B, 1.U, 0.U)
-    stall_req_counters(4) := stall_req_counters(4) + Mux(stall_req_exe_atomic || stall_req_exe_interruptable, 1.U, 0.U)
-    stall_req_counters(5) := stall_req_counters(5) + Mux(stall_req_dtlb_atomic, 1.U, 0.U)
+    stall_req_counters(4) := stall_req_counters(4) + Mux(
+      stall_req_exe_atomic || stall_req_exe_interruptable,
+      1.U,
+      0.U
+    )
+    stall_req_counters(5) := stall_req_counters(5) + Mux(
+      stall_req_dtlb_atomic,
+      1.U,
+      0.U
+    )
     stall_req_counters(6) := stall_req_counters(6) + Mux(false.B, 1.U, 0.U)
-    stall_req_counters(7) := stall_req_counters(7) + Mux(reg_mem3_wb.io.iiio.inst_info_out.pcSelect === pcJump ||
-      reg_mem3_wb.io.iiio.inst_info_out.pcSelect === pcBranch, 1.U, 0.U)        // FixMe Total Jump Banch
-    stall_req_counters(8) := stall_req_counters(8) + Mux(stall_req_mem3_atomic, 1.U, 0.U)
-    stall_req_counters(9) := stall_req_counters(9) + Mux(br_jump_flush, 1.U, 0.U)   // Total Miss-prediction
+    stall_req_counters(7) := stall_req_counters(7) + Mux(
+      reg_mem3_wb.io.iiio.inst_info_out.pcSelect === pcJump ||
+        reg_mem3_wb.io.iiio.inst_info_out.pcSelect === pcBranch,
+      1.U,
+      0.U
+    ) // FixMe Total Jump Banch
+    stall_req_counters(8) := stall_req_counters(8) + Mux(
+      stall_req_mem3_atomic,
+      1.U,
+      0.U
+    )
+    stall_req_counters(9) := stall_req_counters(9) + Mux(
+      br_jump_flush,
+      1.U,
+      0.U
+    ) // Total Miss-prediction
 
     dtest_wbvalid := !reg_mem3_wb.io.bsrio.bubble_out && !reg_mem3_wb.io.csrio.int_resp_out
 
@@ -750,9 +789,9 @@ import mem._
       )
       dtest_inst := reg_mem3_wb.io.instio.inst_out
       dtest_expt := reg_mem3_wb.io.csrio.int_resp_out
-      dtest_alu  := reg_mem3_wb.io.aluio.alu_val_out
-      dtest_mem  := (reg_mem3_wb.io.iiio.inst_info_out.memType.orR && !reg_mem3_wb.io.csrio.expt_out &&
-        reg_mem3_wb.io.iiio.inst_info_out.wbEnable =/= wenRes && reg_mem3_wb.io.iiio.inst_info_out.wbSelect =/= wbCond)
+      dtest_alu := reg_mem3_wb.io.aluio.alu_val_out
+      dtest_mem := (reg_mem3_wb.io.iiio.inst_info_out.memType.orR && !reg_mem3_wb.io.csrio.expt_out &&
+      reg_mem3_wb.io.iiio.inst_info_out.wbEnable =/= wenRes && reg_mem3_wb.io.iiio.inst_info_out.wbSelect =/= wbCond)
     }
     dtest_int := reg_mem3_wb.io.csrio.int_resp_out // dtest_expt & (io.int.msip | io.int.mtip)
 
@@ -771,7 +810,9 @@ import mem._
 
     if (pipeTrace) {
       if (vscode) {
-        printf("\t\tIF1\t\tIF2\t\tIF3\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n")
+        printf(
+          "\t\tIF1\t\tIF2\t\tIF3\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n"
+        )
         printf(
           "Stall Req\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\t\t%x\n",
           stall_req_if1_atomic,
@@ -949,16 +990,23 @@ import mem._
           reg_mem2_mem3.io.bsrio.bubble_out,
           reg_mem3_wb.io.bsrio.bubble_out
         )
-        printf("VA To DMMU %x, VA valid %x, brj_flush %x, PA %x\n", 
-        dmmu.io.front.va, dmmu.io.front.valid, br_jump_flush, dmmu.io.front.pa)
-        printf("PC to dmem %x, Valid to dmem %x, Wen to dmem %x, Wdata to dmem %x, PA to dmem %x, dmem PC out %x, dmem Data out %x\n",
-        reg_dtlb_mem1.io.bsrio.pc_out,
-        io.dmem.req.valid,
-        io.dmem.req.bits.wen,
-        io.dmem.req.bits.data,
-        io.dmem.req.bits.addr,
-        reg_mem2_mem3.io.bsrio.pc_out,
-        io.dmem.resp.bits.data)
+        printf(
+          "VA To DMMU %x, VA valid %x, brj_flush %x, PA %x\n",
+          dmmu.io.front.va,
+          dmmu.io.front.valid,
+          br_jump_flush,
+          dmmu.io.front.pa
+        )
+        printf(
+          "PC to dmem %x, Valid to dmem %x, Wen to dmem %x, Wdata to dmem %x, PA to dmem %x, dmem PC out %x, dmem Data out %x\n",
+          reg_dtlb_mem1.io.bsrio.pc_out,
+          io.dmem.req.valid,
+          io.dmem.req.bits.wen,
+          io.dmem.req.bits.data,
+          io.dmem.req.bits.addr,
+          reg_mem2_mem3.io.bsrio.pc_out,
+          io.dmem.resp.bits.data
+        )
         printf("\n")
       }
 
@@ -990,8 +1038,8 @@ import mem._
       //        csr.io.current_p, immu.io.front.pa, dmmu.io.front.pa, csr.io.force_s_mode_mem)
     }
 
-    if(prtHotSpot) {
-      if(!pipeTrace)
+    if (prtHotSpot) {
+      if (!pipeTrace)
         printf("\t\tIF1\tIF2\tIF3\tID\tEXE\tDTLB\tMEM1\tMEM2\tMEM3\tWB\n")
       printf(
         "BubbMaker\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
@@ -1008,9 +1056,12 @@ import mem._
       )
     }
 
-    BoringUtils.addSource(VecInit((0 to 9).map(i => stall_req_counters(i))), "difftestStreqs")
+    BoringUtils.addSource(
+      VecInit((0 to 9).map(i => stall_req_counters(i))),
+      "difftestStreqs"
+    )
 
-    if(pipeTrace || prtHotSpot) {
+    if (pipeTrace || prtHotSpot) {
       printf("\n")
     }
 
