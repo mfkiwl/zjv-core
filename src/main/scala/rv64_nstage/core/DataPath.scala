@@ -157,6 +157,7 @@ import mem._
   bpu.io.feedback_target_pc := reg_exe_dtlb.io.bjio.feedback_target_pc_out
   bpu.io.feedback_br_taken := reg_exe_dtlb.io.bjio.feedback_br_taken_out
   bpu.io.stall_update := reg_exe_dtlb.io.bpufb_stall_update
+  bpu.io.update_btb := br_jump_flush
 
   // IMMU
   inst_af := !is_legal_addr(pc_gen.io.pc_out) || immu.io.front.af // TODO

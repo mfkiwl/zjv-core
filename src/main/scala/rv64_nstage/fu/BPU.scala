@@ -91,21 +91,13 @@ class BTB extends Module with phvntomParams {
   val io = IO(new BTBIO)
 
   val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(39.W))
-  val read_data = btb_entries.read(io.index_in, true.B)
+  val read_data = btb_entries.read(io.index_in, !io.update_valid)
 
   io.target_out := Cat(Fill(xlen - 39, read_data(38)), read_data)
 
   when(io.update_valid) {
     btb_entries.write(io.update_index, io.update_target(38, 0))
   }
-
-  // val btb_entries = RegInit(VecInit(Seq.fill(1 << bpuEntryBits)("h80000000".U)))
-
-  // when(io.update_valid) {
-  //   btb_entries(io.update_index) := io.update_target
-  // }
-
-  // io.target_out := btb_entries(io.index_in)
 }
 
 class BPUIO extends Bundle with phvntomParams {
@@ -123,6 +115,8 @@ class BPUIO extends Bundle with phvntomParams {
   val feedback_br_taken = Input(Bool())
   // Stall Req For Sync Mem
   val stall_req = Output(Bool())
+  // Modify BTB
+  val update_btb = Input(Bool())
 }
 
 // TODO The first step will determine if the PC should change.
@@ -161,7 +155,8 @@ class BPU extends Module with phvntomParams {
   bht.io.stall_update := io.stall_update
 
   btb.io.index_in := io.pc_to_predict(bpuEntryBits + 1, 2)
-  btb.io.update_valid := io.feedback_is_br && io.feedback_br_taken
+  btb.io.update_valid := io.update_btb && !io.stall_update
+//  btb.io.update_valid := io.feedback_is_br && io.feedback_br_taken
   btb.io.update_index := io.feedback_pc(bpuEntryBits + 1, 2)
   btb.io.update_target := io.feedback_target_pc
 
