@@ -59,14 +59,18 @@ import chisel3.experimental.chiselName
 }
 
 @chiselName class BrJumpDelayIO extends Bundle with phvntomParams {
-  val branch_jump_flush_in = Input(Bool())
+  val misprediction_in = Input(Bool())
+  val wrong_target_in = Input(Bool())
+  val predict_taken_but_not_br_in = Input(Bool())
   val bjpc_in = Input(UInt(xlen.W))
   val feedback_pc_in = Input(UInt(xlen.W))
   val feedback_xored_index_in = Input(UInt(bpuEntryBits.W))
   val feedback_is_br_in = Input(Bool())
   val feedback_target_pc_in = Input(UInt(xlen.W))
   val feedback_br_taken_in = Input(Bool())
-  val branch_jump_flush_out = Output(Bool())
+  val misprediction_out = Output(Bool())
+  val wrong_target_out = Output(Bool())
+  val predict_taken_but_not_br_out = Output(Bool())
   val bjpc_out = Output(UInt(xlen.W))
   val feedback_pc_out = Output(UInt(xlen.W))
   val feedback_xored_index_out = Output(UInt(bpuEntryBits.W))
@@ -345,6 +349,7 @@ import chisel3.experimental.chiselName
   val iiio = Flipped(Flipped(new InstInfoIO))
   val aluio = Flipped(Flipped(new ExeInfoIO))
   val bjio = Flipped(Flipped(new BrJumpDelayIO))
+  val bpio = Flipped(Flipped(new BPUPredictIO))
   val mdio = Flipped(Flipped(new MultDivIO))
   val bpufb_stall_update = Output(Bool())
 }
@@ -365,7 +370,9 @@ import chisel3.experimental.chiselName
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
   val mem_wdata = RegInit(UInt(xlen.W), 0.U)
-  val branch_jump_flush = RegInit(Bool(), false.B)
+  val misprediction = RegInit(Bool(), false.B)
+  val wrong_target = RegInit(Bool(), false.B)
+  val predict_taken_but_not_br = RegInit(Bool(), false.B)
   val bjpc = RegInit(UInt(xlen.W), startAddr)
   val feedback_pc = RegInit(UInt(xlen.W), startAddr)
   val feedback_xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
@@ -375,6 +382,9 @@ import chisel3.experimental.chiselName
   val rs1_after_fwd = RegInit(UInt(xlen.W), 0.U)
   val rs2_after_fwd = RegInit(UInt(xlen.W), 0.U)
   val bpufb_stall_update = RegInit(Bool(), false.B)
+  val predict_tk = RegInit(Bool(), false.B)
+  val ptar = RegInit(UInt(xlen.W), 0.U)
+  val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -399,7 +409,9 @@ import chisel3.experimental.chiselName
       alu_val := 0.U
       inst_addr_misaligned := false.B
       mem_wdata := 0.U
-      branch_jump_flush := false.B
+      misprediction := false.B
+      wrong_target := false.B
+      predict_taken_but_not_br := false.B
       bjpc := startAddr
       feedback_pc := startAddr
       feedback_xored_index := 0.U
@@ -409,6 +421,9 @@ import chisel3.experimental.chiselName
       rs1_after_fwd := 0.U
       rs2_after_fwd := 0.U
       bpufb_stall_update := true.B
+      predict_tk := false.B
+      ptar := 0.U
+      xored_index := 0.U
     }.otherwise {
       pc := io.bsrio.pc_in
       bubble := false.B
@@ -419,7 +434,9 @@ import chisel3.experimental.chiselName
       alu_val := io.aluio.alu_val_in
       inst_addr_misaligned := io.aluio.inst_addr_misaligned_in
       mem_wdata := io.aluio.mem_wdata_in
-      branch_jump_flush := io.bjio.branch_jump_flush_in
+      misprediction := io.bjio.misprediction_in
+      wrong_target := io.bjio.wrong_target_in
+      predict_taken_but_not_br := io.bjio.predict_taken_but_not_br_in
       bjpc := io.bjio.bjpc_in
       feedback_pc := io.bjio.feedback_pc_in
       feedback_xored_index := io.bjio.feedback_xored_index_in
@@ -429,6 +446,9 @@ import chisel3.experimental.chiselName
       rs1_after_fwd := io.mdio.rs1_after_fwd_in
       rs2_after_fwd := io.mdio.rs2_after_fwd_in
       bpufb_stall_update := false.B
+      predict_tk := io.bpio.predict_taken_in
+      ptar := io.bpio.target_in
+      xored_index := io.bpio.xored_index_in
     }
   }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
     pc := 0.U
@@ -440,7 +460,9 @@ import chisel3.experimental.chiselName
     alu_val := 0.U
     inst_addr_misaligned := false.B
     mem_wdata := 0.U
-    branch_jump_flush := false.B
+    misprediction := false.B
+    wrong_target := false.B
+    predict_taken_but_not_br := false.B
     bjpc := startAddr
     feedback_pc := startAddr
     feedback_xored_index := 0.U
@@ -450,9 +472,15 @@ import chisel3.experimental.chiselName
     rs1_after_fwd := 0.U
     rs2_after_fwd := 0.U
     bpufb_stall_update := true.B
+    predict_tk := false.B
+    ptar := 0.U
+    xored_index := 0.U
   }.elsewhen(io.bsrio.flush_one) {
     bpufb_stall_update := true.B
-    branch_jump_flush := false.B
+    misprediction := false.B
+    wrong_target := false.B
+    predict_taken_but_not_br := false.B
+    inst_info.asTypeOf(new InstInfo).pcSelect := pcPlus4
   }
 
   io.bsrio.bubble_out := bubble
@@ -464,7 +492,9 @@ import chisel3.experimental.chiselName
   io.aluio.inst_addr_misaligned_out := inst_addr_misaligned
   io.aluio.mem_wdata_out := mem_wdata
   io.ifio.inst_pf_out := inst_pf
-  io.bjio.branch_jump_flush_out := branch_jump_flush
+  io.bjio.misprediction_out := misprediction
+  io.bjio.wrong_target_out := wrong_target
+  io.bjio.predict_taken_but_not_br_out := predict_taken_but_not_br
   io.bjio.bjpc_out := bjpc
   io.bjio.feedback_pc_out := feedback_pc
   io.bjio.feedback_xored_index_out := feedback_xored_index
@@ -474,6 +504,9 @@ import chisel3.experimental.chiselName
   io.mdio.rs1_after_fwd_out := rs1_after_fwd
   io.mdio.rs2_after_fwd_out := rs2_after_fwd
   io.bpufb_stall_update := bpufb_stall_update
+  io.bpio.predict_taken_out := predict_tk
+  io.bpio.target_out := ptar
+  io.bpio.xored_index_out := xored_index
 }
 
 @chiselName class RegDTLBMem1IO extends Bundle with phvntomParams {

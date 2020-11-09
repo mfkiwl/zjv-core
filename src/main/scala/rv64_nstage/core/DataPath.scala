@@ -105,7 +105,6 @@ import mem._
   val wrong_target = WireInit(Bool(), false.B)
   val predict_taken_but_not_br = WireInit(Bool(), false.B)
   val jump_flush = WireInit(Bool(), false.B)
-  val branch_jump_flush_comb = WireInit(Bool(), false.B)
   
   // DTLB Signals
   val is_dmmu_idle = WireInit(Bool(), true.B)
@@ -292,23 +291,23 @@ import mem._
   feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump)
   feedback_target_pc := alu.io.out
   feedback_br_taken := branch_cond.io.branch || reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump
-  // when((misprediction || wrong_target)){
-  //   printf("misp ntbt %x, tkbnt %x, wt %x, pc %x, stall %x\n", predict_not_but_taken, predict_taken_but_not, wrong_target, reg_id_exe.io.bsrio.pc_out,
-  //   stall_id_exe)
-  // }.elsewhen((branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out) || (!branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out &&
-  //   reg_id_exe.io.iiio.inst_info_out.brType.orR)){
-  //   printf("hit\n")
-  // }.elsewhen(predict_taken_but_not_br){
-  //   printf("backward\n")
-  // }
-  // when(!reg_exe_dtlb.io.bpufb_stall_update) {
-  //     printf("GB fbpc %x, fbbr %x, fbtk %x, fbtar %x\n",
-  //     reg_exe_dtlb.io.bjio.feedback_pc_out,
-  //     reg_exe_dtlb.io.bjio.feedback_is_br_out,
-  //     reg_exe_dtlb.io.bjio.feedback_br_taken_out,
-  //     reg_exe_dtlb.io.bjio.feedback_target_pc_out
-  //   )
-  // }
+//   when((misprediction || wrong_target && alu.io.out =/= reg_id_exe.io.bpio.target_out)){
+//     printf("misp ntbt %x, tkbnt %x, wt %x, pc %x, stall %x\n", predict_not_but_taken, predict_taken_but_not, wrong_target && alu.io.out =/= reg_id_exe.io.bpio.target_out, reg_id_exe.io.bsrio.pc_out,
+//     stall_id_exe)
+//   }.elsewhen((branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out) || (!branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out &&
+//     reg_id_exe.io.iiio.inst_info_out.brType.orR)){
+//     printf("hit\n")
+//   }.elsewhen(predict_taken_but_not_br){
+//     printf("backward\n")
+//   }
+//   when(!reg_exe_dtlb.io.bpufb_stall_update) {
+//       printf("GB fbpc %x, fbbr %x, fbtk %x, fbtar %x\n",
+//       reg_exe_dtlb.io.bjio.feedback_pc_out,
+//       reg_exe_dtlb.io.bjio.feedback_is_br_out,
+//       reg_exe_dtlb.io.bjio.feedback_br_taken_out,
+//       reg_exe_dtlb.io.bjio.feedback_target_pc_out
+//     )
+//   }
 
   predict_taken_but_not_br := (!reg_id_exe.io.iiio.inst_info_out.brType.orR &&
     reg_id_exe.io.iiio.inst_info_out.pcSelect =/= pcJump && reg_id_exe.io.bpio.predict_taken_out)
@@ -316,11 +315,7 @@ import mem._
   predict_taken_but_not := (!branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out &&
     reg_id_exe.io.iiio.inst_info_out.brType.orR)
   misprediction := predict_not_but_taken || predict_taken_but_not
-  wrong_target := branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out && alu.io.out =/= reg_id_exe.io.bpio.target_out
-  jump_flush := reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump && (!reg_id_exe.io.bpio.predict_taken_out ||
-    alu.io.out =/= reg_id_exe.io.bpio.target_out)
-  branch_jump_flush_comb := ((misprediction || wrong_target || predict_taken_but_not_br ||
-    jump_flush))
+  wrong_target := branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out
   inst_addr_misaligned := alu.io.out(1) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
 
   scheduler.io.is_bubble := reg_id_exe.io.bsrio.bubble_out
@@ -421,7 +416,9 @@ import mem._
   reg_exe_dtlb.io.bsrio.next_stage_flush_req := (br_jump_flush && !(expt_int_flush || error_ret_flush ||
     write_satp_flush || i_fence_flush || s_fence_flush))
   reg_exe_dtlb.io.ifio.inst_pf_in := reg_id_exe.io.ifio.inst_pf_out
-  reg_exe_dtlb.io.bjio.branch_jump_flush_in := branch_jump_flush_comb
+  reg_exe_dtlb.io.bjio.misprediction_in := misprediction
+  reg_exe_dtlb.io.bjio.wrong_target_in := wrong_target
+  reg_exe_dtlb.io.bjio.predict_taken_but_not_br_in := predict_taken_but_not_br
   reg_exe_dtlb.io.bjio.bjpc_in := Mux(
     predict_taken_but_not || (predict_taken_but_not_br && !jump_flush),
     (reg_id_exe.io.bsrio.pc_out + 4.U),
@@ -434,8 +431,16 @@ import mem._
   reg_exe_dtlb.io.bjio.feedback_br_taken_in := feedback_br_taken
   reg_exe_dtlb.io.mdio.rs1_after_fwd_in := rs1
   reg_exe_dtlb.io.mdio.rs2_after_fwd_in := rs2
+  reg_exe_dtlb.io.bpio.predict_taken_in := reg_id_exe.io.bpio.predict_taken_out
+  reg_exe_dtlb.io.bpio.target_in := reg_id_exe.io.bpio.target_out
+  reg_exe_dtlb.io.bpio.xored_index_in := reg_id_exe.io.bpio.xored_index_out
 
-  br_jump_flush := reg_exe_dtlb.io.bjio.branch_jump_flush_out
+  jump_flush := reg_exe_dtlb.io.iiio.inst_info_out.pcSelect === pcJump && (!reg_exe_dtlb.io.bpio.predict_taken_out ||
+    reg_exe_dtlb.io.aluio.alu_val_out =/= reg_exe_dtlb.io.bpio.target_out)
+  br_jump_flush := ((reg_exe_dtlb.io.bjio.misprediction_out ||
+    (reg_exe_dtlb.io.bjio.wrong_target_out && reg_exe_dtlb.io.aluio.alu_val_out =/= reg_exe_dtlb.io.bpio.target_out) ||
+    reg_exe_dtlb.io.bjio.predict_taken_but_not_br_out ||
+    jump_flush))
 
   // MUL DIV
   multiplier.io.start := reg_exe_dtlb.io.iiio.inst_info_out.mult
