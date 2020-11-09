@@ -96,8 +96,9 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
 
     when(state === s_WB_WAIT_AWREADY) {
       io.out.aw.valid := true.B
+      io.out.w.valid := true.B
       when(io.out.aw.ready) {
-        state := s_WB_WRITE
+        state := s_WB_WAIT_BVALID //s_WB_WRITE
       }
     }.elsewhen(state === s_WB_WRITE) {
       io.out.w.valid := true.B
@@ -126,6 +127,7 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
     }.elsewhen(state === s_RECEIVING) {
       when(io.out.r.valid) {
         io.out.r.ready := true.B
+        io.in.resp.valid := true.B
         // when(io.out.r.bits.last) {
           state := s_FINISH
         // }
@@ -137,7 +139,7 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
         state := s_WB_WAIT_AWREADY
       }.otherwise {
         state := s_IDLE
-        io.in.resp.valid := true.B
+        // io.in.resp.valid := true.B
       }
     }
   }
@@ -187,7 +189,7 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
       }
     }
   }
-  io.in.resp.bits.data := RegNext(resp_data)
+  io.in.resp.bits.data := resp_data
 
   // printf(p"[${GTimer()}]: ${mname} Debug Start-----------\n")
   // printf("state = %d\n", state);

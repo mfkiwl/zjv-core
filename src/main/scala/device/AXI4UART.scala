@@ -19,18 +19,12 @@ class SimUART extends BlackBox with phvntomParams {
   })
 }
 
-class FPGAUART extends BlackBox with AXI4Parameters {
-  val io = IO(new Bundle{
-    
-  })
-}
-
 class UARTIO extends Bundle with phvntomParams {
   // val offset = Input(UInt(xlen.W))
   val irq = Output(Bool())
 }
 
-class AXI4UART(name: String = "uart") extends AXI4Slave(new UARTIO, name) with AXI4Parameters {
+class AXI4UART(name: String = "uart") extends AXI4LiteSlave(new UARTIO, name) with AXI4Parameters {
   val wen = io.in.w.fire()
   val uart_sim = Module(new SimUART)
   uart_sim.io.clk := clock  
@@ -39,7 +33,7 @@ class AXI4UART(name: String = "uart") extends AXI4Slave(new UARTIO, name) with A
   uart_sim.io.wdata := io.in.w.bits.data(7, 0)
   uart_sim.io.ren := ren
   uart_sim.io.raddr := Cat(Fill(5, 0.U), io.in.ar.bits.addr(2, 0))
-  val rdata = uart_sim.io.rdata << (io.in.ar.bits.addr(2, 0) << 3)
+  val rdata = Fill(8, uart_sim.io.rdata(7, 0))
   io.in.r.bits.data := rdata
 
   io.extra.get.irq := uart_sim.io.irq

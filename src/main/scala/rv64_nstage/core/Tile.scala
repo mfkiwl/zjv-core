@@ -23,8 +23,8 @@ class Tile extends Module with phvntomParams {
 
   // mem path
   val icache = Module(
-    new ICacheForwardSplitSync3Stage()(
-      CacheConfig(name = "icache", readOnly = true, hasMMIO = false)
+    new ICacheForwardSplitSync3StageMMIO()(
+      CacheConfig(name = "icache", readOnly = true)
     )
   )
   val dcache = Module(new DCacheWriteThroughSplit3Stage()(CacheConfig(name = "dcache")))
@@ -111,13 +111,18 @@ class Tile extends Module with phvntomParams {
   }
 
   // xbar
-  val mmio_device = List(poweroff, clint, plic, uart)
-  val mmioBus = Module(new Uncache(mname = "mmio uncache"))
-  val mmioxbar = Module(new Crossbar1toN(AddressSpace.mmio))
+  val immioBus = Module(new Uncache(mname = "immio uncache"))
+  icache.io.mmio <> immioBus.io.in
+  val dmmioBus = Module(new Uncache(mname = "dmmio uncache"))
+  dcache.io.mmio <> dmmioBus.io.in
+  val mmioxbar_internal = Module(new CrossbarNto1Lite(2))  
+  mmioxbar_internal.io.in(0) <> dmmioBus.io.out
+  mmioxbar_internal.io.in(1) <> immioBus.io.out
 
-  dcache.io.mmio <> mmioBus.io.in
-  mmioBus.io.out <> mmioxbar.io.in
+  val mmio_device = List(poweroff, clint, plic, uart)
+  val mmioxbar_external = Module(new Crossbar1toNLite(AddressSpace.mmio))
+  mmioxbar_internal.io.out <> mmioxbar_external.io.in
   for (i <- 0 until mmio_device.length) {
-    mmio_device(i).io.in <> mmioxbar.io.out(i)
+    mmio_device(i).io.in <> mmioxbar_external.io.out(i)
   }
 }

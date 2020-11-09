@@ -30,7 +30,7 @@ class PlicIO(val nrIntr: Int, val nrConxt: Int) extends Bundle {
 }
 
 class AXI4PLIC(nrIntr: Int = 31, nrConxt: Int = 2)
-    extends AXI4Slave(new PlicIO(nrIntr, nrConxt)) {
+    extends AXI4LiteSlave(new PlicIO(nrIntr, nrConxt)) {
   require(nrIntr < 1024)
   require(nrConxt <= 15872)
   val addressSpaceSize = 0x4000000

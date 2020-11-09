@@ -3,8 +3,11 @@ package bus
 import chisel3._
 import chisel3.util._
 import utils._
+import common.projectConfig
 
-class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
+class Crossbar1toN(addressSpace: List[(Long, Long)])
+    extends Module
+    with projectConfig {
   val io = IO(new Bundle {
     val in = Flipped(new AXI4Bundle)
     val out = Vec(addressSpace.length, new AXI4Bundle)
@@ -114,7 +117,7 @@ class Crossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   // printf("-----------Xbar1toN Debug Done-----------\n")
 }
 
-class CrossbarNto1(n: Int) extends Module {
+class CrossbarNto1(n: Int) extends Module with projectConfig {
   val io = IO(new Bundle {
     val in = Flipped(Vec(n, new AXI4Bundle))
     val out = new AXI4Bundle
@@ -201,7 +204,9 @@ class CrossbarNto1(n: Int) extends Module {
   // printf("--------------------------------\n")
 }
 
-class Crossbar1toNLite(addressSpace: List[(Long, Long)]) extends Module {
+class Crossbar1toNLite(addressSpace: List[(Long, Long)])
+    extends Module
+    with projectConfig {
   val io = IO(new Bundle {
     val in = Flipped(new AXI4Bundle)
     val out = Vec(addressSpace.length, new AXI4Bundle)
@@ -235,8 +240,14 @@ class Crossbar1toNLite(addressSpace: List[(Long, Long)]) extends Module {
     }
   }
   for (i <- 0 until addressSpace.length) {
-    when(routSelIdx === i.U && routSelIdx =/= 0.U) { // minus base addr
-      io.out(i).ar.bits.addr := io.in.ar.bits.addr - addressSpace(i)._1.U
+    if (chiplink) {
+      when(routSelIdx === i.U && routSelIdx =/= 0.U) { // minus base addr
+        io.out(i).ar.bits.addr := io.in.ar.bits.addr - addressSpace(i)._1.U
+      }
+    } else {
+      when(routSelIdx === i.U) { // minus base addr
+        io.out(i).ar.bits.addr := io.in.ar.bits.addr - addressSpace(i)._1.U
+      }
     }
   }
 
@@ -281,8 +292,14 @@ class Crossbar1toNLite(addressSpace: List[(Long, Long)]) extends Module {
     }
   }
   for (i <- 0 until addressSpace.length) {
-    when(woutSelIdx === i.U && woutSelIdx =/= 0.U) { // minus base addr
-      io.out(i).aw.bits.addr := io.in.aw.bits.addr - addressSpace(i)._1.U
+    if (chiplink) {
+      when(woutSelIdx === i.U && woutSelIdx =/= 0.U) { // minus base addr
+        io.out(i).aw.bits.addr := io.in.aw.bits.addr - addressSpace(i)._1.U
+      }
+    } else {
+      when(woutSelIdx === i.U) { // minus base addr
+        io.out(i).aw.bits.addr := io.in.aw.bits.addr - addressSpace(i)._1.U
+      }
     }
   }
 
@@ -303,14 +320,22 @@ class Crossbar1toNLite(addressSpace: List[(Long, Long)]) extends Module {
   io.in.w.ready := woutSel.w.ready
 
   // printf(p"[${GTimer()}]: Xbar1toN Debug Start-----------\n")
-  // printf(p"r_state = ${r_state}, routSelVec = ${routSelVec}, routSelIdx = ${routSelIdx}, rreqInvalidAddr = ${rreqInvalidAddr}\n")
+  // printf(p"io.in: \n${io.in}\n")
+  // for (i <- 0 until addressSpace.length) {
+  //   printf(p"io.out(${i}): \n${io.out(i)}\n")
+  // }
+  // printf(
+  //   p"r_state = ${r_state}, routSelVec = ${routSelVec}, routSelIdx = ${routSelIdx}, routSelIdxResp=${routSelIdxResp}, rreqInvalidAddr = ${rreqInvalidAddr}\n"
+  // )
   // printf(p"routSel: \n${woutSel}\n")
   // printf("--------------------------------------------------------\n")
-  // printf(p"w_state = ${w_state}, woutSelVec = ${woutSelVec}, woutSelIdx = ${woutSelIdx}, wreqInvalidAddr = ${wreqInvalidAddr}\n")
+  // printf(
+  //   p"w_state = ${w_state}, woutSelVec = ${woutSelVec}, woutSelIdx = ${woutSelIdx}, woutSelIdxResp=${woutSelIdxResp}, wreqInvalidAddr = ${wreqInvalidAddr}\n"
+  // )
   // printf(p"woutSel: \n${woutSel}\n")
   // printf("-----------Xbar1toN Debug Done-----------\n")
 }
-class CrossbarNto1Lite(n: Int) extends Module {
+class CrossbarNto1Lite(n: Int) extends Module with projectConfig {
   val io = IO(new Bundle {
     val in = Flipped(Vec(n, new AXI4Bundle))
     val out = new AXI4Bundle
@@ -323,7 +348,11 @@ class CrossbarNto1Lite(n: Int) extends Module {
   val thisReq_r = inputArb_r.io.out
   val inflightSrc_r = Reg(UInt(log2Ceil(n).W))
 
-  io.out.ar.bits := thisReq_r.bits
+  io.out.ar.bits := Mux(
+    r_state === s_idle,    
+    thisReq_r.bits,
+    io.in(inflightSrc_r).ar.bits
+  )
   // bind correct valid and ready signals
   io.out.ar.valid := thisReq_r.valid && (r_state === s_idle)
   thisReq_r.ready := io.out.ar.ready && (r_state === s_idle)
@@ -355,7 +384,11 @@ class CrossbarNto1Lite(n: Int) extends Module {
   val thisReq_w = inputArb_w.io.out
   val inflightSrc_w = Reg(UInt(log2Ceil(n).W))
 
-  io.out.aw.bits := thisReq_w.bits
+  io.out.aw.bits := Mux(
+    w_state === s_idle,
+    thisReq_w.bits,
+    io.in(inflightSrc_w).aw.bits
+  )
   // bind correct valid and ready signals
   io.out.aw.valid := thisReq_w.valid && (w_state === s_idle)
   thisReq_w.ready := io.out.aw.ready && (w_state === s_idle)

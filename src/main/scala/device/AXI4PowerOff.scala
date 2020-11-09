@@ -10,7 +10,7 @@ class AXI4PowerOffIO extends Bundle with phvntomParams {
   val poweroff = Output(UInt(xlen.W))
 }
 
-class AXI4PowerOff(name: String = "poweroff") extends AXI4Slave(new AXI4PowerOffIO, name) with AXI4Parameters {
+class AXI4PowerOff(name: String = "poweroff") extends AXI4LiteSlave(new AXI4PowerOffIO, name) with AXI4Parameters {
   val poweroff = RegInit(0.U(xlen.W))
 
   val mapping = Map(
