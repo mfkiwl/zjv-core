@@ -35,6 +35,7 @@ trait CacheParameters extends phvntomParams {
   val lineBytes = lineBits / 8
   val lineLength = log2Ceil(nLine)
   val nSets = nBytes / lineBytes / nWays
+  val nWords = lineBits / xlen
   val offsetLength = log2Ceil(lineBytes)
   val indexLength = log2Ceil(nSets)
   val tagLength = xlen - (indexLength + offsetLength)

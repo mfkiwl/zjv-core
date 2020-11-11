@@ -23,11 +23,11 @@ class Tile extends Module with phvntomParams {
 
   // mem path
   val icache = Module(
-    new ICacheForwardSplitSync3StageMMIO()(
+    new ICacheForwardSplitSync3StageMMIOReorg()(
       CacheConfig(name = "icache", readOnly = true)
     )
   )
-  val dcache = Module(new DCacheWriteThroughSplit3Stage()(CacheConfig(name = "dcache")))
+  val dcache = Module(new DCacheWriteThroughSplit3StageReorg()(CacheConfig(name = "dcache", readOnly = true)))
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
 
   core.io.imem <> icache.io.in
@@ -39,7 +39,7 @@ class Tile extends Module with phvntomParams {
     // dcache_wb.io.in <> dcache.io.mem
     val memxbar = Module(new CrossbarNto1(1))
     val l2cache = Module(
-      new L2CacheSplit3Stage(4)(
+      new L2CacheSplit3StageReorg(4)(
         CacheConfig(
           name = "l2cache",
           blockBits = dcache.lineBits,
