@@ -112,6 +112,12 @@ import mem._
   val dmmu_delay_flush_signal = RegInit(Bool(), false.B)
   val dmmu_flush = WireInit(Bool(), false.B)
 
+  // ICACHE SIGNAL
+  val is_icache_idle = WireInit(Bool(), true.B)
+  val is_icache_idle_last = RegInit(Bool(), true.B)
+  val icache_delay_flush_signal = RegInit(Bool(), false.B)
+  val icache_flush = WireInit(Bool(), false.B)
+
   // Mem Signals
   val mem_addr_misaligned = WireInit(Bool(), false.B)
   val amo_bubble_insert = WireInit(Bool(), false.B)
@@ -214,6 +220,19 @@ import mem._
   io.imem.req.bits.wen := false.B
   io.imem.req.bits.memtype := memWordU
   io.imem.resp.ready := true.B
+
+  icache_flush := Mux(
+    !is_icache_idle_last && is_icache_idle,
+    icache_delay_flush_signal,
+    false.B
+  ) || i_fence_flush
+  is_icache_idle_last := !stall_req_if3_atomic
+  is_icache_idle := !stall_req_if3_atomic
+  when(is_icache_idle_last && !is_icache_idle) {
+    icache_delay_flush_signal := i_fence_flush
+  }.elsewhen(!is_icache_idle && i_fence_flush) {
+    icache_delay_flush_signal := true.B
+  }
 
   inst_if3 := io.imem.resp.bits.data
   stall_req_if3_atomic := !io.imem.req.ready || !io.imem.flush_ready
