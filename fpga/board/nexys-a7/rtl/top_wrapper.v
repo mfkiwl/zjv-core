@@ -2,7 +2,7 @@
 
 module mycpu_top(
     input         clock, 
-    input         reset,
+    input         resetn,
     input UART_CTS,
     output UART_RTS,
     input UART_RXD_OUT,
@@ -112,12 +112,45 @@ module mycpu_top(
   wire [0:0]S00_AXI_wready;
   wire [7:0]S00_AXI_wstrb;
   wire [0:0]S00_AXI_wvalid;
+  wire [63:0]S01_AXI_araddr;
+  wire [1:0]S01_AXI_arburst;
+  wire [3:0]S01_AXI_arcache;
+  wire [7:0]S01_AXI_arlen;
+  wire [0:0]S01_AXI_arlock;
+  wire [2:0]S01_AXI_arprot;
+  wire [3:0]S01_AXI_arqos;
+  wire [0:0]S01_AXI_arready;
+  wire [2:0]S01_AXI_arsize;
+  wire [0:0]S01_AXI_arvalid;
+  wire [63:0]S01_AXI_awaddr;
+  wire [1:0]S01_AXI_awburst;
+  wire [3:0]S01_AXI_awcache;
+  wire [7:0]S01_AXI_awlen;
+  wire [0:0]S01_AXI_awlock;
+  wire [2:0]S01_AXI_awprot;
+  wire [3:0]S01_AXI_awqos;
+  wire [0:0]S01_AXI_awready;
+  wire [2:0]S01_AXI_awsize;
+  wire [0:0]S01_AXI_awvalid;
+  wire [0:0]S01_AXI_bready;
+  wire [1:0]S01_AXI_bresp;
+  wire [0:0]S01_AXI_bvalid;
+  wire [63:0]S01_AXI_rdata;
+  wire [0:0]S01_AXI_rlast;
+  wire [0:0]S01_AXI_rready;
+  wire [1:0]S01_AXI_rresp;
+  wire [0:0]S01_AXI_rvalid;
+  wire [63:0]S01_AXI_wdata;
+  wire [0:0]S01_AXI_wlast;
+  wire [0:0]S01_AXI_wready;
+  wire [7:0]S01_AXI_wstrb;
+  wire [0:0]S01_AXI_wvalid;
   wire ctsn;
   wire ip2intc_irpt;
 
-design_1_wrapper axi(
+ext_device_wrapper axi(
     .ACLK(clock),
-    .ARESETN(~reset),
+    .ARESETN(resetn),
     .M00_AXI_araddr(M00_AXI_araddr),
     .M00_AXI_arburst(M00_AXI_arburst),
     .M00_AXI_arcache(M00_AXI_arcache),
@@ -221,6 +254,39 @@ design_1_wrapper axi(
     .S00_AXI_wready(S00_AXI_wready),
     .S00_AXI_wstrb(S00_AXI_wstrb),
     .S00_AXI_wvalid(S00_AXI_wvalid),
+    .S01_AXI_araddr(S01_AXI_araddr),
+    .S01_AXI_arburst(S01_AXI_arburst),
+    .S01_AXI_arcache(S01_AXI_arcache),
+    .S01_AXI_arlen(S01_AXI_arlen),
+    .S01_AXI_arlock(S01_AXI_arlock),
+    .S01_AXI_arprot(S01_AXI_arprot),
+    .S01_AXI_arqos(S01_AXI_arqos),
+    .S01_AXI_arready(S01_AXI_arready),
+    .S01_AXI_arsize(S01_AXI_arsize),
+    .S01_AXI_arvalid(S01_AXI_arvalid),
+    .S01_AXI_awaddr(S01_AXI_awaddr),
+    .S01_AXI_awburst(S01_AXI_awburst),
+    .S01_AXI_awcache(S01_AXI_awcache),
+    .S01_AXI_awlen(S01_AXI_awlen),
+    .S01_AXI_awlock(S01_AXI_awlock),
+    .S01_AXI_awprot(S01_AXI_awprot),
+    .S01_AXI_awqos(S01_AXI_awqos),
+    .S01_AXI_awready(S01_AXI_awready),
+    .S01_AXI_awsize(S01_AXI_awsize),
+    .S01_AXI_awvalid(S01_AXI_awvalid),
+    .S01_AXI_bready(S01_AXI_bready),
+    .S01_AXI_bresp(S01_AXI_bresp),
+    .S01_AXI_bvalid(S01_AXI_bvalid),
+    .S01_AXI_rdata(S01_AXI_rdata),
+    .S01_AXI_rlast(S01_AXI_rlast),
+    .S01_AXI_rready(S01_AXI_rready),
+    .S01_AXI_rresp(S01_AXI_rresp),
+    .S01_AXI_rvalid(S01_AXI_rvalid),
+    .S01_AXI_wdata(S01_AXI_wdata),
+    .S01_AXI_wlast(S01_AXI_wlast),
+    .S01_AXI_wready(S01_AXI_wready),
+    .S01_AXI_wstrb(S01_AXI_wstrb),
+    .S01_AXI_wvalid(S01_AXI_wvalid),
     .ctsn(~UART_CTS),
     .ip2intc_irpt(ip2intc_irpt),
     .rtsn(~UART_RTS),
@@ -230,49 +296,91 @@ design_1_wrapper axi(
 
 SimTop mycpu(
   .clock(clock),
-  .reset(reset),
-  .io_mmio_aw_ready(S00_AXI_awready),
-  .io_mmio_aw_valid(S00_AXI_awvalid),
-  .io_mmio_aw_bits_id(),
-  .io_mmio_aw_bits_addr(S00_AXI_awaddr),
-  .io_mmio_aw_bits_len(S00_AXI_awlen),
-  .io_mmio_aw_bits_size(S00_AXI_awsize),
-  .io_mmio_aw_bits_burst(S00_AXI_awburst),
-  .io_mmio_aw_bits_lock(S00_AXI_awlock),
-  .io_mmio_aw_bits_cache(S00_AXI_awcache),
-  .io_mmio_aw_bits_prot(S00_AXI_awprot),
-  .io_mmio_aw_bits_qos(S00_AXI_awqos),
-  .io_mmio_aw_bits_user(),
-  .io_mmio_w_ready(S00_AXI_wready),
-  .io_mmio_w_valid(S00_AXI_wvalid),
-  .io_mmio_w_bits_data(S00_AXI_wdata),
-  .io_mmio_w_bits_strb(S00_AXI_wstrb),
-  .io_mmio_w_bits_last(S00_AXI_wlast),
-  .io_mmio_w_bits_user(io_mmio_wuser),
-  .io_mmio_b_ready(S00_AXI_bready),
-  .io_mmio_b_valid(S00_AXI_bvalid),
-  .io_mmio_b_bits_id(),
-  .io_mmio_b_bits_resp(S00_AXI_bresp),
-  .io_mmio_b_bits_user(),
-  .io_mmio_ar_ready(S00_AXI_arready),
-  .io_mmio_ar_valid(S00_AXI_arvalid),
-  .io_mmio_ar_bits_id(),
-  .io_mmio_ar_bits_addr(S00_AXI_araddr),
-  .io_mmio_ar_bits_len(S00_AXI_arlen),
-  .io_mmio_ar_bits_size(S00_AXI_arsize),
-  .io_mmio_ar_bits_burst(S00_AXI_arburst),
-  .io_mmio_ar_bits_lock(S00_AXI_arlock),
-  .io_mmio_ar_bits_cache(S00_AXI_arcache),
-  .io_mmio_ar_bits_prot(S00_AXI_arprot),
-  .io_mmio_ar_bits_qos(S00_AXI_arqos),
-  .io_mmio_ar_bits_user(),
-  .io_mmio_r_ready(S00_AXI_rready),
-  .io_mmio_r_valid(S00_AXI_rvalid),
-  .io_mmio_r_bits_id(),
-  .io_mmio_r_bits_data(S00_AXI_rdata),
-  .io_mmio_r_bits_resp(S00_AXI_rresp),
-  .io_mmio_r_bits_last(S00_AXI_rlast),
-  .io_mmio_r_bits_user(),
+  .reset(~resetn),
+  .io_immio_aw_ready(S00_AXI_awready),
+  .io_immio_aw_valid(S00_AXI_awvalid),
+  .io_immio_aw_bits_id(),
+  .io_immio_aw_bits_addr(S00_AXI_awaddr),
+  .io_immio_aw_bits_len(S00_AXI_awlen),
+  .io_immio_aw_bits_size(S00_AXI_awsize),
+  .io_immio_aw_bits_burst(S00_AXI_awburst),
+  .io_immio_aw_bits_lock(S00_AXI_awlock),
+  .io_immio_aw_bits_cache(S00_AXI_awcache),
+  .io_immio_aw_bits_prot(S00_AXI_awprot),
+  .io_immio_aw_bits_qos(S00_AXI_awqos),
+  .io_immio_aw_bits_user(),
+  .io_immio_w_ready(S00_AXI_wready),
+  .io_immio_w_valid(S00_AXI_wvalid),
+  .io_immio_w_bits_data(S00_AXI_wdata),
+  .io_immio_w_bits_strb(S00_AXI_wstrb),
+  .io_immio_w_bits_last(S00_AXI_wlast),
+  .io_immio_w_bits_user(io_mmio_wuser),
+  .io_immio_b_ready(S00_AXI_bready),
+  .io_immio_b_valid(S00_AXI_bvalid),
+  .io_immio_b_bits_id(),
+  .io_immio_b_bits_resp(S00_AXI_bresp),
+  .io_immio_b_bits_user(),
+  .io_immio_ar_ready(S00_AXI_arready),
+  .io_immio_ar_valid(S00_AXI_arvalid),
+  .io_immio_ar_bits_id(),
+  .io_immio_ar_bits_addr(S00_AXI_araddr),
+  .io_immio_ar_bits_len(S00_AXI_arlen),
+  .io_immio_ar_bits_size(S00_AXI_arsize),
+  .io_immio_ar_bits_burst(S00_AXI_arburst),
+  .io_immio_ar_bits_lock(S00_AXI_arlock),
+  .io_immio_ar_bits_cache(S00_AXI_arcache),
+  .io_immio_ar_bits_prot(S00_AXI_arprot),
+  .io_immio_ar_bits_qos(S00_AXI_arqos),
+  .io_immio_ar_bits_user(),
+  .io_immio_r_ready(S00_AXI_rready),
+  .io_immio_r_valid(S00_AXI_rvalid),
+  .io_immio_r_bits_id(),
+  .io_immio_r_bits_data(S00_AXI_rdata),
+  .io_immio_r_bits_resp(S00_AXI_rresp),
+  .io_immio_r_bits_last(S00_AXI_rlast),
+  .io_immio_r_bits_user(),
+  .io_dmmio_aw_ready(S01_AXI_awready),
+  .io_dmmio_aw_valid(S01_AXI_awvalid),
+  .io_dmmio_aw_bits_id(),
+  .io_dmmio_aw_bits_addr(S01_AXI_awaddr),
+  .io_dmmio_aw_bits_len(S01_AXI_awlen),
+  .io_dmmio_aw_bits_size(S01_AXI_awsize),
+  .io_dmmio_aw_bits_burst(S01_AXI_awburst),
+  .io_dmmio_aw_bits_lock(S01_AXI_awlock),
+  .io_dmmio_aw_bits_cache(S01_AXI_awcache),
+  .io_dmmio_aw_bits_prot(S01_AXI_awprot),
+  .io_dmmio_aw_bits_qos(S01_AXI_awqos),
+  .io_dmmio_aw_bits_user(),
+  .io_dmmio_w_ready(S01_AXI_wready),
+  .io_dmmio_w_valid(S01_AXI_wvalid),
+  .io_dmmio_w_bits_data(S01_AXI_wdata),
+  .io_dmmio_w_bits_strb(S01_AXI_wstrb),
+  .io_dmmio_w_bits_last(S01_AXI_wlast),
+  .io_dmmio_w_bits_user(io_mmio_wuser),
+  .io_dmmio_b_ready(S01_AXI_bready),
+  .io_dmmio_b_valid(S01_AXI_bvalid),
+  .io_dmmio_b_bits_id(),
+  .io_dmmio_b_bits_resp(S01_AXI_bresp),
+  .io_dmmio_b_bits_user(),
+  .io_dmmio_ar_ready(S01_AXI_arready),
+  .io_dmmio_ar_valid(S01_AXI_arvalid),
+  .io_dmmio_ar_bits_id(),
+  .io_dmmio_ar_bits_addr(S01_AXI_araddr),
+  .io_dmmio_ar_bits_len(S01_AXI_arlen),
+  .io_dmmio_ar_bits_size(S01_AXI_arsize),
+  .io_dmmio_ar_bits_burst(S01_AXI_arburst),
+  .io_dmmio_ar_bits_lock(S01_AXI_arlock),
+  .io_dmmio_ar_bits_cache(S01_AXI_arcache),
+  .io_dmmio_ar_bits_prot(S01_AXI_arprot),
+  .io_dmmio_ar_bits_qos(S01_AXI_arqos),
+  .io_dmmio_ar_bits_user(),
+  .io_dmmio_r_ready(S01_AXI_rready),
+  .io_dmmio_r_valid(S01_AXI_rvalid),
+  .io_dmmio_r_bits_id(),
+  .io_dmmio_r_bits_data(S01_AXI_rdata),
+  .io_dmmio_r_bits_resp(S01_AXI_rresp),
+  .io_dmmio_r_bits_last(S01_AXI_rlast),
+  .io_dmmio_r_bits_user(),
   .io_clint_aw_ready(M00_AXI_awready),
   .io_clint_aw_valid(M00_AXI_awvalid),
   .io_clint_aw_bits_id(),

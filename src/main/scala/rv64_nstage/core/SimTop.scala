@@ -10,7 +10,8 @@ import device._
 import mem._
 
 class SimTopIO extends Bundle with phvntomParams {
-  val mmio = new AXI4Bundle
+  val immio = new AXI4Bundle
+  val dmmio = new AXI4Bundle
   val clint = Flipped(new AXI4Bundle)
   val plic = Flipped(new AXI4Bundle)
   val uart_irq = Input(Bool())
@@ -23,11 +24,7 @@ class SimTop extends Module with phvntomParams {
   core.reset := reset
 
   // mem path
-  val icache = Module(
-    new ICacheForwardSplitSync3Stage()(
-      CacheConfig(name = "icache", readOnly = true, hasMMIO = false)
-    )
-  )
+  val icache = Module(new ICacheForwardSplitSync3StageMMIO()(CacheConfig(name = "icache", readOnly = true)))
   val dcache = Module(new DCacheWriteThroughSplit3Stage()(CacheConfig(name = "dcache")))
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
 
@@ -46,16 +43,21 @@ class SimTop extends Module with phvntomParams {
     )
   )
   val l2cacheBus = Module(new DUncache(l2cache.lineBits, "mem uncache"))
-  for (i <- 0 until mem_source.length) {
-    mem_source(i).io.mem <> l2cache.io.in(i)
-  }
-  core.io.immu <> l2cache.io.in(2)
-  core.io.dmmu <> l2cache.io.in(3)
+  dcache.io.mem <> l2cache.io.in(0)
+  core.io.dmmu <> l2cache.io.in(1)
+  icache.io.mem <> l2cache.io.in(2)
+  core.io.immu <> l2cache.io.in(3)
   l2cache.io.mem <> l2cacheBus.io.in
   l2cacheBus.io.out <> memxbar.io.in(0)
   memxbar.io.out <> mem.io.in
 
   // mmio path
+  val immioBus = Module(new Uncache(mname = "immio uncache"))
+  icache.io.mmio <> immioBus.io.in
+  val dmmioBus = Module(new Uncache(mname = "dmmio uncache"))
+  dcache.io.mmio <> dmmioBus.io.in
+  immioBus.io.out <> io.immio
+  dmmioBus.io.out <> io.dmmio
 
   // clint
   val clint = Module(new Clint)
@@ -63,6 +65,7 @@ class SimTop extends Module with phvntomParams {
   val msipSync = clint.io.extra.get.msip
   core.io.int.msip := msipSync
   core.io.int.mtip := mtipSync
+  clint.io.in <> io.clint
 
   // plic
   val plic = Module(new AXI4PLIC)
@@ -72,12 +75,6 @@ class SimTop extends Module with phvntomParams {
   plic.io.extra.get.intrVec := uart_irqSync
   core.io.int.meip := hart0_meipSync
   core.io.int.seip := hart0_seipSync
-  
-  // xbar
-  val mmioBus = Module(new Uncache(mname = "mmio uncache"))
-  dcache.io.mmio <> mmioBus.io.in
-  mmioBus.io.out <> io.mmio
-  clint.io.in <> io.clint
   plic.io.in <> io.plic
 }
 
