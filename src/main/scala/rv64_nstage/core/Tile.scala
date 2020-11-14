@@ -79,6 +79,9 @@ class Tile extends Module with phvntomParams {
   }
 
   // mmio path
+  // flash
+  val flash = Module(new AXI4DummyFlash(memByte = 16 * 1024 * 1024))
+
   // uart
   val uart = Module(new AXI4UART)
 
@@ -108,10 +111,7 @@ class Tile extends Module with phvntomParams {
     BoringUtils.addSource(uart_irqSync,   "difftestuartirq")
     BoringUtils.addSource(hart0_meipSync, "difftestplicmeip")
     BoringUtils.addSource(hart0_seipSync, "difftestplicseip")
-  }
-
-  // flash
-  val flash = Module(new AXI4DummyFlash(memByte = 16 * 1024 * 1024))
+  }  
 
   // xbar
   val immioBus = Module(new Uncache(mname = "immio uncache"))
@@ -122,7 +122,7 @@ class Tile extends Module with phvntomParams {
   mmioxbar_internal.io.in(0) <> dmmioBus.io.out
   mmioxbar_internal.io.in(1) <> immioBus.io.out
 
-  val mmio_device = List(poweroff, clint, plic, uart, flash)
+  val mmio_device = List(flash, poweroff, clint, plic, uart)
   val mmioxbar_external = Module(new Crossbar1toNLite(AddressSpace.mmio))
   mmioxbar_internal.io.out <> mmioxbar_external.io.in
   for (i <- 0 until mmio_device.length) {

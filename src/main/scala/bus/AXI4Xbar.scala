@@ -248,7 +248,7 @@ class Crossbar1toNLite(addressSpace: List[(Long, Long)])
     }
   }
   for (i <- 0 until addressSpace.length) {
-    if (chiplink) {
+    if (!fpga) {
       when(routSelIdx === i.U && routSelIdx =/= 0.U) { // minus base addr
         io.out(i).ar.bits.addr := io.in.ar.bits.addr - addressSpace(i)._1.U
       }
@@ -300,7 +300,7 @@ class Crossbar1toNLite(addressSpace: List[(Long, Long)])
     }
   }
   for (i <- 0 until addressSpace.length) {
-    if (chiplink) {
+    if (!fpga) {
       when(woutSelIdx === i.U && woutSelIdx =/= 0.U) { // minus base addr
         io.out(i).aw.bits.addr := io.in.aw.bits.addr - addressSpace(i)._1.U
       }
