@@ -118,7 +118,7 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
 
   val s_idle :: s_memReadReq :: s_memReadResp :: s_memWriteReq :: s_memWriteResp :: s_mmioReq :: s_mmioResp :: s_flush :: Nil =
     Enum(8)
-  val state = RegInit(s_idle)
+  val state = RegInit(s_flush)
   val read_address = Cat(s3_addr(xlen - 1, offsetLength), 0.U(offsetLength.W))
   val write_address =
     Cat(Mux(s3_hit, cacheline_meta.tag, s3_tag), s3_index, 0.U(offsetLength.W))
@@ -259,7 +259,7 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
         write_data := writeData
         write_meta := policy.update_meta(s3_meta, s3_access_index)
         write_meta(s3_access_index).valid := true.B
-        write_meta(s3_access_index).dirty := false.B
+        // write_meta(s3_access_index).dirty := false.B
         write_meta(s3_access_index).tag := s3_tag
         meta_index := s3_index
         // printf(
@@ -327,7 +327,7 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
           new_data := target_data
           write_meta := policy.update_meta(s3_meta, s3_access_index)
           write_meta(s3_access_index).valid := true.B
-          write_meta(s3_access_index).dirty := false.B
+          // write_meta(s3_access_index).dirty := false.B
           write_meta(s3_access_index).tag := s3_tag
           meta_index := s3_index
           // printf(
@@ -343,9 +343,9 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
   when(state === s_flush) {
     for (i <- 0 until nWays) {
       write_meta(i).valid := false.B
-      write_meta(i).valid := false.B
+      // write_meta(i).dirty := false.B
       write_meta(i).meta := 0.U
-      write_meta(i).tag := DontCare
+      write_meta(i).tag := 0.U
     }
     meta_index := flush_counter.value
     flush_counter.inc()

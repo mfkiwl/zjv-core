@@ -117,7 +117,7 @@ class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
 
   val s_idle :: s_memReadReq :: s_memReadResp :: s_mmioReq :: s_mmioResp :: s_finish :: s_flush :: Nil =
     Enum(7)
-  val state = RegInit(s_idle)
+  val state = RegInit(s_flush)
   val read_address = Cat(s3_tag, s3_index, 0.U(offsetLength.W))
   val flush_counter = Counter(nSets)
   val flush_finish = flush_counter.value === (nSets - 1).U

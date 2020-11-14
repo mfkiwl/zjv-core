@@ -108,7 +108,7 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
 
   val s_idle :: s_memReadReq :: s_memReadResp :: s_memWriteReq :: s_memWriteResp :: s_flush :: Nil =
     Enum(6)
-  val state = RegInit(s_idle)
+  val state = RegInit(s_flush)
   val read_address = Cat(s3_tag, s3_index, 0.U(offsetLength.W))
   val write_address = Cat(cacheline_meta.tag, s3_index, 0.U(offsetLength.W))
   val mem_valid = state === s_memReadResp && io.mem.resp.valid
@@ -223,9 +223,9 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
   when(state === s_flush) {
     for (i <- 0 until nWays) {
       write_meta(i).valid := false.B
-      write_meta(i).valid := false.B
+      write_meta(i).dirty := false.B
       write_meta(i).meta := 0.U
-      write_meta(i).tag := DontCare
+      write_meta(i).tag := 0.U
     }
     meta_index := flush_counter.value
     flush_counter.inc()

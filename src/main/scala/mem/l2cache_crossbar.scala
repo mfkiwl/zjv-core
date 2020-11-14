@@ -21,7 +21,11 @@ class L2CacheXbar(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
   val thisReq = inputArb.io.out
   val inflightSrc = Reg(UInt(log2Up(n_sources).W))
 
-  io.out.req.bits := thisReq.bits
+  io.out.req.bits := Mux(
+    state === s_idle,
+    thisReq.bits,
+    io.in(inflightSrc).req.bits
+  )
   // bind correct valid and ready signals
   io.out.stall := false.B
   io.out.flush := false.B

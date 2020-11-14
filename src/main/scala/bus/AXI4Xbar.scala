@@ -130,7 +130,11 @@ class CrossbarNto1(n: Int) extends Module with projectConfig {
   val thisReq_r = inputArb_r.io.out
   val inflightSrc_r = Reg(UInt(log2Ceil(n).W))
 
-  io.out.ar.bits := thisReq_r.bits
+  io.out.ar.bits := Mux(
+    r_state === s_idle,
+    thisReq_r.bits,
+    io.in(inflightSrc_r).ar.bits
+  )
   // bind correct valid and ready signals
   io.out.ar.valid := thisReq_r.valid && (r_state === s_idle)
   thisReq_r.ready := io.out.ar.ready && (r_state === s_idle)
@@ -162,7 +166,11 @@ class CrossbarNto1(n: Int) extends Module with projectConfig {
   val thisReq_w = inputArb_w.io.out
   val inflightSrc_w = Reg(UInt(log2Ceil(n).W))
 
-  io.out.aw.bits := thisReq_w.bits
+  io.out.aw.bits := Mux(
+    w_state === s_idle,
+    thisReq_w.bits,
+    io.in(inflightSrc_w).aw.bits
+  )
   // bind correct valid and ready signals
   io.out.aw.valid := thisReq_w.valid && (w_state === s_idle)
   thisReq_w.ready := io.out.aw.ready && (w_state === s_idle)

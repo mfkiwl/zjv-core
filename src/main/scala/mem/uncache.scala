@@ -95,9 +95,9 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
 
     when(state === s_WB_WAIT_AWREADY) {
       io.out.aw.valid := true.B
-      io.out.w.valid := true.B
+      // io.out.w.valid := true.B
       when(io.out.aw.ready) {
-        state := s_WB_WAIT_BVALID //s_WB_WRITE
+        state := s_WB_WRITE
       }
     }.elsewhen(state === s_WB_WRITE) {
       io.out.w.valid := true.B

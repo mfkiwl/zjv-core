@@ -33,18 +33,18 @@ class ysys_zjv extends Module with phvntomParams {
 
   // mem path
   val icache = Module(
-    new ICacheForwardSplitSync3StageMMIO()(
+    new ICacheForwardSplitSync3StageMMIOReorg()(
       CacheConfig(name = "icache", readOnly = true)
     )
   )
-  val dcache = Module(new DCacheWriteThroughSplit3Stage()(CacheConfig(name = "dcache")))
+  val dcache = Module(new DCacheWriteThroughSplit3StageReorg()(CacheConfig(name = "dcache", readOnly = true)))
 
   core.io.imem <> icache.io.in
   core.io.dmem <> dcache.io.in
 
   val mem_source = List(icache, dcache)
   val l2cache = Module(
-    new L2CacheSplit3Stage(4)(
+    new L2CacheSplit3StageReorg(4)(
       CacheConfig(
         name = "l2cache",
         blockBits = dcache.lineBits,

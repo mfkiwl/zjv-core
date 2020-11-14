@@ -71,7 +71,7 @@ class MetaData(implicit val cacheConfig: CacheConfig)
   else { UInt(1.W) }
   val tag = UInt(tagLength.W)
   override def toPrintable: Printable =
-    p"MetaData(valid = ${valid}, dirty = ${dirty}, meta = ${meta}, tag = 0x${Hexadecimal(tag)})\n"
+    p"MetaData(valid = ${valid}, dirty = ${dirty}, meta = ${meta}, tag = 0x${Hexadecimal(tag)})"
 }
 
 class CacheLineData(implicit val cacheConfig: CacheConfig)
@@ -79,5 +79,5 @@ class CacheLineData(implicit val cacheConfig: CacheConfig)
     with CacheParameters {
   val data = Vec(nLine, UInt(blockBits.W))
   override def toPrintable: Printable =
-    p"CacheLineData(data = ${data})\n"
+    p"CacheLineData(data = ${data})"
 }
