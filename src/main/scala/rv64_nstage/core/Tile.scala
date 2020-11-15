@@ -86,11 +86,11 @@ class Tile extends Module with phvntomParams {
   val uart = Module(new AXI4UART)
 
   // power off
-  val poweroff = Module(new AXI4PowerOff)
-  val poweroffSync = poweroff.io.extra.get.poweroff
-  if (diffTest) {
-    BoringUtils.addSource(poweroffSync(31, 0), "difftestpoweroff")
-  }
+  // val poweroff = Module(new AXI4PowerOff)
+  // val poweroffSync = poweroff.io.extra.get.poweroff
+  // if (diffTest) {
+  //   BoringUtils.addSource(poweroffSync(31, 0), "difftestpoweroff")
+  // }
 
   // clint
   val clint = Module(new Clint)
@@ -122,7 +122,7 @@ class Tile extends Module with phvntomParams {
   mmioxbar_internal.io.in(0) <> dmmioBus.io.out
   mmioxbar_internal.io.in(1) <> immioBus.io.out
 
-  val mmio_device = List(flash, poweroff, clint, plic, uart)
+  val mmio_device = List(flash, clint, plic, uart)
   val mmioxbar_external = Module(new Crossbar1toNLite(AddressSpace.mmio))
   mmioxbar_internal.io.out <> mmioxbar_external.io.in
   for (i <- 0 until mmio_device.length) {
