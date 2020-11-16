@@ -15,15 +15,26 @@ class ICacheForwardSplitSync3StageMMIOReorg(implicit
   val io = IO(new CacheIO)
 
   // Module Used
-  val metaArray = List.fill(nWays)(SyncReadMem(nSets, new MetaData))
-  val dataArray =
-    List.fill(nWays)(List.fill(nWords)(SyncReadMem(nSets, UInt(xlen.W))))
+  val metaArray = List.fill(nWays)(Module(new S011HD2P_X128Y2D54(nSets, 54)))
+  val dataArray = List.fill(nWays)(
+    List.fill(nWords)(Module(new S011HD2P_X128Y2D64(nSets, xlen)))
+  )
+  for (i <- 0 until nWays) {
+    metaArray(i).io.CLKA := clock
+    metaArray(i).io.CLKB := clock
+    for (j <- 0 until nWords) {
+      dataArray(i)(j).io.CLKA := clock
+      dataArray(i)(j).io.CLKB := clock
+    }
+  }
+
   val stall = Wire(Bool())
   val need_forward = Wire(Bool())
   val write_meta = Wire(Vec(nWays, new MetaData))
   val write_data = Wire(Vec(nWays, new CacheLineData))
   val write_meta_tmp = Wire(Vec(nWays, new MetaData))
   val write_data_tmp = Wire(Vec(nWays, new CacheLineData))
+  val need_write = Wire(Bool())
 
   /* stage1 signals */
   val s1_valid = WireDefault(Bool(), false.B)
@@ -53,6 +64,7 @@ class ICacheForwardSplitSync3StageMMIOReorg(implicit
   val s2_index = Wire(UInt(indexLength.W))
   val s2_tag = Wire(UInt(tagLength.W))
   val read_index = Mux(io.in.stall, s2_index, s1_index)
+  val s3_index = Wire(UInt(indexLength.W))
 
   when(!io.in.stall) {
     s2_valid := s1_valid
@@ -62,11 +74,28 @@ class ICacheForwardSplitSync3StageMMIOReorg(implicit
     s2_memtype := s1_memtype
   }
   for (i <- 0 until nWays) {
-    array_meta(i) := metaArray(i).read(read_index, true.B)
+    metaArray(i).io.AA := read_index
+    metaArray(i).io.CENA := (read_index === s3_index && need_write) || Mux(
+      io.in.stall,
+      !s2_valid,
+      !s1_valid
+    )
+    for (j <- 0 until nWords) {
+      dataArray(i)(j).io.AA := read_index
+      dataArray(i)(j).io.CENA := (read_index === s3_index && need_write) || Mux(
+        io.in.stall,
+        !s2_valid,
+        !s1_valid
+      )
+      dataArray(i)(j).io.CENB := true.B
+    }
+  }
+  for (i <- 0 until nWays) {
+    array_meta(i) := metaArray(i).io.QA.asTypeOf(new MetaData) // metaArray(i).read(read_index, true.B)
     val read_data = Wire(Vec(nWords, UInt(xlen.W)))
     for (j <- 0 until nWords) {
-      read_data(j) := dataArray(i)(j).read(read_index, true.B)
-    }    
+      read_data(j) := dataArray(i)(j).io.QA
+    }   
     array_cacheline(i) := read_data.asUInt.asTypeOf(new CacheLineData)
   }
   s2_meta := Mux(need_forward, write_meta, array_meta)
@@ -91,7 +120,6 @@ class ICacheForwardSplitSync3StageMMIOReorg(implicit
   val s3_memtype = RegInit(UInt(xlen.W), 0.U)
   val s3_meta = Reg(Vec(nWays, new MetaData))
   val s3_cacheline = Reg(Vec(nWays, new CacheLineData))
-  val s3_index = Wire(UInt(indexLength.W))
   val s3_tag = Wire(UInt(tagLength.W))
   val s3_lineoffset = Wire(UInt(lineLength.W))
   val s3_wordoffset = Wire(UInt((offsetLength - lineLength).W))
@@ -123,7 +151,7 @@ class ICacheForwardSplitSync3StageMMIOReorg(implicit
 
   val s_idle :: s_memReadReq :: s_memReadResp :: s_mmioReq :: s_mmioResp :: s_finish :: s_flush :: Nil =
     Enum(7)
-  val state = RegInit(s_idle)
+  val state = RegInit(s_flush)
   val read_address = Cat(s3_tag, s3_index, 0.U(offsetLength.W))
   val flush_counter = Counter(nSets)
   val flush_finish = flush_counter.value === (nSets - 1).U
@@ -207,6 +235,7 @@ class ICacheForwardSplitSync3StageMMIOReorg(implicit
   write_meta := HoldCond(write_meta_tmp, hold_assert, state === s_finish)
   write_data_tmp := DontCare
   write_meta_tmp := DontCare
+  need_write := false.B
   when(s3_valid) {
     when(request_satisfied) {
       val result_data = target_data.data(s3_lineoffset)
@@ -255,8 +284,12 @@ class ICacheForwardSplitSync3StageMMIOReorg(implicit
             when(s3_access_index === i.U) {
               write_data_tmp(i) := target_data
               for (j <- 0 until nWords) {
-                dataArray(i)(j).write(s3_index, target_data.data(j))
+                dataArray(i)(j).io.AB := s3_index
+                dataArray(i)(j).io.DB := target_data.data(j)
+                dataArray(i)(j).io.CENB := false.B
+                // dataArray(i)(j).write(s3_index, target_data.data(j))
               }
+              need_write := true.B
             }.otherwise {
               write_data_tmp(i) := s3_cacheline(i)
             }
@@ -279,19 +312,23 @@ class ICacheForwardSplitSync3StageMMIOReorg(implicit
     for (i <- 0 until nWays) {
       write_meta_tmp(i).valid := false.B
       write_meta_tmp(i).meta := 0.U
-      write_meta_tmp(i).tag := DontCare
+      write_meta_tmp(i).tag := 0.U
     }
     meta_index := flush_counter.value
     flush_counter.inc()
   }
 
-  when(state === s_flush || (s3_valid && mem_request_satisfied)) {
+  // when(state === s_flush || (s3_valid && mem_request_satisfied)) {
     for (i <- 0 until nWays) {
-      metaArray(i).write(meta_index, write_meta_tmp(i))
+      metaArray(i).io.AB := meta_index
+      metaArray(i).io.DB := write_meta_tmp(i).asUInt
+      metaArray(i).io.CENB := !(state === s_flush || (s3_valid && mem_request_satisfied))
+      // metaArray(i).write(meta_index, write_meta_tmp(i))
     }
-  }
+  // }
 
   // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  // printf(p"AA=${dataArray(0)(0).io.AA}, CENA=${dataArray(0)(0).io.CENA}, AB=${s3_index}, need_write=${need_write}\n")
   // printf(
   //   "stall=%d, need_forward=%d, state=%d, s3_hit=%d, result=%x\n",
   //   stall,

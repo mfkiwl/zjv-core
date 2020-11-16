@@ -4,6 +4,23 @@ import chisel3._
 import rv64_nstage.core._
 import chisel3.util._
 
+/* ------ Here is the WRAPPER of BTB ------ */
+
+class BTBSRAMWrapperIO extends Bundle with phvntomParams {
+  val CLK = Input(Clock())
+  val CEN = Input(Bool())
+  val WEN = Input(Bool())
+  val	A = Input(UInt(8.W))
+  val D = Input(UInt(39.W))
+  val Q = Output(UInt(39.W))
+}
+
+class S011HD1P_X128Y2D39 extends BlackBox {
+  val io = IO(new BTBSRAMWrapperIO)
+}
+
+/* --------- BTB WRAPPER ends here --------- */
+
 class PHTIO extends Bundle with phvntomParams {
   // Combinational History Query
   val index_in = Input(UInt(bpuEntryBits.W))
@@ -90,14 +107,33 @@ class BTBIO extends Bundle with phvntomParams {
 class BTB extends Module with phvntomParams {
   val io = IO(new BTBIO)
 
-  val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(39.W))
-  val read_data = btb_entries.read(io.index_in, !io.update_valid)
+//  val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(39.W))
+//  val read_data = btb_entries.read(io.index_in, !io.update_valid)
+//
+//  io.target_out := Cat(Fill(xlen - 39, read_data(38)), read_data)
+//
+//  when(io.update_valid) {
+//    btb_entries.write(io.update_index, io.update_target(38, 0))
+//  }
 
-  io.target_out := Cat(Fill(xlen - 39, read_data(38)), read_data)
+  /* ------ Use Generated RAM to Replace SyncReadMem ------ */
 
-  when(io.update_valid) {
-    btb_entries.write(io.update_index, io.update_target(38, 0))
-  }
+  val btb_entries = Module(new S011HD1P_X128Y2D39)
+  val wenr = RegNext(!io.update_valid)
+  val ar = RegNext(Mux(io.update_valid, io.update_index, io.index_in))
+  val dr = RegNext(io.update_target(38, 0))
+
+  btb_entries.io.CLK := clock
+  btb_entries.io.CEN := false.B
+  btb_entries.io.WEN := !io.update_valid
+  btb_entries.io.A := Mux(io.update_valid, io.update_index, io.index_in)
+  btb_entries.io.D := io.update_target(38, 0)
+  io.target_out := Cat(Fill(xlen - 39, btb_entries.io.Q(38)), btb_entries.io.Q)
+
+//  when(io.update_valid) {
+//    printf("~wen %x, addr %x, data %x, out %x\n", btb_entries.io.WEN, btb_entries.io.A, btb_entries.io.D, io.target_out)
+//  }
+  /* ------------------------------------------------------ */
 }
 
 class BPUIO extends Bundle with phvntomParams {

@@ -84,12 +84,15 @@ generate_testcase:
 generate_analysis:
 	mkdir -p $(WORK_DIR)
 	sbt "runMain $(TARGET_CORE).generate"
-	cd fpga && make clean && make generate_project
+	# cd fpga && make clean && make generate_project
 
 generate_chiplink:
 	sbt "runMain $(TARGET_CORE).chiplink"
-	sed -i '1 i\`define RANDOMIZE_DELAY 0' ./build/verilog/rv64_nstage.core/ysys_zjv.v
-	cp ./build/verilog/rv64_nstage.core/ysys_zjv.v /mnt/c/Users/zhxj9823/Downloads/
+	sed -i '1 i\`define RANDOMIZE_DELAY 0' ./build/verilog/rv64_nstage.core/ysyx_zjv.v
+	sed -i 's/zjv_ysyx/ysyx/' ./build/verilog/rv64_nstage.core/ysyx_zjv.v
+	sed -i 's/zjv_S011/S011/' ./build/verilog/rv64_nstage.core/ysyx_zjv.v
+	cp ./build/verilog/rv64_nstage.core/ysyx_zjv.v ~/phvntom-chiplink/cpu/
+	cp ./build/verilog/rv64_nstage.core/ysyx_zjv.v /mnt/c/Users/zhxj9823/Downloads/
 
 how_verilator_work:
 	mkdir -p $(VERILATOR_DEST_DIR)/Hello

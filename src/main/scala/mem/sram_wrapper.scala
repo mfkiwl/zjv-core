@@ -4,40 +4,32 @@ import chisel3._
 import chisel3.util._
 import rv64_nstage.core._
 
-class SRAMWrapperIO(depth: Int, width: Int) extends Bundle with phvntomParams {
-  val aa = Input(UInt(depth.W))
-  val ab = Input(UInt(depth.W))
-  val db = Input(UInt(width.W))
-  val bwenb = Input(UInt(width.W))
-  val cena = Input(Bool())
-  val cenb = Input(Bool())
-  val clka = Input(Bool())
-  val clkb = Input(Bool())
-  val qa = Output(UInt(width.W))
+class SRAMWrapperIO(val depth: Int = 256, val dataWidth: Int = 64) extends Bundle with phvntomParams {
+  val depthLength = log2Ceil(depth)
+  val AA = Input(UInt(depthLength.W))
+  val AB = Input(UInt(depthLength.W))
+  val DB = Input(UInt(dataWidth.W))
+  val CENA = Input(Bool())
+  val CENB = Input(Bool())
+  val CLKA = Input(Clock())
+  val CLKB = Input(Clock())
+  val QA = Output(UInt(dataWidth.W))
 }
 
-class SRAMTrueWrapper(depth: Int, width: Int)
+class S011HD2P_X128Y2D53(depth: Int, width: Int)
     extends BlackBox
     with phvntomParams {
   val io = IO(new SRAMWrapperIO(depth, width))
 }
 
-class SRAMWrapper(depth: Int, width: Int) extends Module with phvntomParams {
+class S011HD2P_X128Y2D54(depth: Int, width: Int)
+    extends BlackBox
+    with phvntomParams {
   val io = IO(new SRAMWrapperIO(depth, width))
-  val mem = Module(new SRAMTrueWrapper(depth, width))
-  mem.io.clka := clock
-  mem.io.clkb := clock
+}
 
-  def read(addr: UInt, en: Bool) = {
-    mem.io.aa := addr
-    mem.io.cena := ~en
-    mem.io.qa
-  }
-  
-  def wrire(addr: UInt, data: UInt, en: Bool) = {
-    mem.io.ab := addr
-    mem.io.db := data
-    mem.io.bwenb := Fill(width, 1.U(1.W))
-    mem.io.cenb := ~en
-  }
+class S011HD2P_X128Y2D64(depth: Int, width: Int)
+    extends BlackBox
+    with phvntomParams {
+  val io = IO(new SRAMWrapperIO(depth, width))
 }
