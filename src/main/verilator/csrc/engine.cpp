@@ -104,7 +104,7 @@ dtengine_t::dtengine_t(size_t xlen, std::string elfpath): xlen(xlen) {
     disassembler = new disassembler_t(xlen);
 
     emu_init(elfpath);
-    // sim_init(elfpath);
+    sim_init(elfpath);
     
 
     #if VM_TRACE

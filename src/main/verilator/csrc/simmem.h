@@ -23,7 +23,7 @@
 class htif_simmem_t : public chunked_memif_t
 {
 public:
-  htif_simmem_t(size_t w=8, size_t b=0x40000000);
+  htif_simmem_t(size_t w=8, size_t b=0x80000000);
 
   void mem_check () {
     for(auto entry : mem) {

@@ -63,11 +63,11 @@ int main(int argc, char **argv)
    while (!engine.is_finish())
    {
       engine.emu_step(1);
-      usleep(500*2);
+      // usleep(500*2);
       if (engine.emu_difftest_valid())
       {
-         // fprintf(stderr, "\t\t\t\t [ ROUND %lx %lx ]\n", engine.trace_count, engine.emu_get_mcycle());
-         // fprintf(stderr, "zjv   pc: 0x%016lx (0x%08lx): %s\n", engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
+         fprintf(stderr, "[ ROUND %lx %lx ]  ", engine.trace_count, engine.emu_get_mcycle());
+         fprintf(stderr, "zjv   pc: 0x%016lx (0x%08lx): %s\n", engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
 
          // for (int i = 0; i < REG_G_NUM; i++)
          // {
