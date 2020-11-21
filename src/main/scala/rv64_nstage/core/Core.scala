@@ -11,7 +11,7 @@ trait phvntomParams {
   val bitWidth      = log2Ceil(xlen)
   val regNum        = 32
   val regWidth      = log2Ceil(regNum)
-  val diffTest      = false
+  val diffTest      = true
   val pipeTrace     = false
   val prtHotSpot    = false
   val vscode        = false
