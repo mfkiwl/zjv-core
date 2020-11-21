@@ -52,10 +52,9 @@ class AXI4RAM(memByte: Int, name: String = "ram")
   //   writeBeatCnt
   // )
   // printf(
-  //   "raddr = %x, rIdx = %x, rdata = %x, readBeatCnt = %d\n",
+  //   "raddr = %x, rIdx = %x, readBeatCnt = %d\n",
   //   raddr,
   //   rIdx,
-  //   rdata,
   //   readBeatCnt
   // )
   // printf("----------AXI4RAM Debug Done----------\n")

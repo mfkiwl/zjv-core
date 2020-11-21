@@ -140,37 +140,49 @@ class ChiplinkTile extends Module with phvntomParams {
   // io.frontend.r.bits := DontCare
 
   // mem path
-  val icache = Module(
-    new ICacheForwardSplitSync3StageMMIOReorg()(
-      CacheConfig(name = "icache", readOnly = true)
+  val icache = if (hasCache) {
+    Module(
+      new ICacheForwardSplitSync3StageMMIOReorg()(CacheConfig(readOnly = true))
     )
-  )
-  val dcache = Module(
-    new DCacheWriteThroughSplit3StageReorg()(
-      CacheConfig(name = "dcache", readOnly = true)
+  } else { Module(new CacheDummy()(CacheConfig(name = "icache", lines = 1))) }
+  val dcache = if (hasCache) {
+    Module(
+      new DCacheWriteThroughSplit3StageReorg()(CacheConfig(readOnly = true))
     )
-  )
+  } else { Module(new CacheDummy()(CacheConfig(lines = 1))) }
 
   core.io.imem <> icache.io.in
   core.io.dmem <> dcache.io.in
 
-  val mem_source = List(icache, dcache)
-  val l2cache = Module(
-    new L2CacheSplit3StageReorg(4)(
-      CacheConfig(
-        name = "l2cache",
-        blockBits = dcache.lineBits,
-        totalSize = 128
+  if (hasCache) {
+    val l2cache = Module(
+      new L2CacheSplit3StageReorg(4)(
+        CacheConfig(blockBits = dcache.lineBits, totalSize = 128)
       )
     )
-  )
-  val l2cacheBus = Module(new DUncache(l2cache.lineBits, "mem uncache"))
-  dcache.io.mem <> l2cache.io.in(0)
-  core.io.dmmu <> l2cache.io.in(1)
-  icache.io.mem <> l2cache.io.in(2)
-  core.io.immu <> l2cache.io.in(3)
-  l2cache.io.mem <> l2cacheBus.io.in
-  l2cacheBus.io.out <> io.mem
+    val l2cacheBus = Module(new DUncache(l2cache.lineBits))
+    dcache.io.mem <> l2cache.io.in(0)
+    core.io.dmmu <> l2cache.io.in(1)
+    icache.io.mem <> l2cache.io.in(2)
+    core.io.immu <> l2cache.io.in(3)
+    l2cache.io.mem <> l2cacheBus.io.in
+    l2cacheBus.io.out <> io.mem
+  } else {
+    val memxbar = Module(new CrossbarNto1(4))
+    val imemBus = Module(new MemUncache(dataWidth = xlen))
+    val dmemBus = Module(new MemUncache(dataWidth = xlen))
+    val immuBus = Module(new MemUncache(dataWidth = xlen))
+    val dmmuBus = Module(new MemUncache(dataWidth = xlen))
+    dcache.io.mem <> dmemBus.io.in
+    icache.io.mem <> imemBus.io.in
+    core.io.immu <> immuBus.io.in
+    core.io.dmmu <> dmmuBus.io.in
+    dmemBus.io.out <> memxbar.io.in(0)
+    dmmuBus.io.out <> memxbar.io.in(1)
+    imemBus.io.out <> memxbar.io.in(2)
+    immuBus.io.out <> memxbar.io.in(3)
+    memxbar.io.out <> io.mem
+  }
 
   // mmio path
   val immioBus = Module(new Uncache(mname = "immio uncache"))
@@ -204,7 +216,7 @@ class ChiplinkTile extends Module with phvntomParams {
   mmioxbar_external.io.out(2) <> plic.io.in
 }
 
-class ysyx_zjv extends Module with phvntomParams {
+class ysyx_zju extends Module with phvntomParams {
   val io = IO(new SOCIO)
 
   val chiplink = Module(new ChiplinkTile)
@@ -327,9 +339,9 @@ object chiplink {
     (new chisel3.stage.ChiselStage).execute(
       Array("-td", "build/verilog/" + packageName, "-X", "verilog"),
       Seq(
-        ChiselGeneratorAnnotation(() => new ysyx_zjv),
+        ChiselGeneratorAnnotation(() => new ysyx_zju),
         RunFirrtlTransformAnnotation(new AddModulePrefix()),
-        ModulePrefixAnnotation("zjv_")
+        ModulePrefixAnnotation("zju_")
       )
     )
   }

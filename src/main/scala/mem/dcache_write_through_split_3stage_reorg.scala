@@ -17,13 +17,15 @@ class DCacheWriteThroughSplit3StageReorg(implicit val cacheConfig: CacheConfig)
   val metaArray = List.fill(nWays)(Module(new S011HD2P_X128Y2D54(nSets, 54)))
   val dataArray = List.fill(nWays)(
     List.fill(nWords)(Module(new S011HD2P_X128Y2D64(nSets, xlen)))
-  )  
+  )
   for (i <- 0 until nWays) {
     metaArray(i).io.CLKA := clock
     metaArray(i).io.CLKB := clock
+    metaArray(i).io.CENB := true.B
     for (j <- 0 until nWords) {
       dataArray(i)(j).io.CLKA := clock
       dataArray(i)(j).io.CLKB := clock
+      dataArray(i)(j).io.CENB := true.B
     }
   }
 
@@ -73,22 +75,15 @@ class DCacheWriteThroughSplit3StageReorg(implicit val cacheConfig: CacheConfig)
   }
   for (i <- 0 until nWays) {
     metaArray(i).io.AA := read_index
-    metaArray(i).io.CENA := (read_index === s3_index && need_write) || Mux(
-      io.in.stall,
-      !s2_valid,
-      !s1_valid
-    )
+    metaArray(i).io.CENA := read_index === s3_index && need_write
     for (j <- 0 until nWords) {
       dataArray(i)(j).io.AA := read_index
-      dataArray(i)(j).io.CENA := (read_index === s3_index && need_write) || Mux(
-        io.in.stall,
-        !s2_valid,
-        !s1_valid
-      )
+      dataArray(i)(j).io.CENA := read_index === s3_index && need_write
     }
   }
   for (i <- 0 until nWays) {
-    array_meta(i) := metaArray(i).io.QA.asTypeOf(new MetaData) // metaArray(i).read(read_index, true.B)
+    array_meta(i) := metaArray(i).io.QA
+      .asTypeOf(new MetaData) // metaArray(i).read(read_index, true.B)
     val read_data = Wire(Vec(nWords, UInt(xlen.W)))
     for (j <- 0 until nWords) {
       read_data(j) := dataArray(i)(j).io.QA
@@ -380,40 +375,38 @@ class DCacheWriteThroughSplit3StageReorg(implicit val cacheConfig: CacheConfig)
     flush_counter.inc()
   }
 
-  // when(
-  //   state === s_flush || (s3_valid && ((s3_wen && (s3_hit || mem_read_valid)) || (!s3_wen && (s3_hit || mem_read_valid || mmio_request_satisfied))))
-  // ) {
-  for (i <- 0 until nWays) {
-    metaArray(i).io.AB := meta_index
-    metaArray(i).io.DB := write_meta(i).asUInt
-    metaArray(i).io.CENB := !(state === s_flush || (s3_valid && ((s3_wen && ((s3_hit && state === s_idle) || (!s3_hit && mem_read_valid))) || (!s3_wen && (s3_hit || mem_read_valid)))))
-    // metaArray(i).write(meta_index, write_meta(i))
+  when(
+    state === s_flush || (s3_valid && ((s3_wen && ((s3_hit && state === s_idle) || (!s3_hit && mem_read_valid))) || (!s3_wen && !s3_ismmio && (s3_hit || mem_read_valid))))
+  ) {
+    for (i <- 0 until nWays) {
+      metaArray(i).io.AB := meta_index
+      metaArray(i).io.DB := write_meta(i).asUInt
+      metaArray(i).io.CENB := false.B
+      // metaArray(i).write(meta_index, write_meta(i))
+    }
   }
-  // }
 
-  // when(
-  //   s3_valid && ((s3_wen && (s3_hit || mem_read_valid)) || (!s3_wen && !s3_ismmio && mem_read_valid))
-  // ) {
   need_write := s3_valid && ((s3_wen && ((s3_hit && state === s_idle) || (!s3_hit && mem_read_valid))) || (!s3_wen && !s3_ismmio && mem_read_valid))
-  for (i <- 0 until nWays) {
-    when(s3_access_index === i.U) {
-      val db_data = new_data.data.asUInt.asTypeOf(Vec(nWords, UInt(xlen.W)))
-      for (j <- 0 until nWords) {
-        dataArray(i)(j).io.AB := s3_index
-        dataArray(i)(j).io.DB := db_data(j)
-        dataArray(i)(j).io.CENB := !need_write
-        // dataArray(i)(j).write(
-        //   s3_index,
-        //   new_data.data(j),
-        //   s3_valid && ((s3_wen && (s3_hit || mem_read_valid)) || (!s3_wen && !s3_ismmio && mem_read_valid))
-        // )
+  when(need_write) {
+    for (i <- 0 until nWays) {
+      when(s3_access_index === i.U) {
+        val db_data = new_data.data.asUInt.asTypeOf(Vec(nWords, UInt(xlen.W)))
+        for (j <- 0 until nWords) {
+          dataArray(i)(j).io.AB := s3_index
+          dataArray(i)(j).io.DB := db_data(j)
+          dataArray(i)(j).io.CENB := false.B
+          // dataArray(i)(j).write(
+          //   s3_index,
+          //   new_data.data(j),
+          //   s3_valid && ((s3_wen && (s3_hit || mem_read_valid)) || (!s3_wen && !s3_ismmio && mem_read_valid))
+          // )
+        }
       }
     }
   }
-  // }
-  // printf(p"[${GTimer()}] AA=${dataArray(0)(0).io.AA}, CENA=${dataArray(0)(0).io.CENA}, AB=${s3_index}, new_data=${new_data}, CENB=${!need_write}\n")
 
   // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+  // printf(p"[${GTimer()}] AA=${dataArray(0)(0).io.AA}, CENA=${dataArray(0)(0).io.CENA}, AB=${s3_index}, new_data=${new_data}, CENB=${!need_write}\n")
   // printf(
   //   "stall=%d, need_forward=%d, state=%d, s3_ismmio=%d, s3_hit=%d, result=%x\n",
   //   stall,

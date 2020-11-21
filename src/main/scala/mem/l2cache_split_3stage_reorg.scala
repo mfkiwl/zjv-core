@@ -23,9 +23,11 @@ class L2CacheSplit3StageReorg(val n_sources: Int = 1)(implicit
   for (i <- 0 until nWays) {
     metaArray(i).io.CLKA := clock
     metaArray(i).io.CLKB := clock
+    metaArray(i).io.CENB := true.B
     for (j <- 0 until nWords) {
       dataArray(i)(j).io.CLKA := clock
       dataArray(i)(j).io.CLKB := clock
+      dataArray(i)(j).io.CENB := true.B
     }
   }
 
@@ -76,13 +78,10 @@ class L2CacheSplit3StageReorg(val n_sources: Int = 1)(implicit
     }
   }
   for (i <- 0 until nWays) {
-    s2_meta(i) := metaArray(i).io.QA
-      .asTypeOf(new MetaData) // metaArray(i).read(s1_index, true.B)
+    s2_meta(i) := metaArray(i).io.QA.asTypeOf(new MetaData)
     val read_data = Wire(Vec(nWords, UInt(xlen.W)))
     for (j <- 0 until nWords) {
-      read_data(j) := dataArray(i)(
-        j
-      ).io.QA // dataArray(i)(j).read(s1_index, true.B)
+      read_data(j) := dataArray(i)(j).io.QA
     }
     s2_cacheline(i) := read_data.asUInt.asTypeOf(new CacheLineData)
   }
@@ -258,30 +257,28 @@ class L2CacheSplit3StageReorg(val n_sources: Int = 1)(implicit
     flush_counter.inc()
   }
 
-  // when(state === s_flush || (s3_valid && request_satisfied)) {
-  for (i <- 0 until nWays) {
-    metaArray(i).io.AB := meta_index
-    metaArray(i).io.DB := write_meta(i).asUInt
-    metaArray(
-      i
-    ).io.CENB := !(state === s_flush || (s3_valid && request_satisfied))
-    // metaArray(i).write(meta_index, write_meta(i))
+  when(state === s_flush || (s3_valid && request_satisfied)) {
+    for (i <- 0 until nWays) {
+      metaArray(i).io.AB := meta_index
+      metaArray(i).io.DB := write_meta(i).asUInt
+      metaArray(i).io.CENB := false.B
+      // metaArray(i).write(meta_index, write_meta(i))
+    }
   }
-  // }
 
-  // when(s3_valid && request_satisfied) {
-  for (i <- 0 until nWays) {
-    when(s3_access_index === i.U) {
-      val db_data = new_data.data.asUInt.asTypeOf(Vec(nWords, UInt(xlen.W)))
-      for (j <- 0 until nWords) {
-        dataArray(i)(j).io.AB := s3_index
-        dataArray(i)(j).io.DB := db_data(j)
-        dataArray(i)(j).io.CENB := !(s3_valid && request_satisfied)
-        // dataArray(i)(j).write(s3_index, db_data(j))
+  when(s3_valid && request_satisfied) {
+    for (i <- 0 until nWays) {
+      when(s3_access_index === i.U) {
+        val db_data = new_data.data.asUInt.asTypeOf(Vec(nWords, UInt(xlen.W)))
+        for (j <- 0 until nWords) {
+          dataArray(i)(j).io.AB := s3_index
+          dataArray(i)(j).io.DB := db_data(j)
+          dataArray(i)(j).io.CENB := false.B
+          // dataArray(i)(j).write(s3_index, db_data(j))
+        }
       }
     }
   }
-  // }
 
   // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
   // printf("state=%d, stall=%d, s3_hit=%d, result=%x\n", state, stall, s3_hit, result)

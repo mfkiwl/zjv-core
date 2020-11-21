@@ -30,6 +30,7 @@ class L2CacheXbar(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
   io.out.stall := false.B
   io.out.flush := false.B
   io.out.req.valid := thisReq.valid && (state === s_idle)
+  io.in.map(_.req.ready := false.B)
   thisReq.ready := io.out.req.ready && (state === s_idle)
 
   io.in.map(_.resp.bits := DontCare)
@@ -45,8 +46,9 @@ class L2CacheXbar(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
 
   switch(state) {
     is(s_idle) {
-      when(thisReq.fire()) {
+      when(thisReq.valid) {
         inflightSrc := inputArb.io.chosen
+        io.in(inputArb.io.chosen).req.ready := true.B
         when(thisReq.valid) {
           when(thisReq.bits.wen) { state := s_writeResp }.otherwise {
             state := s_readResp

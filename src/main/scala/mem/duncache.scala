@@ -32,7 +32,7 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
   io.out.r.ready := false.B
   io.in.resp.valid := false.B // stall
   io.in.flush_ready := true.B
-  io.in.req.ready := state === s_IDLE && ((io.out.ar.ready && !io.in.req.bits.wen) || (io.out.aw.ready && io.in.req.bits.wen))
+  io.in.req.ready := (state === s_WAIT_AXI_READY && io.out.ar.ready && !io.in.req.bits.wen) || (state === s_WB_WAIT_AWREADY && io.out.aw.ready && io.in.req.bits.wen)
 
   io.out.aw.bits.id := 0.U
   io.out.ar.bits.id := 0.U
@@ -98,7 +98,7 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
         state := s_RECEIVING
       }
     }.elsewhen(state === s_RECEIVING) {
-      io.out.ar.valid := true.B
+      // io.out.ar.valid := true.B
       when(io.out.r.valid) {
         io.out.r.ready := true.B
         when(io.out.r.fire()) {

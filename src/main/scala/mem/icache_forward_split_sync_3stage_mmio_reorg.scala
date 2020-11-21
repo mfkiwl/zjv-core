@@ -75,18 +75,11 @@ class ICacheForwardSplitSync3StageMMIOReorg(implicit
   }
   for (i <- 0 until nWays) {
     metaArray(i).io.AA := read_index
-    metaArray(i).io.CENA := (read_index === s3_index && need_write) || Mux(
-      io.in.stall,
-      !s2_valid,
-      !s1_valid
-    )
+    metaArray(i).io.CENA := read_index === s3_index && need_write
+    metaArray(i).io.CENB := true.B
     for (j <- 0 until nWords) {
       dataArray(i)(j).io.AA := read_index
-      dataArray(i)(j).io.CENA := (read_index === s3_index && need_write) || Mux(
-        io.in.stall,
-        !s2_valid,
-        !s1_valid
-      )
+      dataArray(i)(j).io.CENA := read_index === s3_index && need_write
       dataArray(i)(j).io.CENB := true.B
     }
   }
@@ -318,14 +311,14 @@ class ICacheForwardSplitSync3StageMMIOReorg(implicit
     flush_counter.inc()
   }
 
-  // when(state === s_flush || (s3_valid && mem_request_satisfied)) {
+  when(state === s_flush || (s3_valid && mem_request_satisfied)) {
     for (i <- 0 until nWays) {
       metaArray(i).io.AB := meta_index
       metaArray(i).io.DB := write_meta_tmp(i).asUInt
-      metaArray(i).io.CENB := !(state === s_flush || (s3_valid && mem_request_satisfied))
+      metaArray(i).io.CENB := false.B
       // metaArray(i).write(meta_index, write_meta_tmp(i))
     }
-  // }
+  }
 
   // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
   // printf(p"AA=${dataArray(0)(0).io.AA}, CENA=${dataArray(0)(0).io.CENA}, AB=${s3_index}, need_write=${need_write}\n")

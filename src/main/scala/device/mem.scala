@@ -10,7 +10,7 @@ class MemReq(val dataWidth: Int = 64) extends Bundle with phvntomParams { // wri
   val addr = Output(UInt(xlen.W))
   val data = Output(UInt(dataWidth.W))
   val wen = Output(Bool())
-  val memtype = Output(UInt(xlen.W))
+  val memtype = Output(UInt(memBits.W))
 
   override def toPrintable: Printable = p"addr = 0x${Hexadecimal(addr)}, wen = ${wen}, memtype = ${memtype}\n\tdata = 0x${Hexadecimal(data)}"
 }
