@@ -5,7 +5,7 @@ import chisel3.util._
 import rv64_nstage.core._
 import utils._
 
-abstract class AXI4Slave[B <: Data](
+abstract class AXI4LiteSlave[B <: Data](
     _extra: B = null,
     name: String = "AXI4Slave"
 ) extends Module
@@ -29,7 +29,7 @@ abstract class AXI4Slave[B <: Data](
   val wrapAddr = io.in.ar.bits.addr & ~(io.in.ar.bits.len
     .asTypeOf(UInt(io.in.addrBits.W)) << io.in.ar.bits.size)
   raddr := HoldUnless(wrapAddr, io.in.ar.fire())
-  io.in.r.bits.last := (c_r.value === len)
+  io.in.r.bits.last := true.B // (c_r.value === len)
   when(ren) {
     beatCnt.inc()
     when(burst === io.in.BURST_WRAP && beatCnt.value === len) {
@@ -73,9 +73,9 @@ abstract class AXI4Slave[B <: Data](
   waddr := HoldUnless(io.in.aw.bits.addr, io.in.aw.fire())
   when(io.in.w.fire()) {
     c_w.inc()
-    when(io.in.w.bits.last) { c_w.value := 0.U }
+    when(true.B) { c_w.value := 0.U }
   }
-  val (writeBeatCnt, wLast) = (c_w.value, io.in.w.bits.last)
+  val (writeBeatCnt, wLast) = (c_w.value, true.B)
 
   val w_busy =
     BoolStopWatch(io.in.aw.fire(), io.in.b.fire(), startHighPriority = true)
@@ -102,5 +102,5 @@ abstract class AXI4Slave[B <: Data](
   //   p"readBeatCnt=${readBeatCnt}, writeBeatCnt=${writeBeatCnt}, rLast=${rLast}, wLast=${wLast}\n"
   // )
   // printf(p"io.in: \n${io.in}\n")
-  // printf("-----------AXI4Slave Debug Done-----------\n")
+  // printf("-----------AXI4LiteSlave Debug Done-----------\n")
 }

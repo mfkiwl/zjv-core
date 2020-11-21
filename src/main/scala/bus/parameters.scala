@@ -2,10 +2,9 @@ package bus
 
 import chisel3._
 import chisel3.util
-import common._
-import rv64_3stage.phvntomParams
+import rv64_nstage.core._
 
-trait AXI4Parameters extends phvntomParams{
+trait AXI4Parameters extends phvntomParams {
   // These are all fixed by the AXI4 standard:
   val lenBits = 8
   val sizeBits = 3
@@ -18,8 +17,8 @@ trait AXI4Parameters extends phvntomParams{
 
   // These are not fixed:
   val idBits = 1
-  val addrBits = xlen // PAddrBits
-  val dataBits = xlen // DataBits
+  val addrBits = 32
+  val dataBits = xlen
   val userBits = 1
 
   def CACHE_RALLOCATE = 8.U(cacheBits.W)

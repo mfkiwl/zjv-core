@@ -39,6 +39,7 @@ extern void init_ram(const std::string img);
 
 struct difftest_state_t {
     reg_t regs[32];
+    reg_t streqs[10];
     reg_t pc, inst;
     reg_t npc;
     reg_t priv;
@@ -60,6 +61,8 @@ struct difftest_state_t {
     uint32_t plicprio;
     uint32_t plicthrs;
     uint32_t plicclaim;
+    bool mem;
+    reg_t pa;
 };
 
 class dtengine_t {
@@ -113,6 +116,8 @@ public:
     difftest_get(emu, sip);
     difftest_get(emu, mie);
     difftest_get(emu, sie);
+    difftest_get(emu, mem);
+    difftest_get(emu, pa);
 
     difftest_get(sim, npc);
     difftest_get(sim, pc);
@@ -135,6 +140,7 @@ public:
     difftest_get(sim, sip);
     difftest_get(sim, mie);
     difftest_get(sim, sie);
+    // difftest_get(sim, pa);
 
     difftest_get(emu, uartirq);
     difftest_get(emu, plicmeip);

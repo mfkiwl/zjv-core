@@ -45,6 +45,75 @@ class ALU extends Module with phvntomParams {
   io.zero := ~io.out.orR
 }
 
+class WallaceMultiplierIO extends Bundle with phvntomParams {
+  // Signals for Input
+  val abs_a_i = Input(UInt(xlen.W))
+  val abs_b_i = Input(UInt(xlen.W))
+  // Signals for Output
+  val data_o = Output(UInt((2 * xlen).W))
+}
+
+// The Pipelined Multiplier
+class WallaceMultiplier extends Module with phvntomParams {
+  val io = IO(new WallaceMultiplierIO)
+
+  val stage_one_reg_num = (xlen + 3) / 4
+  val stage_two_reg_num = (stage_one_reg_num + 3) / 4
+  val stage_three_reg_num = (stage_two_reg_num + 3) / 4
+
+  val abs_a = WireInit(UInt(xlen.W), 0.U)
+  val abs_b = WireInit(UInt(xlen.W), 0.U)
+
+  val temp_regs_stage_one = RegInit(VecInit(Seq.fill(stage_one_reg_num)(0.U((xlen + 4).W))))
+  val temp_regs_stage_two = RegInit(VecInit(Seq.fill(stage_two_reg_num)(0.U((xlen + 4 + 12).W))))
+
+  // Stage Zero
+  abs_a := io.abs_a_i
+  abs_b := io.abs_b_i
+
+//  printf("BEGIN\n")
+//  printf("In stage0 a %x, b %x\n", abs_a, abs_b)
+  // Stage One
+  for(i <- 0 to stage_one_reg_num - 1) {
+    temp_regs_stage_one(i) := (
+      0.U((xlen + 4).W) +
+      Cat(Mux(abs_b((i << 2) + 3), abs_a, 0.U), 0.U(3.W)) +
+      Cat(Mux(abs_b((i << 2) + 2), abs_a, 0.U), 0.U(2.W)) +
+      Cat(Mux(abs_b((i << 2) + 1), abs_a, 0.U), 0.U(1.W)) +
+      Mux(abs_b((i << 2) + 0), abs_a, 0.U)
+    )
+//    printf("In stage1(%x) %x\n", i.asUInt, temp_regs_stage_one(i))
+  }
+
+  // Stage Two
+  for(i <- 0 to stage_two_reg_num - 1) {
+    temp_regs_stage_two(i) := (
+      0.U((xlen + 4 + 12).W) +
+      Cat(temp_regs_stage_one((i << 2) + 3), 0.U(12.W)) +
+      Cat(temp_regs_stage_one((i << 2) + 2), 0.U(8.W)) +
+      Cat(temp_regs_stage_one((i << 2) + 1), 0.U(4.W)) +
+      temp_regs_stage_one((i << 2) + 0)
+    )
+//    printf("In stage2(%x) %x\n", i.asUInt, temp_regs_stage_two(i))
+  }
+
+  // Stage Three
+  if(xlen == 64) {
+    io.data_o := (
+      0.U((xlen + 4 + 12 + 48).W) +
+      temp_regs_stage_two(0) +
+      Cat(temp_regs_stage_two(1), 0.U(16.W)) +
+      Cat(temp_regs_stage_two(2), 0.U(32.W)) +
+      Cat(temp_regs_stage_two(3), 0.U(48.W))
+    )
+//    printf("data %x\n", io.data_o)
+  } else {
+    io.data_o := 0.U((xlen + 4 + 12 + 16).W) + (temp_regs_stage_two(0) << 0.U) + (temp_regs_stage_two(1) << 16.U)
+  }
+
+//  printf("END\n")
+}
+
 class MultiplierIO extends Bundle with phvntomParams {
   val start = Input(Bool())
   val a = Input(UInt(xlen.W))
@@ -140,19 +209,35 @@ class Multiplier extends Module with phvntomParams {
 
   last_stall_req := io.stall_req
 
+  /* ------ Try My New Multiplier ------ */
+  val abs_a_reg = RegNext(abs_a)
+  val abs_b_reg = RegNext(abs_b)
+  val adv_multiplier = Module(new WallaceMultiplier)
+  adv_multiplier.io.abs_a_i := abs_a_reg
+  adv_multiplier.io.abs_b_i := abs_b_reg
+  /* ------------ Done ------------ */
+
   when(io.start) {
     when(is_mult) {
-      when (io.stall_req) {
+//      when (io.stall_req) {
+//        mult_cnt := mult_cnt + 1.U
+//      }.otherwise {
+//        mult_cnt := 0.U
+//      }
+//      when(io.stall_req) {
+//        when(!last_stall_req) {
+//          res := Cat(Fill(xlen, 0.U), abs_b)
+//        }.otherwise {
+//          res := Cat(front_val(xlen), step_result(2 * xlen - 1, 1))
+//        }
+//      }
+      when(io.stall_req) {
         mult_cnt := mult_cnt + 1.U
       }.otherwise {
         mult_cnt := 0.U
       }
       when(io.stall_req) {
-        when(!last_stall_req) {
-          res := Cat(Fill(xlen, 0.U), abs_b)
-        }.otherwise {
-          res := Cat(front_val(xlen), step_result(2 * xlen - 1, 1))
-        }
+        res := adv_multiplier.io.data_o
       }
     }.otherwise {
       when (io.stall_req) {
@@ -177,9 +262,10 @@ class Multiplier extends Module with phvntomParams {
   // TODO additionally, div_cnt and mult_cnt are separated because I want to accelerate MULT
 
   when(is_mult) {
-    front_val := Cat(Fill(1, 0.U), Mux(res(0), abs_a, 0.U(xlen.W))) + Cat(Fill(1, 0.U), res(2 * xlen - 1, xlen))
-    step_result := Cat(front_val(xlen - 1, 0), res(xlen - 1, 0))
-    io.stall_req := io.start && (mult_cnt =/= (xlen + 1).U || (!last_stall_req && !check_history_same(io.a, io.b, io.op, last_a, last_b, last_op)))
+    io.stall_req := io.start && (mult_cnt =/= 4.U || (!last_stall_req && !check_history_same(io.a, io.b, io.op, last_a, last_b, last_op)))
+//    front_val := Cat(Fill(1, 0.U), Mux(res(0), abs_a, 0.U(xlen.W))) + Cat(Fill(1, 0.U), res(2 * xlen - 1, xlen))
+//    step_result := Cat(front_val(xlen - 1, 0), res(xlen - 1, 0))
+//    io.stall_req := io.start && (mult_cnt =/= (xlen + 1).U || (!last_stall_req && !check_history_same(io.a, io.b, io.op, last_a, last_b, last_op)))
     io.mult_out := MuxLookup(io.op, Cat(Fill(32, res(31)), res(31, 0)),
       Seq(
         aluMUL -> res(xlen - 1, 0),

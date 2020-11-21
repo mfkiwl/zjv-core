@@ -10,7 +10,7 @@ import mem._
 import device._
 
 class TLBEntry(implicit val mmuConfig: MMUConfig)
-  extends Bundle
+    extends Bundle
     with MMUParameters {
   val valid = Bool()
   val meta = UInt(log2Ceil(nEntry).W)
@@ -20,11 +20,9 @@ class TLBEntry(implicit val mmuConfig: MMUConfig)
   val pte = UInt(xlen.W)
 
   override def toPrintable: Printable =
-    p"TLBEntry(valid=${valid}, meta=${meta}, level=${level}, vpn = 0x${
-      Hexadecimal(
-        vpn
-      )
-    }, asid = 0x${Hexadecimal(asid)}, pte = 0x${Hexadecimal(pte)})"
+    p"TLBEntry(valid=${valid}, meta=${meta}, level=${level}, vpn = 0x${Hexadecimal(
+      vpn
+    )}, asid = 0x${Hexadecimal(asid)}, pte = 0x${Hexadecimal(pte)})"
 }
 
 class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
@@ -39,9 +37,9 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
   }
 
   def update_meta(
-                   array: Vec[TLBEntry],
-                   access_index: UInt
-                 ): Vec[TLBEntry] = {
+      array: Vec[TLBEntry],
+      access_index: UInt
+  ): Vec[TLBEntry] = {
     val length = log2Ceil(array.length)
     val new_meta = WireDefault(array)
     val old_meta_value =
@@ -113,10 +111,19 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
   //    )
   //  }
 
-  def violate_pte_u_prot(current_p: UInt, last_pte: UInt, is_fetch: Bool, sum: UInt, mprv: Bool, mpp_s: Bool): Bool = {
-    Mux(last_pte(4),
+  def violate_pte_u_prot(
+      current_p: UInt,
+      last_pte: UInt,
+      is_fetch: Bool,
+      sum: UInt,
+      mprv: Bool,
+      mpp_s: Bool
+  ): Bool = {
+    Mux(
+      last_pte(4),
       (current_p === CSR.PRV_S || (!is_fetch && mprv && mpp_s)) && (is_fetch || !sum.asBool),
-      current_p === CSR.PRV_U)
+      current_p === CSR.PRV_U
+    )
   }
 
   def violate_pte_v_rw(last_pte: UInt): Bool = {
@@ -127,8 +134,21 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     !last_pte(6) || (!last_pte(7) && is_store)
   }
 
-  def violate_pte_rwx(last_pte: UInt, is_inst: Bool, is_load: Bool, mxr: UInt): Bool = {
-    Mux(is_inst, !last_pte(3), Mux(is_load, !last_pte(1) && !(mxr.asBool && last_pte(3)), !(last_pte(2) && last_pte(1))))
+  def violate_pte_rwx(
+      last_pte: UInt,
+      is_inst: Bool,
+      is_load: Bool,
+      mxr: UInt
+  ): Bool = {
+    Mux(
+      is_inst,
+      !last_pte(3),
+      Mux(
+        is_load,
+        !last_pte(1) && !(mxr.asBool && last_pte(3)),
+        !(last_pte(2) && last_pte(1))
+      )
+    )
   }
 
   val entryArray =
@@ -183,13 +203,20 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
   )
 
   val prot_check = (
-    !violate_pte_u_prot(io.in.current_p, current_pte, io.in.is_inst, io.in.sum, io.in.force_s_mode, io.in.mpp_s) &&
-    !violate_pte_v_rw(current_pte) &&
-    !violate_pte_ad(current_pte, io.in.is_store) &&
-    !violate_pte_rwx(current_pte, io.in.is_inst, io.in.is_load, io.in.mxr) &&
-    !misaligned_spage(current_level, current_pte) &&
-    pass_pmp_pma(current_pte)
-    )
+    !violate_pte_u_prot(
+      io.in.current_p,
+      current_pte,
+      io.in.is_inst,
+      io.in.sum,
+      io.in.force_s_mode,
+      io.in.mpp_s
+    ) &&
+      !violate_pte_v_rw(current_pte) &&
+      !violate_pte_ad(current_pte, io.in.is_store) &&
+      !violate_pte_rwx(current_pte, io.in.is_inst, io.in.is_load, io.in.mxr) &&
+      !misaligned_spage(current_level, current_pte) &&
+      pass_pmp_pma(current_pte)
+  )
 
   //  val prot_check = pass_protection_check(
   //    current_pte,
@@ -212,8 +239,10 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     io.in.va
   ) || !prot_check)
   io.in.af := false.B
-  io.in.stall_req := need_ptw && !io.out.resp.valid
+  io.in.stall_req := ((need_ptw || state =/= s_idle) && !(state === s_resp && io.out.resp.valid))
+  // io.in.stall_req := (need_ptw && !io.out.resp.valid) || state === s_flush
   io.in.pa := Mux(!need_translate || io.in.pf, io.in.va, final_pa)
+  io.in.is_idle := state === s_idle
 
   io.out.req.valid := state === s_req // || state === s_resp
   io.out.req.bits.va := io.in.va
@@ -242,7 +271,7 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     }
   }
 
-  when(request_satisfied) {
+  when(request_satisfied && !io.in.pf) {
     entryArray := update_meta(entryArray, access_index)
     when(!hit) {
       entryArray(victim_index).valid := true.B
@@ -250,11 +279,13 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
       entryArray(victim_index).asid := satp_asid
       entryArray(victim_index).level := io.out.resp.bits.level
       entryArray(victim_index).pte := io.out.resp.bits.pte
-      // printf(
-      //   p"[${GTimer()}]TLB write: vpn=${Hexadecimal(io.in.va(38, 12))}, asid=${Hexadecimal(
-      //     satp_asid
-      //   )}, level=${io.out.resp.bits.level}, pte=${io.out.resp.bits.pte}\n"
-      // )
+      // when(GTimer() > 480000000.U) {
+      //   printf(
+      //     p"[${GTimer()}]TLB write: vpn=${Hexadecimal(io.in.va(38, 12))}, asid=${Hexadecimal(
+      //       satp_asid
+      //     )}, level=${io.out.resp.bits.level}, pte=${io.out.resp.bits.pte}\n"
+      //   )
+      // }
     }
   }
 
@@ -264,21 +295,23 @@ class TLB(implicit val mmuConfig: MMUConfig) extends Module with MMUParameters {
     }
   }
 
-  if (pipeTrace) {
-    printf(p"[${GTimer()}]: ${mmuName} TLB Debug Info\n")
-    printf(
-      p"state=${state}, prot_check=${prot_check}, hit=${hit}, hit_index=${hit_index}, victim_index=${victim_index}\n"
-    )
-    printf(
-      p"need_translate=${need_translate}, current_level=${current_level}, current_pte=${Hexadecimal(current_pte)}, final_pa=${Hexadecimal(final_pa)}\n"
-    )
-    printf(
-      p"satp_mode=${satp_mode}, satp_asid=${Hexadecimal(satp_asid)}, satp_ppn=${Hexadecimal(satp_ppn)}\n"
-    )
-    printf(p"io.in: ${io.in}\n")
-    //    printf(p"io.out: ${io.out}\n")
-    printf(p"entryArray=${entryArray}\n")
-    printf("-----------------------------------------------\n")
-  }
+  // if (pipeTrace || isdmmu) {
+  //   when(GTimer() > 480000000.U) {
+  //     printf(p"[${GTimer()}]: ${mmuName} TLB Debug Info\n")
+  //     printf(
+  //       p"state=${state}, prot_check=${prot_check}, hit=${hit}, hit_index=${hit_index}, victim_index=${victim_index}\n"
+  //     )
+  //     printf(
+  //       p"need_translate=${need_translate}, current_level=${current_level}, current_pte=${Hexadecimal(current_pte)}, final_pa=${Hexadecimal(final_pa)}\n"
+  //     )
+  //     printf(
+  //       p"satp_mode=${satp_mode}, satp_asid=${Hexadecimal(satp_asid)}, satp_ppn=${Hexadecimal(satp_ppn)}\n"
+  //     )
+  //     printf(p"io.in: ${io.in}\n")
+  //     printf(p"io.out: ${io.out}\n")
+  //     printf(p"entryArray=${entryArray}\n")
+  //     printf("-----------------------------------------------\n")
+  //   }
+  // }
 
 }

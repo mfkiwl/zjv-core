@@ -8,7 +8,7 @@ import bus._
 import device._
 import utils._
 
-class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
+class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
     extends Module
     with CacheParameters {
   val io = IO(new CacheIO)
@@ -72,7 +72,8 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
   val s2_hit_index = PriorityEncoder(s2_hitVec)
   val s2_victim_index = policy.choose_victim(s2_meta)
   val s2_victim_vec = UIntToOH(s2_victim_index)
-  val s2_hit = s2_hitVec.orR
+  val s2_ismmio = AddressSpace.isMMIO(s2_addr)
+  val s2_hit = s2_hitVec.orR && !s2_ismmio
   val s2_access_index = Mux(s2_hit, s2_hit_index, s2_victim_index)
   val s2_access_vec = UIntToOH(s2_access_index)
 
@@ -112,22 +113,25 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
   val result = Wire(UInt(blockBits.W))
   val cacheline_meta = s3_meta(s3_access_index)
   val cacheline_data = s3_cacheline(s3_access_index)
+  val s3_ismmio = AddressSpace.isMMIO(s3_addr)
 
-  val s_idle :: s_memReadReq :: s_memReadResp :: s_finish :: s_flush :: Nil =
-    Enum(5)
-  val state = RegInit(s_idle)
+  val s_idle :: s_memReadReq :: s_memReadResp :: s_mmioReq :: s_mmioResp :: s_finish :: s_flush :: Nil =
+    Enum(7)
+  val state = RegInit(s_flush)
   val read_address = Cat(s3_tag, s3_index, 0.U(offsetLength.W))
   val flush_counter = Counter(nSets)
   val flush_finish = flush_counter.value === (nSets - 1).U
 
   val mem_valid = state === s_memReadResp && io.mem.resp.valid
-  val request_satisfied = s3_hit || mem_valid
+  val mem_request_satisfied = s3_hit || mem_valid
+  val mmio_request_satisfied = state === s_mmioResp && io.mmio.resp.valid
+  val request_satisfied = mem_request_satisfied || mmio_request_satisfied
   val hazard = s2_valid && s3_valid && s2_index === s3_index
   stall := s3_valid && !request_satisfied && state =/= s_finish // wait for data
   val external_stall = io.in.stall && !stall
   val hold_assert = external_stall && request_satisfied
   need_forward := HoldCond(
-    hazard && request_satisfied,
+    hazard && mem_request_satisfied,
     hold_assert,
     state === s_finish
   )
@@ -150,17 +154,32 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
   io.mem.req.bits.memtype := DontCare
   io.mem.resp.ready := s3_valid && state === s_memReadResp
 
+  io.mmio.stall := false.B
+  io.mmio.flush := false.B
+  io.mmio.req.valid := s3_valid && state === s_mmioReq
+  io.mmio.req.bits.addr := s3_addr
+  io.mmio.req.bits.data := s3_data
+  io.mmio.req.bits.wen := s3_wen
+  io.mmio.req.bits.memtype := s3_memtype
+  io.mmio.resp.ready := s3_valid && state === s_mmioResp
+
   switch(state) {
     is(s_idle) {
       when(io.in.flush || reset.asBool) {
         state := s_flush
       }.elsewhen(s3_valid && !s3_hit) {
-        state := s_memReadReq
+        state := Mux(s3_ismmio, s_mmioReq, s_memReadReq)
       }
     }
     is(s_memReadReq) { when(io.mem.req.fire()) { state := s_memReadResp } }
     is(s_memReadResp) {
       when(io.mem.resp.fire()) {
+        state := Mux(external_stall, s_finish, s_idle)
+      }
+    }
+    is(s_mmioReq) { when(io.mmio.req.fire()) { state := s_mmioResp } }
+    is(s_mmioResp) {
+      when(io.mmio.resp.fire()) {
         state := Mux(external_stall, s_finish, s_idle)
       }
     }
@@ -188,57 +207,63 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
       val offset = s3_wordoffset << 3
       val mask = WireDefault(UInt(blockBits.W), 0.U)
       val real_data = WireDefault(UInt(blockBits.W), 0.U)
+      val mem_result = WireDefault(UInt(blockBits.W), 0.U)
       switch(s3_memtype) {
-        is(memXXX) { result := result_data }
+        is(memXXX) { mem_result := result_data }
         is(memByte) {
           mask := Fill(8, 1.U(1.W)) << offset
           real_data := (result_data & mask) >> offset
-          result := Cat(Fill(56, real_data(7)), real_data(7, 0))
+          mem_result := Cat(Fill(56, real_data(7)), real_data(7, 0))
         }
         is(memHalf) {
           mask := Fill(16, 1.U(1.W)) << offset
           real_data := (result_data & mask) >> offset
-          result := Cat(Fill(48, real_data(15)), real_data(15, 0))
+          mem_result := Cat(Fill(48, real_data(15)), real_data(15, 0))
         }
         is(memWord) {
           mask := Fill(32, 1.U(1.W)) << offset
           real_data := (result_data & mask) >> offset
-          result := Cat(Fill(32, real_data(31)), real_data(31, 0))
+          mem_result := Cat(Fill(32, real_data(31)), real_data(31, 0))
         }
         is(memDouble) { result := result_data }
         is(memByteU) {
           mask := Fill(8, 1.U(1.W)) << offset
           real_data := (result_data & mask) >> offset
-          result := Cat(Fill(56, 0.U), real_data(7, 0))
+          mem_result := Cat(Fill(56, 0.U), real_data(7, 0))
         }
         is(memHalfU) {
           mask := Fill(16, 1.U(1.W)) << offset
           real_data := (result_data & mask) >> offset
-          result := Cat(Fill(48, 0.U), real_data(15, 0))
+          mem_result := Cat(Fill(48, 0.U), real_data(15, 0))
         }
         is(memWordU) {
           mask := Fill(32, 1.U(1.W)) << offset
           real_data := (result_data & mask) >> offset
-          result := Cat(Fill(32, 0.U), real_data(31, 0))
+          mem_result := Cat(Fill(32, 0.U), real_data(31, 0))
         }
       }
-      for (i <- 0 until nWays) {
-        when(s3_access_index === i.U) {
-          write_data_tmp(i) := target_data
-          dataArray(i).write(s3_index, target_data)
-        }.otherwise {
-          write_data_tmp(i) := s3_cacheline(i)
+      result := Mux(s3_ismmio, io.mmio.resp.bits.data, mem_result)
+      when(!s3_ismmio) {
+        when(!s3_hit) {
+          for (i <- 0 until nWays) {
+            when(s3_access_index === i.U) {
+              write_data_tmp(i) := target_data
+              dataArray(i).write(s3_index, target_data)
+            }.otherwise {
+              write_data_tmp(i) := s3_cacheline(i)
+            }
+          }
         }
+        write_meta_tmp := policy.update_meta(s3_meta, s3_access_index)
+        write_meta_tmp(s3_access_index).valid := true.B
+        write_meta_tmp(s3_access_index).tag := s3_tag
+        meta_index := s3_index
       }
-      write_meta_tmp := policy.update_meta(s3_meta, s3_access_index)
-      write_meta_tmp(s3_access_index).valid := true.B
-      write_meta_tmp(s3_access_index).tag := s3_tag
-      meta_index := s3_index
       // printf(
       //   p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
       // )
-      // printf(p"\twrite_data=${write_data}\n")
-      // printf(p"\twrite_meta=${write_meta}\n")
+      // printf(p"\twrite_data_tmp=${write_data_tmp}\n")
+      // printf(p"\twrite_meta_tmp=${write_meta_tmp}\n")
     }
   }
 
@@ -252,7 +277,7 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
     flush_counter.inc()
   }
 
-  when(state === s_flush || (s3_valid && request_satisfied)) {
+  when(state === s_flush || (s3_valid && mem_request_satisfied)) {
     for (i <- 0 until nWays) {
       metaArray(i).write(meta_index, write_meta_tmp(i))
     }
@@ -260,13 +285,12 @@ class ICacheForwardSplitSync3Stage(implicit val cacheConfig: CacheConfig)
 
   // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
   // printf(
-  //   "stall=%d, need_forward=%d, state=%d, s3_hit=%d, result=%x, external_stall=%d\n",
+  //   "stall=%d, need_forward=%d, state=%d, s3_hit=%d, result=%x\n",
   //   stall,
   //   need_forward,
   //   state,
   //   s3_hit,
-  //   result,
-  //   external_stall
+  //   result
   // )
   // printf(
   //   "flush_counter.value=%x, flush_finish=%d\n",

@@ -2,10 +2,10 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
+import rv64_nstage.core._
 import device._
 
-case class CacheConfig (
+case class CacheConfig(
     readOnly: Boolean = false,
     hasMMIO: Boolean = true,
     name: String = "cache", // used for debug info
@@ -35,6 +35,7 @@ trait CacheParameters extends phvntomParams {
   val lineBytes = lineBits / 8
   val lineLength = log2Ceil(nLine)
   val nSets = nBytes / lineBytes / nWays
+  val nWords = lineBits / xlen
   val offsetLength = log2Ceil(lineBytes)
   val indexLength = log2Ceil(nSets)
   val tagLength = xlen - (indexLength + offsetLength)
@@ -70,7 +71,7 @@ class MetaData(implicit val cacheConfig: CacheConfig)
   else { UInt(1.W) }
   val tag = UInt(tagLength.W)
   override def toPrintable: Printable =
-    p"MetaData(valid = ${valid}, dirty = ${dirty}, meta = ${meta}, tag = 0x${Hexadecimal(tag)})\n"
+    p"MetaData(valid = ${valid}, dirty = ${dirty}, meta = ${meta}, tag = 0x${Hexadecimal(tag)})"
 }
 
 class CacheLineData(implicit val cacheConfig: CacheConfig)
@@ -78,5 +79,5 @@ class CacheLineData(implicit val cacheConfig: CacheConfig)
     with CacheParameters {
   val data = Vec(nLine, UInt(blockBits.W))
   override def toPrintable: Printable =
-    p"CacheLineData(data = ${data})\n"
+    p"CacheLineData(data = ${data})"
 }

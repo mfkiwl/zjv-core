@@ -42,8 +42,7 @@ static int getSize (paddr_t mask) {
     return memDouble;
 }
 
-extern "C" void SimMemAccess(paddr_t raddr, paddr_t *rdata, paddr_t waddr, paddr_t wdata, paddr_t wmask, uint8_t wen)
-{
+extern "C" void SimMemAccess(paddr_t raddr, paddr_t *rdata, paddr_t waddr, paddr_t wdata, paddr_t wmask, uint8_t wen) {
 
 #define RACCESS(addr, memtype, rdata)  \
   if (memtype == memByte)              \
@@ -88,6 +87,10 @@ extern "C" void SimMemAccess(paddr_t raddr, paddr_t *rdata, paddr_t waddr, paddr
       throw std::runtime_error("Unexpect Write Memory Access Type"); \
   }
 
+  // fprintf(stderr, "[Memory Access] \n");
+  // fprintf(stderr, "raddr %lx\n", raddr);
+  // fprintf(stderr, "waddr %lx\n", waddr);
+
   if (raddr != 0xdeadbeefL)
   {
     // daddr = daddr - mem->get_base();
@@ -103,7 +106,78 @@ extern "C" void SimMemAccess(paddr_t raddr, paddr_t *rdata, paddr_t waddr, paddr
     // fprintf(stderr, "Write Done %lx -> %lx, offset = %d, size = %d\n", waddr, wdata, offset, size);
   }
 
-  // fprintf(stderr, "[Memory Access] \n");
+
   // fprintf(stderr, "raddr %lx rdata %lx\n", raddr, *rdata);
   // fprintf(stderr, "waddr %lx wdata %lx mask %lx wen %d\n", waddr, wdata, wmask, wen);
+}
+
+htif_simmem_t::htif_simmem_t(size_t width, size_t base)
+  : base(base), width(width)
+{
+  #ifdef ZJV_DEBUG
+  printf("[SimMem] create : width %lu base 0x%lx\n", width * 8, base);
+  #endif
+}
+
+void htif_simmem_t::read_chunk(addr_t taddr, size_t len, void* vdst)
+{
+  // printf("Read 0x%lx - %lx\n", taddr, len);
+  taddr -= base;
+
+  assert(len % chunk_align() == 0);
+
+  uint8_t* dst = (uint8_t*)vdst;
+  while(len)
+  {
+    if(mem[taddr/width].size() == 0)
+      mem[taddr/width].resize(width,0);
+
+    for(size_t j = 0; j < width; j++)
+      dst[j] = mem[taddr/width][j];
+
+    len -= width;
+    taddr += width;
+    dst += width;
+  }
+}
+
+void htif_simmem_t::write_chunk(addr_t taddr, size_t len, const void* vsrc)
+{
+  // printf("Write 0x%lx - %lx\n", taddr, len);
+  taddr -= base;
+
+  assert(len % chunk_align() == 0);
+
+  const uint8_t* src = (const uint8_t*)vsrc;
+  while(len)
+  {
+    if(mem[taddr/width].size() == 0)
+      mem[taddr/width].resize(width,0);
+
+    for(size_t j = 0; j < width; j++)
+      mem[taddr/width][j] = src[j];
+
+    len -= width;
+    taddr += width;
+  }
+}
+
+void htif_simmem_t::clear_chunk(addr_t taddr, size_t len) {
+  // printf("Clear 0x%lx - %lx\n", taddr, len);
+  taddr -= base;
+
+  assert(len % chunk_align() == 0);
+
+  while(len)
+  {
+    if(mem[taddr/width].size() == 0)
+      mem[taddr/width].resize(width,0);
+
+    for(size_t j = 0; j < width; j++)
+      mem[taddr/width][j] = 0;
+
+    len -= width;
+    taddr += width;
+  }
+
 }

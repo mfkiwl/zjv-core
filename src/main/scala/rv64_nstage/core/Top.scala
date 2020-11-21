@@ -8,6 +8,7 @@ import common._
 import rv64_nstage.control.ControlConst
 
 class DiffTestIO extends Bundle with phvntomParams {
+  val streqs   = Output(Vec(10, UInt(xlen.W)))
   val regs     = Output(Vec(regNum, UInt(xlen.W)))
   val pc       = Output(UInt(xlen.W))
   val inst     = Output(UInt(xlen.W))
@@ -41,6 +42,8 @@ class DiffTestIO extends Bundle with phvntomParams {
   val plicprio = Output(UInt(32.W))
   val plicthrs = Output(UInt(32.W))
   val plicclaim = Output(UInt(32.W))
+  val alu_val  = Output(UInt(xlen.W))
+  val is_mem   = Output(Bool())
 }
 
 class TopIO extends Bundle with phvntomParams {
@@ -56,6 +59,7 @@ class Top extends Module with phvntomParams {
   val tile = Module(new Tile)
 
   val difftest = WireInit(0.U.asTypeOf(new DiffTestIO))
+  BoringUtils.addSink(difftest.streqs,  "difftestStreqs")
   BoringUtils.addSink(difftest.regs,    "difftestRegs")
   BoringUtils.addSink(difftest.pc,      "difftestPC")
   BoringUtils.addSink(difftest.inst,    "difftestInst")
@@ -94,6 +98,9 @@ class Top extends Module with phvntomParams {
   BoringUtils.addSink(difftest.plicprio,    "difftestplicpriority")
   BoringUtils.addSink(difftest.plicthrs,    "difftestplicthreshold")
   BoringUtils.addSink(difftest.plicclaim,   "difftestplicclaimed")
+
+  BoringUtils.addSink(difftest.alu_val, "difftestALU")
+  BoringUtils.addSink(difftest.is_mem,  "difftestMem")
 
   io.difftest := difftest
   io.poweroff := poweroff

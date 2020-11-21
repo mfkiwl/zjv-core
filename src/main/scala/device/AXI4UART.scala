@@ -2,13 +2,13 @@ package device
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage.phvntomParams
+import rv64_nstage.core._
 import bus._
 import utils._
 
 class SimUART extends BlackBox with phvntomParams {
   val io = IO(new Bundle {
-    val clk = Input(Clock())    
+    val clk = Input(Clock())
     val wen = Input(Bool())
     val waddr = Input(UInt(8.W))
     val wdata = Input(UInt(8.W))
@@ -24,53 +24,21 @@ class UARTIO extends Bundle with phvntomParams {
   val irq = Output(Bool())
 }
 
-class AXI4UART(name: String = "uart") extends AXI4Slave(new UARTIO, name) with AXI4Parameters {
-//   val rx_tx = RegInit(0.U(8.W))
-//   val interrupt_enable = RegInit(0.U(8.W))
-//   val interrupt_fifo = RegInit(0.U(8.W))
-//   val line_control = RegInit(0.U(8.W))
-//   val modem_control = RegInit(0.U(8.W))
-//   val line_status = RegInit(0.U(8.W))
-//   val modem_status = RegInit(0.U(8.W))
-//   val scratch_pad = RegInit(0.U(8.W))
+class AXI4UART(name: String = "uart")
+    extends AXI4LiteSlave(new UARTIO, name)
+    with AXI4Parameters {
   val wen = io.in.w.fire()
   val uart_sim = Module(new SimUART)
-  uart_sim.io.clk := clock  
+  uart_sim.io.clk := clock
   uart_sim.io.wen := wen
   uart_sim.io.waddr := Cat(Fill(5, 0.U), io.in.aw.bits.addr(2, 0))
   uart_sim.io.wdata := io.in.w.bits.data(7, 0)
   uart_sim.io.ren := ren
   uart_sim.io.raddr := Cat(Fill(5, 0.U), io.in.ar.bits.addr(2, 0))
-  val rdata = uart_sim.io.rdata << (io.in.ar.bits.addr(2, 0) << 3)
+  val rdata = Fill(8, uart_sim.io.rdata(7, 0))
   io.in.r.bits.data := rdata
 
   io.extra.get.irq := uart_sim.io.irq
 
-  // when(wen && io.extra.get.offset(2, 0) === 0.U) {
-  //   printf("%c", io.in.w.bits.data(7, 0))
-  // }
-
 //   printf("In UART: wen = %d, waddr = %d, wdata = %d; ren = %d, raddr = %d, rdata = %d\n", uart_sim.io.wen, io.in.aw.bits.addr(2, 0), uart_sim.io.wdata, uart_sim.io.ren, io.in.ar.bits.addr(2, 0), rdata)
-
-  
-//   val mapping = Map(
-//     RegMap(0x0, rx_tx, putc),
-//     RegMap(0x1, interrupt_enable),
-//     RegMap(0x2, interrupt_fifo),
-//     RegMap(0x3, line_control),
-//     RegMap(0x4, modem_control),
-//     RegMap(0x5, line_status),
-//     RegMap(0x6, modem_status),
-//     RegMap(0x7, scratch_pad)
-//   )
-
-//   RegMap.generate(
-//     mapping,
-//     raddr(2, 0),
-//     io.in.r.bits.data,
-//     waddr(2, 0),
-//     io.in.w.fire(),
-//     io.in.w.bits.data,
-//     MaskExpand(io.in.w.bits.strb)
-//   )
 }

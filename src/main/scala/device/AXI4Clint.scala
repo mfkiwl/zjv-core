@@ -2,11 +2,9 @@ package device
 
 import chisel3._
 import chisel3.util._
-import bus.AXI4Parameters
-import rv64_3stage.phvntomParams
-import bus.AXI4Slave
+import rv64_nstage.core._
+import bus._
 import utils._
-import chisel3.util.experimental.BoringUtils
 
 class ClintIO extends Bundle with phvntomParams {
   val mtip = Output(Bool())
@@ -14,7 +12,7 @@ class ClintIO extends Bundle with phvntomParams {
 }
 
 class Clint(name: String = "clint")
-    extends AXI4Slave(new ClintIO, name)
+    extends AXI4LiteSlave(new ClintIO, name)
     with AXI4Parameters {
   val mtime = RegInit(0.S(xlen.W).asUInt) // unit: us
   val mtimecmp = RegInit(1024.U(xlen.W))
@@ -28,7 +26,7 @@ class Clint(name: String = "clint")
   val freq = RegInit(clk.U(16.W))
   val inc = RegInit(1.U(16.W))
 
-  val cnt = RegInit(2.U(16.W))
+  val cnt = RegInit(1.U(16.W))
   val nextCnt = cnt + 1.U
   cnt := Mux(nextCnt < freq, nextCnt, 0.U)
   val tick = (nextCnt === freq)

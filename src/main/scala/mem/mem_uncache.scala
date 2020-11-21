@@ -9,13 +9,8 @@ import device._
 import utils._
 import scala.annotation.switch
 
-class UncacheIO(val dataWidth: Int = 64) extends Bundle with phvntomParams {
-  val in = new MemIO(dataWidth)
-  val out = new AXI4Bundle
-}
-
 // serve as a simple convertor from MemIO to AXI4 interface
-class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
+class MemUncache(val dataWidth: Int = 64, val mname: String = "Uncache")
     extends Module
     with AXI4Parameters {
   val io = IO(new UncacheIO(dataWidth))
@@ -42,27 +37,7 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
   io.out.ar.bits.id := 0.U
 
   val addr_aligned = Wire(UInt(xlen.W))
-  addr_aligned := io.in.req.bits.addr
-  switch(io.in.req.bits.memtype) {
-    is(memXXX) { addr_aligned := io.in.req.bits.addr }
-    is(memByte) { addr_aligned := io.in.req.bits.addr }
-    is(memHalf) {
-      addr_aligned := Cat(io.in.req.bits.addr(xlen - 1, 1), 0.U(1.W))
-    }
-    is(memWord) {
-      addr_aligned := Cat(io.in.req.bits.addr(xlen - 1, 2), 0.U(2.W))
-    }
-    is(memDouble) {
-      addr_aligned := Cat(io.in.req.bits.addr(xlen - 1, 3), 0.U(3.W))
-    }
-    is(memByteU) { addr_aligned := io.in.req.bits.addr }
-    is(memHalfU) {
-      addr_aligned := Cat(io.in.req.bits.addr(xlen - 1, 1), 0.U(1.W))
-    }
-    is(memWordU) {
-      addr_aligned := Cat(io.in.req.bits.addr(xlen - 1, 2), 0.U(2.W))
-    }
-  }
+  addr_aligned := Cat(io.in.req.bits.addr(xlen - 1, 3), 0.U(3.W))
 
   when(state === s_IDLE) {
     when(io.in.req.valid) {
