@@ -137,6 +137,7 @@ class CrossbarNto1(n: Int) extends Module with projectConfig {
   )
   // bind correct valid and ready signals
   io.out.ar.valid := thisReq_r.valid && (r_state === s_idle)
+  io.in.map(_.ar.ready := false.B)
   thisReq_r.ready := io.out.ar.ready && (r_state === s_idle)
 
   io.in.map(_.r.bits := io.out.r.bits)
@@ -152,6 +153,7 @@ class CrossbarNto1(n: Int) extends Module with projectConfig {
     is(s_idle) {
       when(thisReq_r.fire()) {
         inflightSrc_r := inputArb_r.io.chosen
+        io.in(inputArb_r.io.chosen).ar.ready := true.B
         when(thisReq_r.valid) { r_state := s_readResp }
       }
     }
@@ -173,6 +175,7 @@ class CrossbarNto1(n: Int) extends Module with projectConfig {
   )
   // bind correct valid and ready signals
   io.out.aw.valid := thisReq_w.valid && (w_state === s_idle)
+  io.in.map(_.aw.ready := false.B)
   thisReq_w.ready := io.out.aw.ready && (w_state === s_idle)
 
   io.out.w.valid := io.in(inflightSrc_w).w.valid
@@ -193,6 +196,7 @@ class CrossbarNto1(n: Int) extends Module with projectConfig {
     is(s_idle) {
       when(thisReq_w.fire()) {
         inflightSrc_w := inputArb_w.io.chosen
+        io.in(inputArb_w.io.chosen).aw.ready := true.B
         when(thisReq_w.valid) { w_state := s_writeResp }
       }
     }
@@ -205,6 +209,8 @@ class CrossbarNto1(n: Int) extends Module with projectConfig {
   // printf(
   //   p"r_state=${r_state},inflightSrc_r=${inflightSrc_r},w_state=${w_state},inflightSrc_w=${inflightSrc_w}\n"
   // )
+  // printf(p"inputArb_r.io.chosen=${inputArb_r.io.chosen}, inputArb_w.io.chosen=${inputArb_w.io.chosen}\n")
+  // printf(p"thisReq_r=${thisReq_r}, thisReq_w=${thisReq_w}\n")
   // for (i <- 0 until n) {
   //   printf(p"io.in(${i}): \n${io.in(i)}\n")
   // }

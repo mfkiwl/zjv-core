@@ -13,7 +13,7 @@ trait projectConfig {
   val startAddr = 0x80000000L
   var debug: Boolean = false
   var fpga: Boolean = false
-  var chiplink: Boolean = false
+  var chiplink: Boolean = true
   var board: String = "None"
   var hasICache: Boolean = false
   var hasDCache: Boolean = false

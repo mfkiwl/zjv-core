@@ -69,16 +69,18 @@ class PTWalker(implicit val mmuConfig: MMUConfig)
 
   // L2 cache interface
   val pte_addr = Reg(UInt(xlen.W))
-  val cache_rdata = MuxLookup(
-    io.out.mmu.req.bits.addr(4, 3),
-    "hdeadbeef".U,
-    Seq(
-      "b00".U -> io.out.mmu.resp.bits.data(63, 0),
-      "b01".U -> io.out.mmu.resp.bits.data(2 * 64 - 1, 64),
-      "b10".U -> io.out.mmu.resp.bits.data(3 * 64 - 1, 2 * 64),
-      "b11".U -> io.out.mmu.resp.bits.data(4 * 64 - 1, 3 * 64)
+  val cache_rdata = if (hasL2Cache) {
+    MuxLookup(
+      io.out.mmu.req.bits.addr(4, 3),
+      "hdeadbeef".U,
+      Seq(
+        "b00".U -> io.out.mmu.resp.bits.data(63, 0),
+        "b01".U -> io.out.mmu.resp.bits.data(2 * 64 - 1, 64),
+        "b10".U -> io.out.mmu.resp.bits.data(3 * 64 - 1, 2 * 64),
+        "b11".U -> io.out.mmu.resp.bits.data(4 * 64 - 1, 3 * 64)
+      )
     )
-  )
+  } else { io.out.mmu.resp.bits.data }
   val pte_ppn = cache_rdata(53, 10)
 
   io.in.resp.valid := finish || page_fault
