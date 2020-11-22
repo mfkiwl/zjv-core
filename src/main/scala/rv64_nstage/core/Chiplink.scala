@@ -216,7 +216,7 @@ class ChiplinkTile extends Module with phvntomParams {
   mmioxbar_external.io.out(2) <> plic.io.in
 }
 
-class ysyx_zju extends Module with phvntomParams {
+class ysyx_zjv extends Module with phvntomParams {
   val io = IO(new SOCIO)
 
   val chiplink = Module(new ChiplinkTile)
@@ -339,9 +339,9 @@ object chiplink {
     (new chisel3.stage.ChiselStage).execute(
       Array("-td", "build/verilog/" + packageName, "-X", "verilog"),
       Seq(
-        ChiselGeneratorAnnotation(() => new ysyx_zju),
+        ChiselGeneratorAnnotation(() => new ysyx_zjv),
         RunFirrtlTransformAnnotation(new AddModulePrefix()),
-        ModulePrefixAnnotation("zju_")
+        ModulePrefixAnnotation("zjv_")
       )
     )
   }
