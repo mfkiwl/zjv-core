@@ -25,3 +25,6 @@ log*
 
 # Javascript generate by chisel
 *.anno.json
+
+# LICENSE
+src/main/verilator/vsrc/S011HD*
