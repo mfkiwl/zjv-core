@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.util._
 import rv64_nstage.core._
 import device._
+import utils._
 
 class L2CacheXbar(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
     extends Module
@@ -61,14 +62,14 @@ class L2CacheXbar(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
   }
 
   // when(GTimer() > 480000000.U) {
-  //   printf(p"[${GTimer()}]: L2CacheXbar Debug Start-----------\n")
-  //   printf(p"state=${state},inflightSrc=${inflightSrc}\n")
-  //   for (i <- 0 until n_sources) {
-  //     printf(p"----------l2cache io.in(${i})----------\n")
-  //     printf(p"${io.in(i)}\n")
-  //   }
-  //   printf(p"----------l2cache io.out----------\n")
-  //   printf(p"${io.out}\n")
-  //   printf("--------------------------------\n")
+    // printf(p"[${GTimer()}]: L2CacheXbar Debug Start-----------\n")
+    // printf(p"state=${state},inflightSrc=${inflightSrc}\n")
+    // for (i <- 0 until n_sources) {
+    //   printf(p"----------l2cache io.in(${i})----------\n")
+    //   printf(p"${io.in(i)}\n")
+    // }
+    // printf(p"----------l2cache io.out----------\n")
+    // printf(p"${io.out}\n")
+    // printf("--------------------------------\n")
   // }
 }
