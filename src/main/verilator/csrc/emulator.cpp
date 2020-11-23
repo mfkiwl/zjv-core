@@ -60,24 +60,24 @@ int main(int argc, char **argv)
    int int_total_cnt = 0;
    long sim_cnt = 0;
 
-   // while (!engine.is_finish())
-   // {
-   //    engine.emu_step(1);
-   //    // usleep(500*2);
-   //    if (engine.emu_difftest_valid())
-   //    {
-   //       fprintf(stderr, "[ ROUND %lx %lx ]  ", engine.trace_count, engine.emu_get_mcycle());
-   //       fprintf(stderr, "zjv   pc: 0x%016lx (0x%08lx): %s\n", engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
+   while (!engine.is_finish())
+   {
+      engine.emu_step(1);
+      // usleep(500*2);
+      if (engine.emu_difftest_valid())
+      {
+         fprintf(stderr, "[ ROUND %lx %lx ]  ", engine.trace_count, engine.emu_get_mcycle());
+         fprintf(stderr, "zjv   pc: 0x%016lx (0x%08lx): %s\n", engine.emu_get_pc(), engine.emu_get_inst(), engine.disasm(engine.emu_get_inst()).c_str());
 
-   //       // for (int i = 0; i < REG_G_NUM; i++)
-   //       // {
-   //       //    fprintf(stderr, "[%-3s] = %016lX ", engine.reg_name[i], engine.get_emu_state()->regs[i]);
-   //       //    if (i % 3 == 2 || i == REG_G_NUM - 1)
-   //       //       fprintf(stderr, "\n");
-   //       // }
-   //       // fprintf(stderr, "\n");
-   //    }
-   // }
+         // for (int i = 0; i < REG_G_NUM; i++)
+         // {
+         //    fprintf(stderr, "[%-3s] = %016lX ", engine.reg_name[i], engine.get_emu_state()->regs[i]);
+         //    if (i % 3 == 2 || i == REG_G_NUM - 1)
+         //       fprintf(stderr, "\n");
+         // }
+         // fprintf(stderr, "\n");
+      }
+   }
 
    //  while (!engine.is_finish()) {
    //        engine.sim_solo();

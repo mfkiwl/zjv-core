@@ -31,10 +31,10 @@ class AXI4UART(name: String = "uart")
   val uart_sim = Module(new SimUART)
   uart_sim.io.clk := clock
   uart_sim.io.wen := wen
-  uart_sim.io.waddr := Cat(Fill(5, 0.U), io.in.aw.bits.addr(2, 0))
+  uart_sim.io.waddr := Cat(Fill(5, 0.U), io.in.aw.bits.addr(4, 2))
   uart_sim.io.wdata := io.in.w.bits.data(7, 0)
   uart_sim.io.ren := ren
-  uart_sim.io.raddr := Cat(Fill(5, 0.U), io.in.ar.bits.addr(2, 0))
+  uart_sim.io.raddr := Cat(Fill(5, 0.U), io.in.ar.bits.addr(4, 2))
   val rdata = Fill(8, uart_sim.io.rdata(7, 0))
   io.in.r.bits.data := rdata
 
