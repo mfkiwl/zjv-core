@@ -72,7 +72,7 @@ class DCacheWriteThroughSplit3StageReorg(implicit val cacheConfig: CacheConfig)
   val last_s3_valid = RegNext(s3_valid)
   val last_s3_need_write = RegNext(need_write)
   val last_s3_index = RegNext(s3_index)
-  val last_s3_write_line = RegNext(write_data)
+  val last_s3_write_line = RegNext(writeData)
   val last_s3_write_meta = RegNext(write_meta)
   val s2_hazard_low_prio = s2_valid && last_s3_valid && s2_index === last_s3_index && last_s3_need_write
 

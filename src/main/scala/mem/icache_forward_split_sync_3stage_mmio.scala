@@ -17,11 +17,12 @@ class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
   val metaArray = List.fill(nWays)(SyncReadMem(nSets, new MetaData))
   val dataArray = List.fill(nWays)(SyncReadMem(nSets, new CacheLineData))
   val stall = Wire(Bool())
-  val need_forward = Wire(Bool())
+  val s2_need_forward = Wire(Bool())
   val write_meta = Wire(Vec(nWays, new MetaData))
   val write_data = Wire(Vec(nWays, new CacheLineData))
   val write_meta_tmp = Wire(Vec(nWays, new MetaData))
   val write_data_tmp = Wire(Vec(nWays, new CacheLineData))
+  val need_write = Wire(Bool())
 
   /* stage1 signals */
   val s1_valid = WireDefault(Bool(), false.B)
@@ -48,9 +49,20 @@ class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
   val s2_cacheline = Wire(Vec(nWays, new CacheLineData))
   val array_meta = Wire(Vec(nWays, new MetaData))
   val array_cacheline = Wire(Vec(nWays, new CacheLineData))
+  val forward_meta = Wire(Vec(nWays, new MetaData))
+  val forward_cacheline = Wire(Vec(nWays, new CacheLineData))
   val s2_index = Wire(UInt(indexLength.W))
   val s2_tag = Wire(UInt(tagLength.W))
   val read_index = Mux(io.in.stall, s2_index, s1_index)
+  val s3_valid = RegInit(Bool(), false.B)
+  val s3_index = Wire(UInt(indexLength.W))  
+
+  val last_s3_valid = RegNext(s3_valid)
+  val last_s3_need_write = RegNext(need_write)
+  val last_s3_index = RegNext(s3_index)
+  val last_s3_write_line = RegNext(write_data)
+  val last_s3_write_meta = RegNext(write_meta)
+  val s2_hazard_low_prio = s2_valid && last_s3_valid && s2_index === last_s3_index && last_s3_need_write
 
   when(!io.in.stall) {
     s2_valid := s1_valid
@@ -60,11 +72,13 @@ class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
     s2_memtype := s1_memtype
   }
   for (i <- 0 until nWays) {
-    array_meta(i) := metaArray(i).read(read_index, true.B)
-    array_cacheline(i) := dataArray(i).read(read_index, true.B)
+    array_meta(i) := metaArray(i).read(read_index, !(read_index === s3_index && need_write))
+    array_cacheline(i) := dataArray(i).read(read_index, !(read_index === s3_index && need_write))
   }
-  s2_meta := Mux(need_forward, write_meta, array_meta)
-  s2_cacheline := Mux(need_forward, write_data, array_cacheline)
+  forward_meta := Mux(s2_hazard_low_prio, last_s3_write_meta, array_meta)
+  forward_cacheline := Mux(s2_hazard_low_prio, last_s3_write_line, array_cacheline)
+  s2_meta := Mux(s2_need_forward, write_meta, forward_meta)
+  s2_cacheline := Mux(s2_need_forward, write_data, forward_cacheline)
   s2_index := s2_addr(indexLength + offsetLength - 1, offsetLength)
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
 
@@ -78,14 +92,12 @@ class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
   val s2_access_vec = UIntToOH(s2_access_index)
 
   /* stage3 registers */
-  val s3_valid = RegInit(Bool(), false.B)
   val s3_addr = RegInit(UInt(xlen.W), 0.U)
   val s3_data = RegInit(UInt(blockBits.W), 0.U)
   val s3_wen = RegInit(Bool(), false.B)
   val s3_memtype = RegInit(UInt(xlen.W), 0.U)
   val s3_meta = Reg(Vec(nWays, new MetaData))
   val s3_cacheline = Reg(Vec(nWays, new CacheLineData))
-  val s3_index = Wire(UInt(indexLength.W))
   val s3_tag = Wire(UInt(tagLength.W))
   val s3_lineoffset = Wire(UInt(lineLength.W))
   val s3_wordoffset = Wire(UInt((offsetLength - lineLength).W))
@@ -126,12 +138,12 @@ class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
   val mem_request_satisfied = s3_hit || mem_valid
   val mmio_request_satisfied = state === s_mmioResp && io.mmio.resp.valid
   val request_satisfied = mem_request_satisfied || mmio_request_satisfied
-  val hazard = s2_valid && s3_valid && s2_index === s3_index
+  val s2_hazard = s2_valid && s3_valid && s2_index === s3_index
   stall := s3_valid && !request_satisfied && state =/= s_finish // wait for data
   val external_stall = io.in.stall && !stall
   val hold_assert = external_stall && request_satisfied
-  need_forward := HoldCond(
-    hazard && mem_request_satisfied,
+  s2_need_forward := HoldCond(
+    s2_hazard && mem_request_satisfied,
     hold_assert,
     state === s_finish
   )
@@ -201,6 +213,7 @@ class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
   write_meta := HoldCond(write_meta_tmp, hold_assert, state === s_finish)
   write_data_tmp := DontCare
   write_meta_tmp := DontCare
+  need_write := false.B
   when(s3_valid) {
     when(request_satisfied) {
       val result_data = target_data.data(s3_lineoffset)
@@ -249,6 +262,7 @@ class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
             when(s3_access_index === i.U) {
               write_data_tmp(i) := target_data
               dataArray(i).write(s3_index, target_data)
+              need_write := true.B
             }.otherwise {
               write_data_tmp(i) := s3_cacheline(i)
             }
@@ -271,7 +285,7 @@ class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
     for (i <- 0 until nWays) {
       write_meta_tmp(i).valid := false.B
       write_meta_tmp(i).meta := 0.U
-      write_meta_tmp(i).tag := DontCare
+      write_meta_tmp(i).tag := 0.U
     }
     meta_index := flush_counter.value
     flush_counter.inc()
@@ -285,9 +299,9 @@ class ICacheForwardSplitSync3StageMMIO(implicit val cacheConfig: CacheConfig)
 
   // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
   // printf(
-  //   "stall=%d, need_forward=%d, state=%d, s3_hit=%d, result=%x\n",
+  //   "stall=%d, s2_need_forward=%d, state=%d, s3_hit=%d, result=%x\n",
   //   stall,
-  //   need_forward,
+  //   s2_need_forward,
   //   state,
   //   s3_hit,
   //   result

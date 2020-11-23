@@ -3,6 +3,7 @@ package rv64_nstage.fu
 import chisel3._
 import rv64_nstage.core._
 import chisel3.util._
+import common.projectConfig
 
 /* ------ Here is the WRAPPER of BTB ------ */
 
@@ -104,31 +105,32 @@ class BTBIO extends Bundle with phvntomParams {
   val update_target = Input(UInt(xlen.W))
 }
 
-class BTB extends Module with phvntomParams {
+class BTB extends Module with phvntomParams with projectConfig {
   val io = IO(new BTBIO)
 
-//  val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(39.W))
-//  val read_data = btb_entries.read(io.index_in, !io.update_valid)
-//
-//  io.target_out := Cat(Fill(xlen - 39, read_data(38)), read_data)
-//
-//  when(io.update_valid) {
-//    btb_entries.write(io.update_index, io.update_target(38, 0))
-//  }
+  if (!chiplink){
+    val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(39.W))
+    val read_data = btb_entries.read(io.index_in, !io.update_valid)
 
-  /* ------ Use Generated RAM to Replace SyncReadMem ------ */
+    io.target_out := Cat(Fill(xlen - 39, read_data(38)), read_data)
 
-  val btb_entries = Module(new S011HD1P_X128Y2D39)
-  val wenr = RegNext(!io.update_valid)
-  val ar = RegNext(Mux(io.update_valid, io.update_index, io.index_in))
-  val dr = RegNext(io.update_target(38, 0))
+    when(io.update_valid) {
+      btb_entries.write(io.update_index, io.update_target(38, 0))
+    }
+  } else{
+    /* ------ Use Generated RAM to Replace SyncReadMem ------ */
+    val btb_entries = Module(new S011HD1P_X128Y2D39)
+    val wenr = RegNext(!io.update_valid)
+    val ar = RegNext(Mux(io.update_valid, io.update_index, io.index_in))
+    val dr = RegNext(io.update_target(38, 0))
 
-  btb_entries.io.CLK := clock
-  btb_entries.io.CEN := false.B
-  btb_entries.io.WEN := !io.update_valid
-  btb_entries.io.A := Mux(io.update_valid, io.update_index, io.index_in)
-  btb_entries.io.D := io.update_target(38, 0)
-  io.target_out := Cat(Fill(xlen - 39, btb_entries.io.Q(38)), btb_entries.io.Q)
+    btb_entries.io.CLK := clock
+    btb_entries.io.CEN := false.B
+    btb_entries.io.WEN := !io.update_valid
+    btb_entries.io.A := Mux(io.update_valid, io.update_index, io.index_in)
+    btb_entries.io.D := io.update_target(38, 0)
+    io.target_out := Cat(Fill(xlen - 39, btb_entries.io.Q(38)), btb_entries.io.Q)
+ }
 
 //  when(io.update_valid) {
 //    printf("~wen %x, addr %x, data %x, out %x\n", btb_entries.io.WEN, btb_entries.io.A, btb_entries.io.D, io.target_out)
