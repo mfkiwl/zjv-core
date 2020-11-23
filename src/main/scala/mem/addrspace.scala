@@ -21,11 +21,10 @@ object AddressSpace extends phvntomParams with projectConfig {
       )
     } else {
       List( // (start, size)
-        (0x40000000L, 0x1000000L), // dummy flash
-        (0x000100L, 0x10L), // POWEROFFF
-        (0x2000000L, 0x10000L), // CLINT
-        (0xc000000L, 0x4000000L), // PLIC
-        (0x10000000L, 0x100L) // uart        
+        (0x40000000L, 0x1000000L),  // dummy flash
+        (0x38000000L, 0x10000L),    // CLINT
+        (0x3c000000L, 0x4000000L),  // PLIC
+        (0x41000000L, 0x100000L)    // uart        
       )
     }
 
