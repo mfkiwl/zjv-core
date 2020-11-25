@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 import rv64_nstage.core._
 
-class SRAMWrapperIO(val depth: Int = 256, val dataWidth: Int = 64) extends Bundle with phvntomParams {
+class SRAMDPWrapperIO(val depth: Int = 32, val dataWidth: Int = 64) extends Bundle with phvntomParams {
   val depthLength = log2Ceil(depth)
   val AA = Input(UInt(depthLength.W))
   val AB = Input(UInt(depthLength.W))
@@ -16,8 +16,18 @@ class SRAMWrapperIO(val depth: Int = 256, val dataWidth: Int = 64) extends Bundl
   val QA = Output(UInt(dataWidth.W))
 }
 
+class SRAMSPWrapperIO(val depth: Int = 32, val dataWidth: Int = 64) extends Bundle with phvntomParams {
+  val depthLength = log2Ceil(depth)
+  val A = Input(UInt(depthLength.W))
+  val D = Input(UInt(dataWidth.W))
+  val WEN = Input(Bool())
+  val CEN = Input(Bool())
+  val CLK = Input(Clock())
+  val Q = Output(UInt(dataWidth.W))
+}
+
 class S011HD2P_X128Y2D53_Wrapper(depth: Int, width: Int) extends Module with phvntomParams {
-  val io = IO(new SRAMWrapperIO(depth, width))
+  val io = IO(new SRAMDPWrapperIO(depth, width))
 
   val aar = RegInit(UInt(io.depthLength.W), 0.U)
   aar := io.AA
@@ -44,7 +54,7 @@ class S011HD2P_X128Y2D53_Wrapper(depth: Int, width: Int) extends Module with phv
 }
 
 class S011HD2P_X128Y2D54_Wrapper(depth: Int, width: Int) extends Module with phvntomParams {
-  val io = IO(new SRAMWrapperIO(depth, width))
+  val io = IO(new SRAMDPWrapperIO(depth, width))
 
   val aar = RegInit(UInt(io.depthLength.W), 0.U)
   aar := io.AA
@@ -71,7 +81,7 @@ class S011HD2P_X128Y2D54_Wrapper(depth: Int, width: Int) extends Module with phv
 }
 
 class S011HD2P_X128Y2D64_Wrapper(depth: Int, width: Int) extends Module with phvntomParams {
-  val io = IO(new SRAMWrapperIO(depth, width))
+  val io = IO(new SRAMDPWrapperIO(depth, width))
 
   val aar = RegInit(UInt(io.depthLength.W), 0.U)
   aar := io.AA
@@ -97,20 +107,76 @@ class S011HD2P_X128Y2D64_Wrapper(depth: Int, width: Int) extends Module with phv
   io.QA := mem.io.QA
 }
 
+class S011HD2P_X128Y2D128_Wrapper(depth: Int, width: Int) extends Module with phvntomParams {
+  val io = IO(new SRAMSPWrapperIO(depth, width))
+
+  val mem = Module(new S011HD2P_X128Y2D128(depth, width))
+
+  val ar = RegInit(UInt(io.depthLength.W), 0.U)
+  ar := io.A
+  val dr = RegInit(UInt(io.dataWidth.W), 0.U)
+  dr := io.D
+  val nwenr = RegInit(Bool(), true.B)
+  nwenr := io.WEN
+  val cenr = RegInit(Bool(), true.B)
+  cenr := io.CEN
+
+  mem.io.A := ar
+  mem.io.D := dr
+  mem.io.WEN := nwenr
+  mem.io.CEN := cenr
+  mem.io.CLK := (~(clock.asBool)).asClock
+  io.Q := mem.io.Q
+}
+
+class S011HD1P_X128Y2D54_Wrapper(depth: Int, width: Int) extends Module with phvntomParams {
+  val io = IO(new SRAMSPWrapperIO(depth, width))
+
+  val mem = Module(new S011HD1P_X128Y2D54(depth, width))
+
+  val ar = RegInit(UInt(io.depthLength.W), 0.U)
+  ar := io.A
+  val dr = RegInit(UInt(io.dataWidth.W), 0.U)
+  dr := io.D
+  val nwenr = RegInit(Bool(), true.B)
+  nwenr := io.WEN
+  val cenr = RegInit(Bool(), true.B)
+  cenr := io.CEN
+
+  mem.io.A := ar
+  mem.io.D := dr
+  mem.io.WEN := nwenr
+  mem.io.CEN := cenr
+  mem.io.CLK := (~(clock.asBool)).asClock
+  io.Q := mem.io.Q
+}
+
 class S011HD2P_X128Y2D53(depth: Int, width: Int)
     extends BlackBox
     with phvntomParams {
-  val io = IO(new SRAMWrapperIO(depth, width))
+  val io = IO(new SRAMDPWrapperIO(depth, width))
 }
 
 class S011HD2P_X128Y2D54(depth: Int, width: Int)
     extends BlackBox
     with phvntomParams {
-  val io = IO(new SRAMWrapperIO(depth, width))
+  val io = IO(new SRAMDPWrapperIO(depth, width))
 }
 
 class S011HD2P_X128Y2D64(depth: Int, width: Int)
     extends BlackBox
     with phvntomParams {
-  val io = IO(new SRAMWrapperIO(depth, width))
+  val io = IO(new SRAMDPWrapperIO(depth, width))
+}
+
+class S011HD1P_X128Y2D54(depth: Int, width: Int)
+    extends BlackBox
+    with phvntomParams {
+  val io = IO(new SRAMSPWrapperIO(depth, width))
+}
+
+class S011HD2P_X128Y2D128(depth: Int, width: Int)
+    extends BlackBox
+    with phvntomParams {
+  val io = IO(new SRAMSPWrapperIO(depth, width))
 }

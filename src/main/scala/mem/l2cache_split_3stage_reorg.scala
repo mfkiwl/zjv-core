@@ -14,28 +14,27 @@ class L2CacheSplit3StageReorg(val n_sources: Int = 1)(implicit
     with CacheParameters {
   val io = IO(new L2CacheIO(n_sources))
 
+  val numWords = nWords / 2
+
   // Module Used
-  val metaArray = List.fill(nWays)(Module(new S011HD2P_X128Y2D53_Wrapper(nSets, 53)))
+  val metaArray =
+    List.fill(nWays)(Module(new S011HD1P_X128Y2D54_Wrapper(nSets, 54)))
   val dataArray = List.fill(nWays)(
-    List.fill(nWords)(Module(new S011HD2P_X128Y2D64_Wrapper(nSets, xlen)))
+    List.fill(numWords)(Module(new S011HD2P_X128Y2D128_Wrapper(nSets, xlen * 2)))
   )
 
   for (i <- 0 until nWays) {
-    metaArray(i).io.CLKA := clock
-    metaArray(i).io.CLKB := clock
-    metaArray(i).io.CENA := true.B
-    metaArray(i).io.CENB := true.B
-    metaArray(i).io.DB := 0.U
-    metaArray(i).io.AA := 0.U
-    metaArray(i).io.AB := 0.U
-    for (j <- 0 until nWords) {
-      dataArray(i)(j).io.CLKA := clock
-      dataArray(i)(j).io.CLKB := clock
-      dataArray(i)(j).io.CENA := true.B
-      dataArray(i)(j).io.CENB := true.B
-      dataArray(i)(j).io.DB := 0.U
-      dataArray(i)(j).io.AA := 0.U
-      dataArray(i)(j).io.AB := 0.U
+    metaArray(i).io.A := 0.U
+    metaArray(i).io.D := 0.U
+    metaArray(i).io.WEN := true.B
+    metaArray(i).io.CEN := false.B
+    metaArray(i).io.CLK := clock
+    for (j <- 0 until numWords) {
+      dataArray(i)(j).io.A := 0.U
+      dataArray(i)(j).io.D := 0.U
+      dataArray(i)(j).io.WEN := true.B
+      dataArray(i)(j).io.CEN := false.B
+      dataArray(i)(j).io.CLK := clock
     }
   }
 
@@ -78,18 +77,10 @@ class L2CacheSplit3StageReorg(val n_sources: Int = 1)(implicit
     s2_wen := s1_wen
   }
   for (i <- 0 until nWays) {
-    metaArray(i).io.AA := s1_index
-    metaArray(i).io.CENA := false.B
-    for (j <- 0 until nWords) {
-      dataArray(i)(j).io.AA := s1_index
-      dataArray(i)(j).io.CENA := false.B
-    }
-  }
-  for (i <- 0 until nWays) {
-    s2_meta(i) := metaArray(i).io.QA.asTypeOf(new MetaData)
-    val read_data = Wire(Vec(nWords, UInt(xlen.W)))
-    for (j <- 0 until nWords) {
-      read_data(j) := dataArray(i)(j).io.QA
+    s2_meta(i) := metaArray(i).io.Q.asTypeOf(new MetaData)
+    val read_data = Wire(Vec(numWords, UInt((xlen * 2).W)))
+    for (j <- 0 until numWords) {
+      read_data(j) := dataArray(i)(j).io.Q
     }
     s2_cacheline(i) := read_data.asUInt.asTypeOf(new CacheLineData)
   }
@@ -267,23 +258,33 @@ class L2CacheSplit3StageReorg(val n_sources: Int = 1)(implicit
 
   when(state === s_flush || (s3_valid && request_satisfied)) {
     for (i <- 0 until nWays) {
-      metaArray(i).io.AB := meta_index
-      metaArray(i).io.DB := write_meta(i).asUInt
-      metaArray(i).io.CENB := false.B
+      metaArray(i).io.A := meta_index
+      metaArray(i).io.D := write_meta(i).asUInt
+      metaArray(i).io.WEN := false.B
       // metaArray(i).write(meta_index, write_meta(i))
+    }
+  }.otherwise {
+    for (i <- 0 until nWays) {
+      metaArray(i).io.A := s1_index
     }
   }
 
   when(s3_valid && request_satisfied) {
     for (i <- 0 until nWays) {
       when(s3_access_index === i.U) {
-        val db_data = new_data.data.asUInt.asTypeOf(Vec(nWords, UInt(xlen.W)))
-        for (j <- 0 until nWords) {
-          dataArray(i)(j).io.AB := s3_index
-          dataArray(i)(j).io.DB := db_data(j)
-          dataArray(i)(j).io.CENB := false.B
+        val db_data = new_data.data.asUInt.asTypeOf(Vec(numWords, UInt((xlen * 2).W)))
+        for (j <- 0 until numWords) {
+          dataArray(i)(j).io.A := s3_index
+          dataArray(i)(j).io.D := db_data(j)
+          dataArray(i)(j).io.WEN := false.B
           // dataArray(i)(j).write(s3_index, db_data(j))
         }
+      }
+    }
+  }.otherwise {
+    for (i <- 0 until nWays) {
+      for (j <- 0 until numWords) {
+        dataArray(i)(j).io.A := s1_index
       }
     }
   }
