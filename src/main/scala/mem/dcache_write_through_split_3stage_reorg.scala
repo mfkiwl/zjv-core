@@ -14,9 +14,9 @@ class DCacheWriteThroughSplit3StageReorg(implicit val cacheConfig: CacheConfig)
   val io = IO(new CacheIO)
 
   // Module Used
-  val metaArray = List.fill(nWays)(Module(new S011HD2P_X128Y2D54_Wrapper(nSets, 54)))
+  val metaArray = List.fill(nWays)(Module(new S011HD2P_X32Y2D56_Wrapper(nSets, 56)))
   val dataArray = List.fill(nWays)(
-    List.fill(nWords)(Module(new S011HD2P_X128Y2D64_Wrapper(nSets, xlen)))
+    List.fill(nWords)(Module(new S011HD2P_X32Y2D64_Wrapper(nSets, xlen)))
   )
   for (i <- 0 until nWays) {
     metaArray(i).io.CLKA := clock
