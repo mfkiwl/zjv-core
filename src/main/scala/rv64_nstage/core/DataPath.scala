@@ -12,6 +12,7 @@ import rv64_nstage.register._
 import rv64_nstage.mmu._
 import utils._
 import mem._
+import common.projectConfig
 
 @chiselName class DataPathIO extends Bundle with phvntomParams {
   val ctrl = Flipped(new ControlPathIO)
@@ -24,7 +25,7 @@ import mem._
 
 // TODO This is a 10-stage pipeline
 // TODO IF1 IF2 IF3 ID EXE DTLB MEM1 MEM2 MEM3 WB
-@chiselName class DataPath extends Module with phvntomParams {
+@chiselName class DataPath extends Module with phvntomParams with projectConfig {
   val io = IO(new DataPathIO)
 
   val pc_gen = Module(new PcGen)
@@ -822,6 +823,13 @@ import mem._
       BoringUtils.addSource(dtest_int, "difftestInt")
       BoringUtils.addSource(dtest_alu, "difftestALU")
       BoringUtils.addSource(dtest_mem, "difftestMem")
+    } else if (ila) {
+      BoringUtils.addSource(dtest_pc, "ilaPC")
+      BoringUtils.addSource(dtest_inst, "ilaInst")
+      BoringUtils.addSource(dtest_wbvalid, "ilaValid")
+      BoringUtils.addSource(dtest_int, "ilaInt")
+      BoringUtils.addSource(dtest_alu, "ilaALU")
+      BoringUtils.addSource(dtest_mem, "ilaMem")
     }
 
 //    printf("REG IF1 IF2 pc %x, tar %x\n", reg_if1_if2.io.bsrio.pc_in, reg_if1_if2.io.bpio.target_in)

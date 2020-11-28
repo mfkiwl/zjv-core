@@ -77,7 +77,7 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
     io.out.aw.bits.addr := addr_aligned
     io.out.aw.bits.len := 0.U // 1 word
     io.out.aw.bits.size := "b011".U // 8 bytes
-    io.out.aw.bits.burst := BURST_INCR
+    io.out.aw.bits.burst := BURST_FIXED
     io.out.aw.bits.lock := 0.U
     io.out.aw.bits.cache := 0.U
     io.out.aw.bits.prot := 0.U
@@ -139,7 +139,7 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
     io.out.ar.bits.addr := addr_aligned
     io.out.ar.bits.len := 0.U // one word
     io.out.ar.bits.size := "b011".U // 8 bytes
-    io.out.ar.bits.burst := BURST_INCR
+    io.out.ar.bits.burst := BURST_FIXED
     io.out.ar.valid := false.B
     when(state === s_WAIT_AXI_READY) {
       io.out.ar.valid := true.B

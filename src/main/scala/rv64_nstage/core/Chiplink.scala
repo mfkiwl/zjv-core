@@ -3,6 +3,7 @@ package rv64_nstage.core
 import chisel3._
 import chisel3.stage._
 import chisel3.util._
+import chisel3.util.experimental.BoringUtils
 
 import common._
 import bus._
@@ -11,6 +12,15 @@ import mem._
 
 import firrtl.stage.RunFirrtlTransformAnnotation
 
+class ILABundle extends Bundle with phvntomParams {
+  val pc = UInt(xlen.W)
+  val inst = UInt(xlen.W)
+  val wbvalid = Bool()
+  val int = Bool()
+  val alu = UInt(xlen.W)
+  val mem = Bool()
+}
+
 class ChiplinkIO extends Bundle with phvntomParams {
   val mem = new AXI4Bundle
   val mmio = new AXI4Bundle
@@ -18,7 +28,7 @@ class ChiplinkIO extends Bundle with phvntomParams {
   val meip = Input(Bool())
 }
 
-class SOCIO extends Bundle with phvntomParams {
+class SOCIO extends Bundle with phvntomParams with projectConfig {
   val mem_awready = Input(Bool())
   val mem_awvalid = Output(Bool())
   val mem_awaddr = Output(UInt(32.W))
@@ -79,6 +89,42 @@ class SOCIO extends Bundle with phvntomParams {
   val mmio_rvalid = Input(Bool())
   val mmio_rresp = Input(UInt(2.W))
   val mmio_rdata = Input(UInt(64.W))
+  val mmio_awlen = if (ila) { Output(UInt(8.W)) }
+  else { null }
+  val mmio_awsize = if (ila) { Output(UInt(3.W)) }
+  else { null }
+  val mmio_awburst = if (ila) { Output(UInt(2.W)) }
+  else { null }
+  val mmio_awlock = if (ila) { Output(UInt(1.W)) }
+  else { null }
+  val mmio_awcache = if (ila) { Output(UInt(4.W)) }
+  else { null }
+  val mmio_awqos = if (ila) { Output(UInt(4.W)) }
+  else { null }
+  val mmio_wlast = if (ila) { Output(UInt(1.W)) }
+  else { null }
+  val mmio_arlen = if (ila) { Output(UInt(8.W)) }
+  else { null }
+  val mmio_arsize = if (ila) { Output(UInt(3.W)) }
+  else { null }
+  val mmio_arburst = if (ila) { Output(UInt(2.W)) }
+  else { null }
+  val mmio_arlock = if (ila) { Output(UInt(1.W)) }
+  else { null }
+  val mmio_arcache = if (ila) { Output(UInt(4.W)) }
+  else { null }
+  val mmio_arqos = if (ila) { Output(UInt(4.W)) }
+  else { null }
+  val mmio_rlast = if (ila) { Input(UInt(1.W)) }
+  else { null }
+  val mmio_awid = if (ila) { Output(UInt(1.W)) }
+  else { null }
+  val mmio_bid = if (ila) { Input(UInt(1.W)) }
+  else { null }
+  val mmio_arid = if (ila) { Output(UInt(1.W)) }
+  else { null }
+  val mmio_rid = if (ila) { Input(UInt(1.W)) }
+  else { null }
   // val frontend_awready = Output(Bool())
   // val frontend_awvalid = Input(Bool())
   // val frontend_awaddr = Input(UInt(32.W))
@@ -122,9 +168,10 @@ class SOCIO extends Bundle with phvntomParams {
   // val frontend_ruser = Output(UInt(1.W))
   val mtip = Input(Bool())
   val meip = Input(Bool())
+  val ila_bundle = if (ila) { Output(new ILABundle) }
+  else { null }
 }
-
-class ChiplinkTile extends Module with phvntomParams {
+class ChiplinkTile extends Module with phvntomParams with projectConfig {
   val io = IO(new ChiplinkIO)
 
   val core = Module(new Core)
@@ -141,25 +188,47 @@ class ChiplinkTile extends Module with phvntomParams {
 
   // mem path
   val icache = if (hasCache) {
-    Module(
-      new ICacheForwardSplitSync3StageMMIOReorg()(CacheConfig(readOnly = true))
-    )
+    if (ila) {
+      Module(
+        new ICacheForwardSplitSync3StageMMIO()(CacheConfig(readOnly = true))
+      )
+    } else {
+      Module(
+        new ICacheForwardSplitSync3StageMMIOReorg()(
+          CacheConfig(readOnly = true)
+        )
+      )
+    }
   } else { Module(new CacheDummy()(CacheConfig(name = "icache", lines = 1))) }
   val dcache = if (hasCache) {
-    Module(
-      new DCacheWriteThroughSplit3StageReorg()(CacheConfig(readOnly = true))
-    )
+    if (ila) {
+      Module(
+        new DCacheWriteThroughSplit3Stage()(CacheConfig(readOnly = true))
+      )
+    } else {
+      Module(
+        new DCacheWriteThroughSplit3StageReorg()(CacheConfig(readOnly = true))
+      )
+    }
   } else { Module(new CacheDummy()(CacheConfig(lines = 1))) }
 
   core.io.imem <> icache.io.in
   core.io.dmem <> dcache.io.in
 
   if (hasCache) {
-    val l2cache = Module(
-      new L2CacheSplit3StageReorg(4)(
-        CacheConfig(blockBits = dcache.lineBits, totalSize = 64)
+    val l2cache = if (ila) {
+      Module(
+        new L2CacheSplit3Stage(4)(
+          CacheConfig(blockBits = dcache.lineBits, totalSize = 64)
+        )
       )
-    )
+    } else {
+      Module(
+        new L2CacheSplit3StageReorg(4)(
+          CacheConfig(blockBits = dcache.lineBits, totalSize = 64)
+        )
+      )
+    }
     val l2cacheBus = Module(new DUncache(l2cache.lineBits))
     dcache.io.mem <> l2cache.io.in(0)
     core.io.dmmu <> l2cache.io.in(1)
@@ -216,120 +285,154 @@ class ChiplinkTile extends Module with phvntomParams {
   mmioxbar_external.io.out(2) <> plic.io.in
 }
 
-class ysyx_zjv extends Module with phvntomParams {
+class ysyx_zjv extends Module with phvntomParams with projectConfig {
   val io = IO(new SOCIO)
 
-  val chiplink = Module(new ChiplinkTile)
+  val chiplinkTile = Module(new ChiplinkTile)
 
-  chiplink.io.mem.aw.ready := io.mem_awready
-  io.mem_awvalid := chiplink.io.mem.aw.valid
-  io.mem_awaddr := chiplink.io.mem.aw.bits.addr
-  io.mem_awprot := chiplink.io.mem.aw.bits.prot
-  io.mem_awid := chiplink.io.mem.aw.bits.id
-  io.mem_awuser := chiplink.io.mem.aw.bits.user
-  io.mem_awlen := chiplink.io.mem.aw.bits.len
-  io.mem_awsize := chiplink.io.mem.aw.bits.size
-  io.mem_awburst := chiplink.io.mem.aw.bits.burst
-  io.mem_awlock := chiplink.io.mem.aw.bits.lock
-  io.mem_awcache := chiplink.io.mem.aw.bits.cache
-  io.mem_awqos := chiplink.io.mem.aw.bits.qos
-  chiplink.io.mem.w.ready := io.mem_wready
-  io.mem_wvalid := chiplink.io.mem.w.valid
-  io.mem_wdata := chiplink.io.mem.w.bits.data
-  io.mem_wstrb := chiplink.io.mem.w.bits.strb
-  io.mem_wlast := chiplink.io.mem.w.bits.last
-  io.mem_bready := chiplink.io.mem.b.ready
-  chiplink.io.mem.b.valid := io.mem_bvalid
-  chiplink.io.mem.b.bits.resp := io.mem_bresp
-  chiplink.io.mem.b.bits.id := io.mem_bid
-  chiplink.io.mem.b.bits.user := io.mem_buser
-  chiplink.io.mem.ar.ready := io.mem_arready
-  io.mem_arvalid := chiplink.io.mem.ar.valid
-  io.mem_araddr := chiplink.io.mem.ar.bits.addr
-  io.mem_arprot := chiplink.io.mem.ar.bits.prot
-  io.mem_arid := chiplink.io.mem.ar.bits.id
-  io.mem_aruser := chiplink.io.mem.ar.bits.user
-  io.mem_arlen := chiplink.io.mem.ar.bits.len
-  io.mem_arsize := chiplink.io.mem.ar.bits.size
-  io.mem_arburst := chiplink.io.mem.ar.bits.burst
-  io.mem_arlock := chiplink.io.mem.ar.bits.lock
-  io.mem_arcache := chiplink.io.mem.ar.bits.cache
-  io.mem_arqos := chiplink.io.mem.ar.bits.qos
-  io.mem_rready := chiplink.io.mem.r.ready
-  chiplink.io.mem.r.valid := io.mem_rvalid
-  chiplink.io.mem.r.bits.resp := io.mem_rresp
-  chiplink.io.mem.r.bits.data := io.mem_rdata
-  chiplink.io.mem.r.bits.last := io.mem_rlast
-  chiplink.io.mem.r.bits.id := io.mem_rid
-  chiplink.io.mem.r.bits.user := io.mem_ruser
-  chiplink.io.mmio.aw.ready := io.mmio_awready
-  io.mmio_awvalid := chiplink.io.mmio.aw.valid
-  io.mmio_awaddr := chiplink.io.mmio.aw.bits.addr
-  io.mmio_awprot := chiplink.io.mmio.aw.bits.prot
-  chiplink.io.mmio.w.ready := io.mmio_wready
-  io.mmio_wvalid := chiplink.io.mmio.w.valid
-  io.mmio_wdata := chiplink.io.mmio.w.bits.data
-  io.mmio_wstrb := chiplink.io.mmio.w.bits.strb
-  io.mmio_bready := chiplink.io.mmio.b.ready
-  chiplink.io.mmio.b.valid := io.mmio_bvalid
-  chiplink.io.mmio.b.bits.resp := io.mmio_bresp
-  chiplink.io.mmio.ar.ready := io.mmio_arready
-  io.mmio_arvalid := chiplink.io.mmio.ar.valid
-  io.mmio_araddr := chiplink.io.mmio.ar.bits.addr
-  io.mmio_arprot := chiplink.io.mmio.ar.bits.prot
-  io.mmio_rready := chiplink.io.mmio.r.ready
-  chiplink.io.mmio.r.valid := io.mmio_rvalid
-  chiplink.io.mmio.r.bits.resp := io.mmio_rresp
-  chiplink.io.mmio.r.bits.data := io.mmio_rdata
-  // io.frontend_awready := chiplink.io.frontend.aw.ready
-  // chiplink.io.frontend.aw.valid := io.frontend_awvalid
-  // chiplink.io.frontend.aw.bits.addr := io.frontend_awaddr
-  // chiplink.io.frontend.aw.bits.prot := io.frontend_awprot
-  // chiplink.io.frontend.aw.bits.id := io.frontend_awid
-  // chiplink.io.frontend.aw.bits.user := io.frontend_awuser
-  // chiplink.io.frontend.aw.bits.len := io.frontend_awlen
-  // chiplink.io.frontend.aw.bits.size := io.frontend_awsize
-  // chiplink.io.frontend.aw.bits.burst := io.frontend_awburst
-  // chiplink.io.frontend.aw.bits.lock := io.frontend_awlock
-  // chiplink.io.frontend.aw.bits.cache := io.frontend_awcache
-  // chiplink.io.frontend.aw.bits.qos := io.frontend_awqos
-  // io.frontend_wready := chiplink.io.frontend.w.ready
-  // chiplink.io.frontend.w.valid := io.frontend_wvalid
-  // chiplink.io.frontend.w.bits.data := io.frontend_wdata
-  // chiplink.io.frontend.w.bits.strb := io.frontend_wstrb
-  // chiplink.io.frontend.w.bits.last := io.frontend_wlast
-  // chiplink.io.frontend.b.ready := io.frontend_bready
-  // io.frontend_bvalid := chiplink.io.frontend.b.valid
-  // io.frontend_bresp := chiplink.io.frontend.b.bits.resp
-  // io.frontend_bid := chiplink.io.frontend.b.bits.id
-  // io.frontend_buser := chiplink.io.frontend.b.bits.user
-  // io.frontend_arready := chiplink.io.frontend.ar.ready
-  // chiplink.io.frontend.ar.valid := io.frontend_arvalid
-  // chiplink.io.frontend.ar.bits.addr := io.frontend_araddr
-  // chiplink.io.frontend.ar.bits.prot := io.frontend_arprot
-  // chiplink.io.frontend.ar.bits.id := io.frontend_arid
-  // chiplink.io.frontend.ar.bits.user := io.frontend_aruser
-  // chiplink.io.frontend.ar.bits.len := io.frontend_arlen
-  // chiplink.io.frontend.ar.bits.size := io.frontend_arsize
-  // chiplink.io.frontend.ar.bits.burst := io.frontend_arburst
-  // chiplink.io.frontend.ar.bits.lock := io.frontend_arlock
-  // chiplink.io.frontend.ar.bits.cache := io.frontend_arcache
-  // chiplink.io.frontend.ar.bits.qos := io.frontend_arqos
-  // chiplink.io.frontend.r.ready := io.frontend_rready
-  // io.frontend_rvalid := chiplink.io.frontend.r.valid
-  // io.frontend_rresp := chiplink.io.frontend.r.bits.resp
-  // io.frontend_rdata := chiplink.io.frontend.r.bits.data
-  // io.frontend_rlast := chiplink.io.frontend.r.bits.last
-  // io.frontend_rid := chiplink.io.frontend.r.bits.id
-  // io.frontend_ruser := chiplink.io.frontend.r.bits.user
-  chiplink.io.meip := io.meip
+  chiplinkTile.io.mem.aw.ready := io.mem_awready
+  io.mem_awvalid := chiplinkTile.io.mem.aw.valid
+  io.mem_awaddr := chiplinkTile.io.mem.aw.bits.addr
+  io.mem_awprot := chiplinkTile.io.mem.aw.bits.prot
+  io.mem_awid := chiplinkTile.io.mem.aw.bits.id
+  io.mem_awuser := chiplinkTile.io.mem.aw.bits.user
+  io.mem_awlen := chiplinkTile.io.mem.aw.bits.len
+  io.mem_awsize := chiplinkTile.io.mem.aw.bits.size
+  io.mem_awburst := chiplinkTile.io.mem.aw.bits.burst
+  io.mem_awlock := chiplinkTile.io.mem.aw.bits.lock
+  io.mem_awcache := chiplinkTile.io.mem.aw.bits.cache
+  io.mem_awqos := chiplinkTile.io.mem.aw.bits.qos
+  chiplinkTile.io.mem.w.ready := io.mem_wready
+  io.mem_wvalid := chiplinkTile.io.mem.w.valid
+  io.mem_wdata := chiplinkTile.io.mem.w.bits.data
+  io.mem_wstrb := chiplinkTile.io.mem.w.bits.strb
+  io.mem_wlast := chiplinkTile.io.mem.w.bits.last
+  io.mem_bready := chiplinkTile.io.mem.b.ready
+  chiplinkTile.io.mem.b.valid := io.mem_bvalid
+  chiplinkTile.io.mem.b.bits.resp := io.mem_bresp
+  chiplinkTile.io.mem.b.bits.id := io.mem_bid
+  chiplinkTile.io.mem.b.bits.user := io.mem_buser
+  chiplinkTile.io.mem.ar.ready := io.mem_arready
+  io.mem_arvalid := chiplinkTile.io.mem.ar.valid
+  io.mem_araddr := chiplinkTile.io.mem.ar.bits.addr
+  io.mem_arprot := chiplinkTile.io.mem.ar.bits.prot
+  io.mem_arid := chiplinkTile.io.mem.ar.bits.id
+  io.mem_aruser := chiplinkTile.io.mem.ar.bits.user
+  io.mem_arlen := chiplinkTile.io.mem.ar.bits.len
+  io.mem_arsize := chiplinkTile.io.mem.ar.bits.size
+  io.mem_arburst := chiplinkTile.io.mem.ar.bits.burst
+  io.mem_arlock := chiplinkTile.io.mem.ar.bits.lock
+  io.mem_arcache := chiplinkTile.io.mem.ar.bits.cache
+  io.mem_arqos := chiplinkTile.io.mem.ar.bits.qos
+  io.mem_rready := chiplinkTile.io.mem.r.ready
+  chiplinkTile.io.mem.r.valid := io.mem_rvalid
+  chiplinkTile.io.mem.r.bits.resp := io.mem_rresp
+  chiplinkTile.io.mem.r.bits.data := io.mem_rdata
+  chiplinkTile.io.mem.r.bits.last := io.mem_rlast
+  chiplinkTile.io.mem.r.bits.id := io.mem_rid
+  chiplinkTile.io.mem.r.bits.user := io.mem_ruser
+  chiplinkTile.io.mmio.aw.ready := io.mmio_awready
+  io.mmio_awvalid := chiplinkTile.io.mmio.aw.valid
+  io.mmio_awaddr := chiplinkTile.io.mmio.aw.bits.addr
+  io.mmio_awprot := chiplinkTile.io.mmio.aw.bits.prot
+  chiplinkTile.io.mmio.w.ready := io.mmio_wready
+  io.mmio_wvalid := chiplinkTile.io.mmio.w.valid
+  io.mmio_wdata := chiplinkTile.io.mmio.w.bits.data
+  io.mmio_wstrb := chiplinkTile.io.mmio.w.bits.strb
+  io.mmio_bready := chiplinkTile.io.mmio.b.ready
+  chiplinkTile.io.mmio.b.valid := io.mmio_bvalid
+  chiplinkTile.io.mmio.b.bits.resp := io.mmio_bresp
+  chiplinkTile.io.mmio.ar.ready := io.mmio_arready
+  io.mmio_arvalid := chiplinkTile.io.mmio.ar.valid
+  io.mmio_araddr := chiplinkTile.io.mmio.ar.bits.addr
+  io.mmio_arprot := chiplinkTile.io.mmio.ar.bits.prot
+  io.mmio_rready := chiplinkTile.io.mmio.r.ready
+  chiplinkTile.io.mmio.r.valid := io.mmio_rvalid
+  chiplinkTile.io.mmio.r.bits.resp := io.mmio_rresp
+  chiplinkTile.io.mmio.r.bits.data := io.mmio_rdata
+  // io.frontend_awready := chiplinkTile.io.frontend.aw.ready
+  // chiplinkTile.io.frontend.aw.valid := io.frontend_awvalid
+  // chiplinkTile.io.frontend.aw.bits.addr := io.frontend_awaddr
+  // chiplinkTile.io.frontend.aw.bits.prot := io.frontend_awprot
+  // chiplinkTile.io.frontend.aw.bits.id := io.frontend_awid
+  // chiplinkTile.io.frontend.aw.bits.user := io.frontend_awuser
+  // chiplinkTile.io.frontend.aw.bits.len := io.frontend_awlen
+  // chiplinkTile.io.frontend.aw.bits.size := io.frontend_awsize
+  // chiplinkTile.io.frontend.aw.bits.burst := io.frontend_awburst
+  // chiplinkTile.io.frontend.aw.bits.lock := io.frontend_awlock
+  // chiplinkTile.io.frontend.aw.bits.cache := io.frontend_awcache
+  // chiplinkTile.io.frontend.aw.bits.qos := io.frontend_awqos
+  // io.frontend_wready := chiplinkTile.io.frontend.w.ready
+  // chiplinkTile.io.frontend.w.valid := io.frontend_wvalid
+  // chiplinkTile.io.frontend.w.bits.data := io.frontend_wdata
+  // chiplinkTile.io.frontend.w.bits.strb := io.frontend_wstrb
+  // chiplinkTile.io.frontend.w.bits.last := io.frontend_wlast
+  // chiplinkTile.io.frontend.b.ready := io.frontend_bready
+  // io.frontend_bvalid := chiplinkTile.io.frontend.b.valid
+  // io.frontend_bresp := chiplinkTile.io.frontend.b.bits.resp
+  // io.frontend_bid := chiplinkTile.io.frontend.b.bits.id
+  // io.frontend_buser := chiplinkTile.io.frontend.b.bits.user
+  // io.frontend_arready := chiplinkTile.io.frontend.ar.ready
+  // chiplinkTile.io.frontend.ar.valid := io.frontend_arvalid
+  // chiplinkTile.io.frontend.ar.bits.addr := io.frontend_araddr
+  // chiplinkTile.io.frontend.ar.bits.prot := io.frontend_arprot
+  // chiplinkTile.io.frontend.ar.bits.id := io.frontend_arid
+  // chiplinkTile.io.frontend.ar.bits.user := io.frontend_aruser
+  // chiplinkTile.io.frontend.ar.bits.len := io.frontend_arlen
+  // chiplinkTile.io.frontend.ar.bits.size := io.frontend_arsize
+  // chiplinkTile.io.frontend.ar.bits.burst := io.frontend_arburst
+  // chiplinkTile.io.frontend.ar.bits.lock := io.frontend_arlock
+  // chiplinkTile.io.frontend.ar.bits.cache := io.frontend_arcache
+  // chiplinkTile.io.frontend.ar.bits.qos := io.frontend_arqos
+  // chiplinkTile.io.frontend.r.ready := io.frontend_rready
+  // io.frontend_rvalid := chiplinkTile.io.frontend.r.valid
+  // io.frontend_rresp := chiplinkTile.io.frontend.r.bits.resp
+  // io.frontend_rdata := chiplinkTile.io.frontend.r.bits.data
+  // io.frontend_rlast := chiplinkTile.io.frontend.r.bits.last
+  // io.frontend_rid := chiplinkTile.io.frontend.r.bits.id
+  // io.frontend_ruser := chiplinkTile.io.frontend.r.bits.user
+  chiplinkTile.io.meip := io.meip
 
-  chiplink.io.mmio.r.bits.id := DontCare
-  chiplink.io.mmio.r.bits.user := DontCare
-  chiplink.io.mmio.r.bits.last := DontCare
-  chiplink.io.mmio.b.bits.user := DontCare
-  // chiplink.io.frontend.w.bits.user := DontCare
-  chiplink.io.mmio.b.bits.id := DontCare
+  chiplinkTile.io.mmio.r.bits.id := DontCare
+  chiplinkTile.io.mmio.r.bits.user := DontCare
+  chiplinkTile.io.mmio.r.bits.last := DontCare
+  chiplinkTile.io.mmio.b.bits.user := DontCare
+  // chiplinkTile.io.frontend.w.bits.user := DontCare
+  chiplinkTile.io.mmio.b.bits.id := DontCare
+
+  if (ila) {
+    io.mmio_awlen := chiplinkTile.io.mmio.aw.bits.len
+    io.mmio_awsize := chiplinkTile.io.mmio.aw.bits.size
+    io.mmio_awburst := chiplinkTile.io.mmio.aw.bits.burst
+    io.mmio_awlock := chiplinkTile.io.mmio.aw.bits.lock
+    io.mmio_awcache := chiplinkTile.io.mmio.aw.bits.cache
+    io.mmio_awqos := chiplinkTile.io.mmio.aw.bits.qos
+    io.mmio_wlast := chiplinkTile.io.mmio.w.bits.last
+    io.mmio_arlen := chiplinkTile.io.mmio.ar.bits.len
+    io.mmio_arsize := chiplinkTile.io.mmio.ar.bits.size
+    io.mmio_arburst := chiplinkTile.io.mmio.ar.bits.burst
+    io.mmio_arlock := chiplinkTile.io.mmio.ar.bits.lock
+    io.mmio_arcache := chiplinkTile.io.mmio.ar.bits.cache
+    io.mmio_arqos := chiplinkTile.io.mmio.ar.bits.qos
+    chiplinkTile.io.mmio.r.bits.last := io.mmio_rlast
+    io.mmio_awid := chiplinkTile.io.mmio.aw.bits.id
+    chiplinkTile.io.mmio.b.bits.id := io.mmio_bid
+    io.mmio_arid := chiplinkTile.io.mmio.ar.bits.id
+    chiplinkTile.io.mmio.r.bits.id := io.mmio_rid
+
+    def BoringUtilsConnect(sink: UInt, id: String) {
+      val temp = WireInit(0.U(64.W))
+      BoringUtils.addSink(temp, id)
+      sink := temp
+    }
+
+    BoringUtilsConnect(io.ila_bundle.pc      ,"ilaPC")
+    BoringUtilsConnect(io.ila_bundle.inst   ,"ilaInst")
+    BoringUtilsConnect(io.ila_bundle.wbvalid   ,"ilaValid")
+    BoringUtilsConnect(io.ila_bundle.int  ,"ilaInt")
+    BoringUtilsConnect(io.ila_bundle.alu  ,"ilaALU")
+    BoringUtilsConnect(io.ila_bundle.mem  ,"ilaMem")
+  }
 }
 
 object chiplink {

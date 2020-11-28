@@ -108,16 +108,7 @@ class BTBIO extends Bundle with phvntomParams {
 class BTB extends Module with phvntomParams with projectConfig {
   val io = IO(new BTBIO)
 
-  if (!chiplink) {
-    val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(39.W))
-    val read_data = btb_entries.read(io.index_in, !io.update_valid)
-
-    io.target_out := Cat(Fill(xlen - 39, read_data(38)), read_data)
-
-    when(io.update_valid) {
-      btb_entries.write(io.update_index, io.update_target(38, 0))
-    }
-  } else {
+  if (chiplink) {
     /* ------ Use Generated RAM to Replace SyncReadMem ------ */
     val btb_entries = Module(new S011HD1P_X128Y2D39)
     val nwenr = RegInit(Bool(), true.B)
@@ -133,6 +124,15 @@ class BTB extends Module with phvntomParams with projectConfig {
     btb_entries.io.A := ar
     btb_entries.io.D := dr
     io.target_out := Cat(Fill(xlen - 39, btb_entries.io.Q(38)), btb_entries.io.Q)
+  } else {
+    val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(39.W))
+    val read_data = btb_entries.read(io.index_in, !io.update_valid)
+
+    io.target_out := Cat(Fill(xlen - 39, read_data(38)), read_data)
+
+    when(io.update_valid) {
+      btb_entries.write(io.update_index, io.update_target(38, 0))
+    }
  }
 
 //  when(io.update_valid) {

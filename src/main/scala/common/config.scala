@@ -14,6 +14,7 @@ trait projectConfig {
   var debug: Boolean = false
   var fpga: Boolean = false
   var chiplink: Boolean = true
+  var ila: Boolean = false
   var board: String = "None"
   var hasICache: Boolean = false
   var hasDCache: Boolean = false
