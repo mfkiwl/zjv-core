@@ -118,11 +118,18 @@ class BTB extends Module with phvntomParams with projectConfig {
     val dr = RegInit(UInt(39.W), 0.U)
     dr := io.update_target(38, 0)
 
-    btb_entries.io.CLK := (~(clock.asBool)).asClock
+//    btb_entries.io.CLK := (~(clock.asBool)).asClock
+//    btb_entries.io.CEN := false.B
+//    btb_entries.io.WEN := nwenr
+//    btb_entries.io.A := ar
+//    btb_entries.io.D := dr
+
+    btb_entries.io.CLK := clock
     btb_entries.io.CEN := false.B
-    btb_entries.io.WEN := nwenr
-    btb_entries.io.A := ar
-    btb_entries.io.D := dr
+    btb_entries.io.WEN := !io.update_valid
+    btb_entries.io.A := Mux(io.update_valid, io.update_index, io.index_in)
+    btb_entries.io.D := io.update_target(38, 0)
+
     io.target_out := Cat(Fill(xlen - 39, btb_entries.io.Q(38)), btb_entries.io.Q)
   } else {
     val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(39.W))
