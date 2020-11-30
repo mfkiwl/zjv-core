@@ -120,13 +120,12 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
     }
   }
 
-  // io.offset := io.in.req.bits.addr(blen - 1, 0)
-  io.in.resp.bits.data := DontCare
+  // io.offset := io.in.req.bits.addr(blen - 1, 0)  
   val data_vec = Reg(Vec(burst_length, UInt(xlen.W)))
+  io.in.resp.bits.data := data_vec.asUInt
   when(state === s_RECEIVING && io.out.r.valid) {
     // io.in.resp.valid := readBeatCnt.value === burst_length.U
     data_vec(readBeatCnt.value) := io.out.r.bits.data
-    io.in.resp.bits.data := data_vec.asUInt
   }
 
   // printf(p"[${GTimer()}]: ${mname} Debug Start-----------\n")
