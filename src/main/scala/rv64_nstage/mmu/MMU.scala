@@ -24,7 +24,7 @@ import device._
 case class MMUConfig(
     name: String = "mmu", // used for debug info
     isdmmu : Boolean = false,
-    entries: Int = 2, // number of entries
+    entries: Int = 8, // number of entries
 )
 
 trait MMUParameters extends phvntomParams {

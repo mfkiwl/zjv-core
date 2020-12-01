@@ -18,9 +18,9 @@ class L2CacheSplit3StageReorg(val n_sources: Int = 1)(implicit
 
   // Module Used
   val metaArray =
-    List.fill(nWays)(Module(new S011HD1P_X64Y2D54_Wrapper(nSets, 54)))
+    List.fill(nWays)(Module(new S011HD1P_X128Y2D54_Wrapper(nSets, 54)))
   val dataArray = List.fill(nWays)(
-    List.fill(numWords)(Module(new S011HD1P_X64Y2D128_Wrapper(nSets, xlen * 2)))
+    List.fill(numWords)(Module(new S011HD1P_X128Y2D128_Wrapper(nSets, xlen * 2)))
   )
 
   for (i <- 0 until nWays) {

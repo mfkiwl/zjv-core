@@ -42,14 +42,6 @@ class S011HD2P_X32Y2D56_Wrapper(depth: Int, width: Int) extends Module with phvn
 
   val mem = Module(new S011HD2P_X32Y2D56(depth, width))
 
-//  mem.io.CLKA := (~(clock.asBool)).asClock
-//  mem.io.CLKB := (~(clock.asBool)).asClock
-//  mem.io.AA := aar
-//  mem.io.AB := abr
-//  mem.io.DB := dbr
-//  mem.io.CENA := cenar
-//  mem.io.CENB := cenbr
-
   mem.io.CLKA := clock
   mem.io.CLKB := clock
   mem.io.AA := io.AA
@@ -77,14 +69,6 @@ class S011HD2P_X32Y2D64_Wrapper(depth: Int, width: Int) extends Module with phvn
 
   val mem = Module(new S011HD2P_X32Y2D64(depth, width))
 
-//  mem.io.CLKA := (~(clock.asBool)).asClock
-//  mem.io.CLKB := (~(clock.asBool)).asClock
-//  mem.io.AA := aar
-//  mem.io.AB := abr
-//  mem.io.DB := dbr
-//  mem.io.CENA := cenar
-//  mem.io.CENB := cenbr
-
   mem.io.CLKA := clock
   mem.io.CLKB := clock
   mem.io.AA := io.AA
@@ -96,10 +80,10 @@ class S011HD2P_X32Y2D64_Wrapper(depth: Int, width: Int) extends Module with phvn
   io.QA := mem.io.QA
 }
 
-class S011HD1P_X64Y2D128_Wrapper(depth: Int, width: Int) extends Module with phvntomParams {
+class S011HD1P_X128Y2D128_Wrapper(depth: Int, width: Int) extends Module with phvntomParams {
   val io = IO(new SRAMSPWrapperIO(depth, width))
 
-  val mem = Module(new S011HD1P_X64Y2D128(depth, width))
+  val mem = Module(new S011HD1P_X128Y2D128(depth, width))
 
   val ar = RegInit(UInt(io.depthLength.W), 0.U)
   ar := io.A
@@ -109,12 +93,6 @@ class S011HD1P_X64Y2D128_Wrapper(depth: Int, width: Int) extends Module with phv
   nwenr := io.WEN
   val cenr = RegInit(Bool(), true.B)
   cenr := io.CEN
-
-//  mem.io.A := ar
-//  mem.io.D := dr
-//  mem.io.WEN := nwenr
-//  mem.io.CEN := cenr
-//  mem.io.CLK := (~(clock.asBool)).asClock
 
   mem.io.A := io.A
   mem.io.D := io.D
@@ -125,10 +103,10 @@ class S011HD1P_X64Y2D128_Wrapper(depth: Int, width: Int) extends Module with phv
   io.Q := mem.io.Q
 }
 
-class S011HD1P_X64Y2D54_Wrapper(depth: Int, width: Int) extends Module with phvntomParams {
+class S011HD1P_X128Y2D54_Wrapper(depth: Int, width: Int) extends Module with phvntomParams {
   val io = IO(new SRAMSPWrapperIO(depth, width))
 
-  val mem = Module(new S011HD1P_X64Y2D54(depth, width))
+  val mem = Module(new S011HD1P_X128Y2D54(depth, width))
 
   val ar = RegInit(UInt(io.depthLength.W), 0.U)
   ar := io.A
@@ -138,12 +116,6 @@ class S011HD1P_X64Y2D54_Wrapper(depth: Int, width: Int) extends Module with phvn
   nwenr := io.WEN
   val cenr = RegInit(Bool(), true.B)
   cenr := io.CEN
-
-//  mem.io.A := ar
-//  mem.io.D := dr
-//  mem.io.WEN := nwenr
-//  mem.io.CEN := cenr
-//  mem.io.CLK := (~(clock.asBool)).asClock
 
   mem.io.A := io.A
   mem.io.D := io.D
@@ -166,13 +138,13 @@ class S011HD2P_X32Y2D64(depth: Int, width: Int)
   val io = IO(new SRAMDPWrapperIO(depth, width))
 }
 
-class S011HD1P_X64Y2D54(depth: Int, width: Int)
+class S011HD1P_X128Y2D54(depth: Int, width: Int)
     extends BlackBox
     with phvntomParams {
   val io = IO(new SRAMSPWrapperIO(depth, width))
 }
 
-class S011HD1P_X64Y2D128(depth: Int, width: Int)
+class S011HD1P_X128Y2D128(depth: Int, width: Int)
     extends BlackBox
     with phvntomParams {
   val io = IO(new SRAMSPWrapperIO(depth, width))

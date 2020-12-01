@@ -219,13 +219,13 @@ class ChiplinkTile extends Module with phvntomParams with projectConfig {
     val l2cache = if (ila) {
       Module(
         new L2CacheSplit3Stage(4)(
-          CacheConfig(blockBits = dcache.lineBits, totalSize = 64)
+          CacheConfig(blockBits = dcache.lineBits, totalSize = 64, lines = 2)
         )
       )
     } else {
       Module(
         new L2CacheSplit3StageReorg(4)(
-          CacheConfig(blockBits = dcache.lineBits, totalSize = 64)
+          CacheConfig(blockBits = dcache.lineBits, totalSize = 64, lines = 2)
         )
       )
     }

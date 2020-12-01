@@ -91,7 +91,7 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
     io.out.ar.bits.len := (burst_length - 1).U // len - 1
     io.out.ar.bits.size := "b011".U // 8 bytes
     io.out.ar.bits.burst := BURST_INCR
-    io.out.ar.valid := false.B
+    val rlast = readBeatCnt.value === (burst_length - 1).U
     when(state === s_WAIT_AXI_READY) {
       io.out.ar.valid := true.B
       when(io.out.ar.ready) {
@@ -99,12 +99,12 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
       }
     }.elsewhen(state === s_RECEIVING) {
       // io.out.ar.valid := true.B
-      when(io.out.r.valid) {
-        io.out.r.ready := true.B
+      io.out.r.ready := true.B
+      when(io.out.r.valid) {        
         when(io.out.r.fire()) {
           readBeatCnt.inc()
         }
-        when(io.out.r.bits.last) {
+        when(rlast) {
           state := s_FINISH
         }
       }

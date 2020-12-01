@@ -147,8 +147,8 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
         state := s_RECEIVING
       }
     }.elsewhen(state === s_RECEIVING) {
+      io.out.r.ready := true.B
       when(io.out.r.valid) {
-        io.out.r.ready := true.B
         // io.in.resp.valid := true.B
         // when(io.out.r.bits.last) {
         state := s_FINISH
