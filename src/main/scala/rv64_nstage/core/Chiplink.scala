@@ -177,15 +177,6 @@ class ChiplinkTile extends Module with phvntomParams with projectConfig {
   val core = Module(new Core)
   core.reset := reset
 
-  // FixMe DISABLED FRONTEND AMBA AXI4 PROTOCOL
-  // io.frontend.b.valid := false.B
-  // io.frontend.r.valid := false.B
-  // io.frontend.aw.ready := false.B
-  // io.frontend.ar.ready := false.B
-  // io.frontend.w.ready := false.B
-  // io.frontend.b.bits := DontCare
-  // io.frontend.r.bits := DontCare
-
   // mem path
   val icache = if (hasCache) {
     if (ila) {
@@ -219,13 +210,13 @@ class ChiplinkTile extends Module with phvntomParams with projectConfig {
     val l2cache = if (ila) {
       Module(
         new L2CacheSplit3Stage(4)(
-          CacheConfig(blockBits = dcache.lineBits, totalSize = 64, lines = 2)
+          CacheConfig(blockBits = dcache.lineBits, totalSize = 32, lines = 2, ways = 2)
         )
       )
     } else {
       Module(
         new L2CacheSplit3StageReorg(4)(
-          CacheConfig(blockBits = dcache.lineBits, totalSize = 64, lines = 2)
+          CacheConfig(blockBits = dcache.lineBits, totalSize = 32, lines = 2, ways = 2)
         )
       )
     }

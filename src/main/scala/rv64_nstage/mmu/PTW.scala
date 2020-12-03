@@ -80,6 +80,7 @@ class PTWalker(implicit val mmuConfig: MMUConfig)
         "b11".U -> io.out.mmu.resp.bits.data(4 * 64 - 1, 3 * 64)
       )
     )
+    // Mux(io.out.mmu.req.bits.addr(3), io.out.mmu.resp.bits.data(2 * 64 - 1, 64), io.out.mmu.resp.bits.data(63, 0))
   } else { io.out.mmu.resp.bits.data }
   val pte_ppn = cache_rdata(53, 10)
 
