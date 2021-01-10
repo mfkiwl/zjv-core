@@ -279,10 +279,10 @@ import chisel3.experimental.chiselName
   val predict_tk = RegInit(Bool(), false.B)
   val ptar = RegInit(UInt(xlen.W), 0.U)
   val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W))
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W), 0.U(5.W))
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 5 + 5).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 5 + 5 + 5).W),
     default_inst_info)
 
   val delay_flush = RegInit(Bool(), false.B)
@@ -362,10 +362,10 @@ import chisel3.experimental.chiselName
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W))
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W), 0.U(5.W))
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 5 + 5).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 5 + 5 + 5).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -528,10 +528,10 @@ import chisel3.experimental.chiselName
   val inst_pf = RegInit(Bool(), false.B)
   val mem_af = RegInit(Bool(), false.B)
   val mem_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W))
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W), 0.U(5.W))
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 5 + 5).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 5 + 5 + 5).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -641,10 +641,10 @@ import chisel3.experimental.chiselName
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W))
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W), 0.U(5.W))
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 5 + 5).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 5 + 5 + 5).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -744,10 +744,10 @@ import chisel3.experimental.chiselName
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W))
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W), 0.U(5.W))
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 5 + 5).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 5 + 5 + 5).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)

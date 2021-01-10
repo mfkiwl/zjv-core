@@ -20,18 +20,22 @@ object ControlConst {
   val pcSelectBits = pcPlus4.getWidth
 
   // ImmExt.io.instType
-  val instXXX  = 0.U(4.W)  // Dont care
-  val IType    = 1.U(4.W)
-  val SType    = 2.U(4.W)
-  val BType    = 3.U(4.W)
-  val UType    = 4.U(4.W)
-  val JType    = 5.U(4.W)
-  val ZType    = 6.U(4.W) // Zicsr
-  val CI4Type  = 7.U(4.W)
-  val CI8Type  = 8.U(4.W)
-  val CSS4Type = 9.U(4.W)
-  val CSS8Type = 10.U(4.W)
-  val Illegal  = 15.U(4.W)
+  val instXXX  = 0.U(5.W)  // Dont care
+  val IType    = 1.U(5.W)
+  val SType    = 2.U(5.W)
+  val BType    = 3.U(5.W)
+  val UType    = 4.U(5.W)
+  val JType    = 5.U(5.W)
+  val ZType    = 6.U(5.W) // Zicsr
+  val CI4Type  = 7.U(5.W)
+  val CI8Type  = 8.U(5.W)
+  val CSS4Type = 9.U(5.W)
+  val CSS8Type = 10.U(5.W)
+  val CSL4Type = 11.U(5.W)  // Both CS and CL use the same way to represent immediate
+  val CSL8Type = 12.U(5.W)
+  val CJType   = 13.U(5.W)
+  val CBType   = 14.U(5.W)
+  val Illegal  = 31.U(5.W)
   val instBits = instXXX.getWidth
 
   // BrCond.io.brType
@@ -119,6 +123,7 @@ object ControlConst {
   val wbPC  = 3.U(3.W)
   val wbCSR = 4.U(3.W)
   val wbCond = 5.U(3.W)
+  val wbCPC = 6.U(3.W)
   val wbBits = wbXXX.getWidth
 
   // io.amoSelect
@@ -180,6 +185,7 @@ class InstInfo extends Bundle with phvntomParams {
   val modifyRd  = Output(Bool())
   val rs1Num    = Output(UInt(5.W))
   val rs2Num    = Output(UInt(5.W))
+  val rdNum     = Output(UInt(5.W))
 }
 
 class ControlPathIO extends Bundle with phvntomParams {
@@ -191,155 +197,155 @@ class ControlPath extends Module with phvntomParams {
   val io = IO(new ControlPathIO)
 
   val controlSignal = ListLookup(io.inst,
-    List(Illegal, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX,    amoXXX,    fwdXXX,    flushXXX,      false.B,    io.inst(19, 15), io.inst(24, 20)),
+    List(Illegal, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX,    amoXXX,    fwdXXX,    flushXXX,      false.B,    io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
     Array(         /*      Inst  |   PC   | alu0 or |Branch|   A    |   B    |  alu   |  Mem  |     wb    |  wb       |   amo  */
                    /*      Type  | Select |  multi1 | Type | Select | Select |  Type  | Type  |   Select  | Enable    | Select */
-      LUI        -> List(UType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AUIPC      -> List(UType,   pcPlus4,  False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      JAL        -> List(JType,   pcJump,   False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbPC,    wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      JALR       -> List(IType,   pcJump,   False,   brXXX,    ARS1,    BIMM,   aluADD,  memXXX,    wbPC,    wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      BEQ        -> List(BType,   pcBranch, False,   beqType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      BNE        -> List(BType,   pcBranch, False,   bneType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      BLT        -> List(BType,   pcBranch, False,   bltType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      BGE        -> List(BType,   pcBranch, False,   bgeType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      BLTU       -> List(BType,   pcBranch, False,   bltuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      BGEU       -> List(BType,   pcBranch, False,   bgeuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      LB         -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      LH         -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      LW         -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      LBU        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByteU,  wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      LHU        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalfU,  wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SB         -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      SH         -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      SW         -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      ADDI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SLTI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLT,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SLTIU      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLTU, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      XORI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluXOR,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      ORI        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluOR,   memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      ANDI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluAND,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SLLI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SRLI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SRAI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRA,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      ADD        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluADD,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SUB        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSUB,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SLL        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SLT        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLT,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SLTU       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLTU, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      XOR        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluXOR,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SRL        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SRA        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRA,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      OR         -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluOR,   memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AND        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluAND,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      FENCE      -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      ECALL      -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      EBREAK     -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      LWU        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWordU,  wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      LD         -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SD         -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      ADDIW      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADDW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SLLIW      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLLW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SRLIW      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRLW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SRAIW      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRAW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      ADDW       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluADDW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SUBW       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSUBW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SLLW       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLLW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SRLW       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRLW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SRAW       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRAW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      FENCE_I    -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushI    , false.B, io.inst(19, 15), io.inst(24, 20)),
-      CSRRW      -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRW  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      CSRRS      -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRS  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      CSRRC      -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRC  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      CSRRWI     -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRW  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      CSRRSI     -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRS  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      CSRRCI     -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRC  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      MRET       -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
+      LUI        -> List(UType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AUIPC      -> List(UType,   pcPlus4,  False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      JAL        -> List(JType,   pcJump,   False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbPC,    wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      JALR       -> List(IType,   pcJump,   False,   brXXX,    ARS1,    BIMM,   aluADD,  memXXX,    wbPC,    wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      BEQ        -> List(BType,   pcBranch, False,   beqType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      BNE        -> List(BType,   pcBranch, False,   bneType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      BLT        -> List(BType,   pcBranch, False,   bltType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      BGE        -> List(BType,   pcBranch, False,   bgeType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      BLTU       -> List(BType,   pcBranch, False,   bltuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      BGEU       -> List(BType,   pcBranch, False,   bgeuType, APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      LB         -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      LH         -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      LW         -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      LBU        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByteU,  wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      LHU        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalfU,  wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SB         -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memByte,   wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SH         -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memHalf,   wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SW         -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      ADDI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SLTI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLT,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SLTIU      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLTU, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      XORI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluXOR,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      ORI        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluOR,   memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      ANDI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluAND,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SLLI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SRLI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SRAI       -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRA,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      ADD        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluADD,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SUB        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSUB,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SLL        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SLT        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLT,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SLTU       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLTU, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      XOR        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluXOR,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SRL        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SRA        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRA,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      OR         -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluOR,   memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AND        -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluAND,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      FENCE      -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      ECALL      -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      EBREAK     -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      LWU        -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWordU,  wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      LD         -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SD         -> List(SType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      ADDIW      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluADDW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SLLIW      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSLLW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SRLIW      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRLW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SRAIW      -> List(IType,   pcPlus4,  False,   brXXX,    ARS1,    BIMM,   aluSRAW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      ADDW       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluADDW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SUBW       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSUBW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SLLW       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSLLW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SRLW       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRLW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SRAW       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluSRAW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      FENCE_I    -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushI    , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      CSRRW      -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRW  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      CSRRS      -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRS  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      CSRRC      -> List(ZType,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memXXX,    wbCSR,   wenCSRC  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      CSRRWI     -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRW  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      CSRRSI     -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRS  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      CSRRCI     -> List(ZType,   pcPlus4,  False,   brXXX,    AXXX,    BIMM,   aluCPB,  memXXX,    wbCSR,   wenCSRC  ,  amoXXX,   fwdMem2 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      MRET       -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
       // M Extension
-      MUL        -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluMUL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      MULH       -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,  aluMULH,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      MULHSU     -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluMULHSU, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      MULHU      -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluMULHU,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      DIV        -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluDIV,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      DIVU       -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluDIVU, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      REM        -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluREM,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      REMU       -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluREMU, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      MULW       -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluMULW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      DIVW       -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluDIVW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      DIVUW      -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluDIVUW,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      REMW       -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluREMW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      REMUW      -> List(instXXX,   pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluREMUW,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
+      MUL        -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluMUL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      MULH       -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX,  aluMULH,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      MULHSU     -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluMULHSU, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      MULHU      -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluMULHU,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      DIV        -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluDIV,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      DIVU       -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluDIVU, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      REM        -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluREM,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      REMU       -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluREMU, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      MULW       -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluMULW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      DIVW       -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluDIVW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      DIVUW      -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluDIVUW,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      REMW       -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX,   aluREMW, memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      REMUW      -> List(instXXX, pcPlus4,  True,    brXXX,    ARS1,    BXXX, aluREMUW,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdMem1 ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
       // A Extension
-      AMOADD_W   -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoADD,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOXOR_W   -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoXOR,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOOR_W    -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoOR,    fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOAND_W   -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoAND,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOMIN_W   -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoMIN,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOMAX_W   -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoMAX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOMINU_W  -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoMINU,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOMAXU_W  -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoMAXU,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOSWAP_W  -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoSWAP,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      LR_W       -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenRes   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SC_W       -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbCond,  wenMem   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOADD_D   -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoADD,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOXOR_D   -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoXOR,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOOR_D    -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoOR,    fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOAND_D   -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoAND,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOMIN_D   -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoMIN,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOMAX_D   -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoMAX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOMINU_D  -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoMINU,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOMAXU_D  -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoMAXU,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      AMOSWAP_D  -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoSWAP,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      LR_D       -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenRes   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
-      SC_D       -> List(instXXX,   pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbCond,  wenMem   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20)),
+      AMOADD_W   -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoADD,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOXOR_W   -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoXOR,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOOR_W    -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoOR,    fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOAND_W   -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoAND,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOMIN_W   -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoMIN,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOMAX_W   -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoMAX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOMINU_W  -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoMINU,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOMAXU_W  -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoMAXU,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOSWAP_W  -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenReg   ,  amoSWAP,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      LR_W       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbMEM,   wenRes   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SC_W       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memWord,   wbCond,  wenMem   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOADD_D   -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoADD,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOXOR_D   -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoXOR,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOOR_D    -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoOR,    fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOAND_D   -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoAND,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOMIN_D   -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoMIN,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOMAX_D   -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoMAX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOMINU_D  -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoMINU,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOMAXU_D  -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoMAXU,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      AMOSWAP_D  -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenReg   ,  amoSWAP,  fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      LR_D       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbMEM,   wenRes   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      SC_D       -> List(instXXX, pcPlus4,  False,   brXXX,    ARS1,    BXXX,   aluCPA,  memDouble, wbCond,  wenMem   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
       // Priv
-      SRET       -> List(instXXX,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      URET       -> List(instXXX,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
-      WFI        -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20)),
+      SRET       -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      URET       -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      WFI        -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
       // TODO In fact, this instruction only FLUSH designated ASID and VA, but if we flush all, it will be right anyway
       // TODO so, no forwarding RS1 = VADDR, RS2 = ASID
-      SFENCE_VMA -> List(instXXX,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushTLB  , false.B, io.inst(19, 15), io.inst(24, 20)),
+      SFENCE_VMA -> List(instXXX, pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushTLB  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
       // C Ext
-    //C_ILLEGAL  -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_ADDI4SPN -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_FLD      -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_LW       -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_LD       -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_FSD      -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_SW       -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_SD       -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_NOP      -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_ADDI     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_JAL      -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_ADDIW    -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_LI       -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_ADDI16SP -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_LUI      -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_SRLI     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_SRAI     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_ANDI     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_SUB      -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_XOR      -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_OR       -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_AND      -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_SUBW     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_ADDW     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_J        -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_BEQZ     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_BNEZ     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_SLLI     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-      C_LWSP     -> List(CI4Type,   pcPlus2,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , 2.U(5.W),        io.inst(24, 20)),
-      C_LDSP     -> List(CI8Type,   pcPlus2,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , 2.U(5.W),        io.inst(24, 20)),
-    //C_JR       -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_MV       -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_EBREAK   -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_JALR     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_ADD      -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_FSDSP    -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_SWSP     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-    //C_FSWSP    -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-      C_SDSP     -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B,0.U,0.U)
-      // C_FLWSP    -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-      // C_FLDSP    -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_ILLEGAL  -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_ADDI4SPN -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      C_LW       -> List(CSL4Type,pcPlus2,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , Cat("b01".U(2.W), io.inst(9, 7)), io.inst(24, 20), Cat("b01".U(2.W), io.inst(4, 2))),
+      C_LD       -> List(CSL8Type,pcPlus2,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , Cat("b01".U(2.W), io.inst(9, 7)), io.inst(24, 20), Cat("b01".U(2.W), io.inst(4, 2))),
+      C_SW       -> List(CSL4Type,pcPlus2,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, Cat("b01".U(2.W), io.inst(9, 7)), Cat("b01".U(2.W), io.inst(4, 2)), io.inst(11, 7) ),
+      C_SD       -> List(CSL8Type,pcPlus2,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, Cat("b01".U(2.W), io.inst(9, 7)), Cat("b01".U(2.W), io.inst(4, 2)), io.inst(11, 7) ),
+    //C_NOP      -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_ADDI     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_ADDIW    -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_LI       -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_ADDI16SP -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_LUI      -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      //C_SLLI     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      //C_SRLI     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_SRAI     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_ANDI     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      //C_ADD      -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      //C_SUB      -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_XOR      -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_OR       -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_AND      -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_SUBW     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_ADDW     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      C_J        -> List(CJType,  pcJump,   False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
+      C_BEQZ     -> List(CBType,  pcBranch, False,   beqType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(9, 7),   0.U(5.W)       , io.inst(11, 7)),
+      C_BNEZ     -> List(CBType,  pcBranch, False,   bneType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(9, 7),   0.U(5.W)       , io.inst(11, 7)),
+      C_LWSP     -> List(CI4Type, pcPlus2,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , 2.U(5.W),        io.inst(24, 20), io.inst(11, 7)),
+      C_LDSP     -> List(CI8Type, pcPlus2,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , 2.U(5.W),        io.inst(24, 20), io.inst(11, 7)),
+      C_JR       -> List(instXXX, pcPlus2,  False,   brXXX,    ARS1,    BXXX,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(11, 7),  io.inst(6, 2),   io.inst(11, 7)),
+    //C_MV       -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+    //C_EBREAK   -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      C_JALR     -> List(instXXX, pcJump,   False,   brXXX,    ARS1,    BXXX,   aluADD,  memXXX,    wbCPC,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(11, 7),  io.inst(6, 2),   1.U(5.W)      ),
+      C_SWSP     -> List(CSS4Type,pcPlus2,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memWord,   wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, 2.U(5.W),        io.inst(6, 2)  , io.inst(11, 7)),
+      C_SDSP     -> List(CSS8Type,pcPlus2,  False,   brXXX,    ARS1,    BIMM,   aluADD,  memDouble, wbXXX,   wenMem   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, 2.U(5.W),        io.inst(6, 2)  , io.inst(11, 7))
+      // TODO : Add new C instructions
+      // C_FLWSP    -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      // C_FLDSP    -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      // C_FSDSP    -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      // C_FSWSP    -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      // C_FLD      -> List(IType,     pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      // C_FSD      -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
     )
   )
 
@@ -363,4 +369,5 @@ class ControlPath extends Module with phvntomParams {
 
   io.inst_info_out.rs1Num    := controlSignal(14)
   io.inst_info_out.rs2Num    := controlSignal(15)
+  io.inst_info_out.rdNum     := controlSignal(16)
 }

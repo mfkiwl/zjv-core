@@ -38,6 +38,12 @@ class ImmExt extends Module with phvntomParams {
   // Compressed
   val CI4Imm = Cat(Fill(24, 0.U), io.inst(3, 2), io.inst(12), io.inst(6, 4), Fill(2, 0.U))
   val CI8Imm = Cat(Fill(23, 0.U), io.inst(4, 2), io.inst(12), io.inst(6, 5), Fill(3, 0.U))
+  val CSS4TypeImm = Cat(Fill(24, 0.U), io.inst(8, 7), io.inst(12, 9), Fill(2, 0.U))
+  val CSS8TypeImm = Cat(Fill(23, 0.U), io.inst(9, 7), io.inst(12, 10), Fill(3, 0.U))
+  val CSL4TypeImm = Cat(Fill(25, 0.U), io.inst(5), io.inst(12, 10), io.inst(6), Fill(2, 0.U))
+  val CSL8TypeImm = Cat(Fill(24, 0.U), io.inst(6, 5), io.inst(12, 10), Fill(3, 0.U))
+  val CJTypeImm = Cat(Fill(20, io.inst(12)), io.inst(12), io.inst(8), io.inst(10, 9), io.inst(6), io.inst(7), io.inst(2), io.inst(11), io.inst(5, 3), Fill(1, 0.U))
+  val CBTypeImm = Cat(Fill(23, io.inst(12)), io.inst(12), io.inst(6, 5), io.inst(2), io.inst(11, 10), io.inst(4, 3), Fill(1, 0.U))
 
   val imm_32 = MuxLookup(
     io.instType,
@@ -50,7 +56,13 @@ class ImmExt extends Module with phvntomParams {
       JType -> JImm,
       ZType -> ZImm,
       CI4Type -> CI4Imm,
-      CI8Type -> CI8Imm
+      CI8Type -> CI8Imm,
+      CSS4Type -> CSS4TypeImm,
+      CSS8Type -> CSS8TypeImm,
+      CSL4Type -> CSL4TypeImm,
+      CSL8Type -> CSL8TypeImm,
+      CJType -> CJTypeImm,
+      CBType -> CBTypeImm
     )
   )
 

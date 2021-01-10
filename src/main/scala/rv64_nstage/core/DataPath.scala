@@ -316,23 +316,6 @@ import common.projectConfig
   feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump)
   feedback_target_pc := alu.io.out
   feedback_br_taken := branch_cond.io.branch || reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump
-//   when((misprediction || wrong_target && alu.io.out =/= reg_id_exe.io.bpio.target_out)){
-//     printf("misp ntbt %x, tkbnt %x, wt %x, pc %x, stall %x\n", predict_not_but_taken, predict_taken_but_not, wrong_target && alu.io.out =/= reg_id_exe.io.bpio.target_out, reg_id_exe.io.bsrio.pc_out,
-//     stall_id_exe)
-//   }.elsewhen((branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out) || (!branch_cond.io.branch && !reg_id_exe.io.bpio.predict_taken_out &&
-//     reg_id_exe.io.iiio.inst_info_out.brType.orR)){
-//     printf("hit\n")
-//   }.elsewhen(predict_taken_but_not_br){
-//     printf("backward\n")
-//   }
-//   when(!reg_exe_dtlb.io.bpufb_stall_update) {
-//       printf("GB fbpc %x, fbbr %x, fbtk %x, fbtar %x\n",
-//       reg_exe_dtlb.io.bjio.feedback_pc_out,
-//       reg_exe_dtlb.io.bjio.feedback_is_br_out,
-//       reg_exe_dtlb.io.bjio.feedback_br_taken_out,
-//       reg_exe_dtlb.io.bjio.feedback_target_pc_out
-//     )
-//   }
 
   predict_taken_but_not_br := (!reg_id_exe.io.iiio.inst_info_out.brType.orR &&
     reg_id_exe.io.iiio.inst_info_out.pcSelect =/= pcJump && reg_id_exe.io.bpio.predict_taken_out)
@@ -355,15 +338,15 @@ import common.projectConfig
     reg_id_exe.io.iiio.inst_info_out.wbEnable === wenMem) && reg_id_exe.io.iiio.inst_info_out.rs2Num.orR
   scheduler.io.rs2_addr_exe := reg_id_exe.io.iiio.inst_info_out.rs2Num
   scheduler.io.rd_used_dtlb := reg_exe_dtlb.io.iiio.inst_info_out.modifyRd
-  scheduler.io.rd_addr_dtlb := reg_exe_dtlb.io.instio.inst_out(11, 7)
+  scheduler.io.rd_addr_dtlb := reg_exe_dtlb.io.iiio.inst_info_out.rdNum
   scheduler.io.rd_used_mem1 := reg_dtlb_mem1.io.iiio.inst_info_out.modifyRd
-  scheduler.io.rd_addr_mem1 := reg_dtlb_mem1.io.instio.inst_out(11, 7)
+  scheduler.io.rd_addr_mem1 := reg_dtlb_mem1.io.iiio.inst_info_out.rdNum
   scheduler.io.rd_used_mem2 := reg_mem1_mem2.io.iiio.inst_info_out.modifyRd && !reg_mem1_mem2.io.csrio.expt_out
-  scheduler.io.rd_addr_mem2 := reg_mem1_mem2.io.instio.inst_out(11, 7)
+  scheduler.io.rd_addr_mem2 := reg_mem1_mem2.io.iiio.inst_info_out.rdNum
   scheduler.io.rd_used_mem3 := reg_mem2_mem3.io.iiio.inst_info_out.modifyRd && !reg_mem2_mem3.io.csrio.expt_out
-  scheduler.io.rd_addr_mem3 := reg_mem2_mem3.io.instio.inst_out(11, 7)
+  scheduler.io.rd_addr_mem3 := reg_mem2_mem3.io.iiio.inst_info_out.rdNum
   scheduler.io.rd_used_wb := reg_mem3_wb.io.iiio.inst_info_out.modifyRd && !reg_mem3_wb.io.csrio.expt_out
-  scheduler.io.rd_addr_wb := reg_mem3_wb.io.instio.inst_out(11, 7)
+  scheduler.io.rd_addr_wb := reg_mem3_wb.io.iiio.inst_info_out.rdNum
   scheduler.io.rs1_from_reg := reg_file.io.rs1_data
   scheduler.io.rs2_from_reg := reg_file.io.rs2_data
   scheduler.io.rd_fen_from_dtlb := reg_exe_dtlb.io.iiio.inst_info_out.fwd_stage <= fwdDTLB
@@ -628,26 +611,6 @@ import common.projectConfig
   reg_mem2_mem3.io.csrio.comp_res_in := reg_mem1_mem2.io.csrio.comp_res_out
   reg_mem2_mem3.io.csrio.af_in := reg_mem1_mem2.io.csrio.af_out
 
-//  val regs = WireInit(VecInit(Seq.fill(regNum)(0.U(xlen.W))))
-//  BoringUtils.addSink(regs,    "difftestRegs")
-//  when(dmmu.io.front.valid && dmmu.io.front.is_store &&
-//    reg_dtlb_mem1.io.bsrio.pc_out === "hffffffff80601608".U) {
-//    printf("[%x] stall %x, stall_req %x, va %x, pa %x, inst %x\n",
-//      GTimer.apply(), stall_exe_dtlb, stall_req_dtlb_atomic, dmmu.io.front.va, dmmu.io.front.pa, reg_exe_dtlb.io.instio.inst_out
-//    )
-//  }
-//  when(io.dmem.req.valid && io.dmem.req.ready &&
-//    (io.dmem.req.bits.addr(31, 4) === "h80e03e5".U || reg_dtlb_mem1.io.bsrio.pc_out === "hffffffff80601608".U)) {
-//    printf("[%x] addr %x, type %x, wen %x, wdata %x, pc %x, inst %x, expt %x, ra %x, sp %x\n",
-//      GTimer.apply(), io.dmem.req.bits.addr, io.dmem.req.bits.memtype,
-//      io.dmem.req.bits.wen, io.dmem.req.bits.data,
-//      reg_dtlb_mem1.io.bsrio.pc_out, reg_dtlb_mem1.io.instio.inst_out, csr.io.expt, regs(1), regs(2)
-//    )
-//  }
-//  when(dmmu.io.front.flush_all) {
-//    printf("[%x] satp_flush, mem1_pc %x, mem1_inst %x\n", GTimer.apply(), reg_dtlb_mem1.io.bsrio.pc_out, reg_dtlb_mem1.io.instio.inst_out)
-//  }
-
   io.dmem.flush := false.B
   io.dmem.stall := !io.dmem.req.ready
   io.dmem.req.bits.addr := Mux(
@@ -728,7 +691,7 @@ import common.projectConfig
     reg_mem3_wb.io.iiio.inst_info_out.wbEnable === wenCSRS ||
     reg_mem3_wb.io.iiio.inst_info_out.wbEnable === wenRes ||
     reg_mem3_wb.io.iiio.inst_info_out.wbSelect === wbCond) && reg_mem3_wb.io.csrio.expt_out === false.B
-  reg_file.io.rd_addr := reg_mem3_wb.io.instio.inst_out(11, 7)
+  reg_file.io.rd_addr := reg_mem3_wb.io.iiio.inst_info_out.rdNum
   reg_file.io.rd_data := MuxLookup(
     reg_mem3_wb.io.iiio.inst_info_out.wbSelect,
     "hdeadbeef".U,
@@ -737,7 +700,8 @@ import common.projectConfig
       wbMEM -> reg_mem3_wb.io.memio.mem_val_out,
       wbPC -> (reg_mem3_wb.io.bsrio.pc_out + 4.U),
       wbCSR -> reg_mem3_wb.io.csrio.csr_val_out,
-      wbCond -> reg_mem3_wb.io.memio.mem_val_out
+      wbCond -> reg_mem3_wb.io.memio.mem_val_out,
+      wbCPC -> (reg_mem3_wb.io.bsrio.pc_out + 2.U)
     )
   )
   reg_file.io.rs1_addr := reg_id_exe.io.iiio.inst_info_out.rs1Num
