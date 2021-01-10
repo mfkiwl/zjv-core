@@ -1196,7 +1196,6 @@ object Interrupt {
   val write_status = Output(Bool())
   val evec = Output(UInt(xlen.W))
   val epc = Output(UInt(xlen.W))
-  val pc_plus = Output(UInt(xlen.W))
   val satp_val = Output(UInt(xlen.W))
   val current_p = Output(UInt(2.W))
   val force_s_mode_mem = Output(Bool())
@@ -1239,7 +1238,8 @@ object Interrupt {
   csr_regfile.io.is_load := io.is_load
   csr_regfile.io.is_store := io.is_store
   csr_regfile.io.is_ecall :=  io.inst === "b00000000000000000000000001110011".U  // ecall
-  csr_regfile.io.is_bpoint := io.inst === "b00000000000100000000000001110011".U  // breakpoint
+  csr_regfile.io.is_bpoint := (io.inst === "b00000000000100000000000001110011".U ||
+    io.inst(31, 0) === "b100_1_00_000_00_000_10".U) // breakpoint and c.ebreak
   csr_regfile.io.is_wfi :=    io.inst === "b00010000010100000000000001110011".U  // wfi
   csr_regfile.io.is_sfence := io.inst(31, 25) === "b0001001".U && io.inst(14, 0) === "b000000001110011".U // sfence.vma
   csr_regfile.io.int_pend.msip := io.soft_int
@@ -1256,7 +1256,6 @@ object Interrupt {
   io.stall_req := false.B
   io.write_satp := csr_regfile.io.write_satp
   io.write_status := csr_regfile.io.write_status
-  io.pc_plus := io.pc + 4.U(3.W)
   io.satp_val := csr_regfile.io.satp_val
   io.current_p := csr_regfile.io.current_p
   io.force_s_mode_mem := csr_regfile.io.force_s_mode_mem

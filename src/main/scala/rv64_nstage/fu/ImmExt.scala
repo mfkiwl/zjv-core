@@ -44,6 +44,10 @@ class ImmExt extends Module with phvntomParams {
   val CSL8TypeImm = Cat(Fill(24, 0.U), io.inst(6, 5), io.inst(12, 10), Fill(3, 0.U))
   val CJTypeImm = Cat(Fill(20, io.inst(12)), io.inst(12), io.inst(8), io.inst(10, 9), io.inst(6), io.inst(7), io.inst(2), io.inst(11), io.inst(5, 3), Fill(1, 0.U))
   val CBTypeImm = Cat(Fill(23, io.inst(12)), io.inst(12), io.inst(6, 5), io.inst(2), io.inst(11, 10), io.inst(4, 3), Fill(1, 0.U))
+  val CITypeImm = Cat(Fill(26, io.inst(12)), io.inst(12), io.inst(6, 2))
+  val CUITypeImm  =Cat(Fill(14, io.inst(12)), io.inst(12), io.inst(6, 2), Fill(12, 0.U))
+  val CI16SPTypeImm = Cat(Fill(22, io.inst(12)), io.inst(12), io.inst(4, 3), io.inst(5), io.inst(2), io.inst(6), Fill(4, 0.U))
+  val CIWTypeImm = Cat(Fill(22, 0.U), io.inst(10, 7), io.inst(12, 11), io.inst(5), io.inst(6), Fill(2, 0.U))
 
   val imm_32 = MuxLookup(
     io.instType,
@@ -62,7 +66,11 @@ class ImmExt extends Module with phvntomParams {
       CSL4Type -> CSL4TypeImm,
       CSL8Type -> CSL8TypeImm,
       CJType -> CJTypeImm,
-      CBType -> CBTypeImm
+      CBType -> CBTypeImm,
+      CIType -> CITypeImm,
+      CUIType -> CUITypeImm,
+      CI16SPType -> CI16SPTypeImm,
+      CIWType -> CIWTypeImm
     )
   )
 

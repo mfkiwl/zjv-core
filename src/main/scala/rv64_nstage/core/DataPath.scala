@@ -23,8 +23,14 @@ import common.projectConfig
   val int = Flipped(Flipped(new InterruptIO))
 }
 
-// TODO This is a 10-stage pipeline
-// TODO IF1 IF2 IF3 ID EXE DTLB MEM1 MEM2 MEM3 WB
+// This is a 10-stage pipeline
+// IF1 IF2 IF3 ID EXE DTLB MEM1 MEM2 MEM3 WB
+// TODO 1. Change C Decoder ---- 1.10 ---- Done
+// TODO 2. Change ImmExt and Datapath to support new inst-info bundle ---- 1.10 ---- Done
+// TODO 3. Use IF3 to detect C instruction to stall former stages ---- 1.11
+// TODO 4. Add 2 shadow bytes in every cacheline in I$ (These 2 stratigies guarantees C will be mostly dealt in frontend) ---- 1.11
+// TODO 5. Inst page fault support ---- 1.12
+// TODO 6. Not necessary, BPU support largely improves peformance ---- 1.12
 @chiselName class DataPath extends Module with phvntomParams with projectConfig {
   val io = IO(new DataPathIO)
 
@@ -151,7 +157,7 @@ import common.projectConfig
   pc_gen.io.predict_jump_target := bpu.io.pc_in_btb
   pc_gen.io.epc := csr.io.epc
   pc_gen.io.tvec := csr.io.evec
-  pc_gen.io.pc_plus := (reg_dtlb_mem1.io.bsrio.pc_out + 4.U(3.W))
+  pc_gen.io.pc_plus := reg_dtlb_mem1.io.bsrio.pc_out + Mux(reg_dtlb_mem1.io.instio.inst_out(1, 0).andR, 4.U(3.W), 2.U(3.W))
   pc_gen.io.branch_jump := br_jump_flush
   pc_gen.io.branch_pc := reg_exe_dtlb.io.bjio.bjpc_out
   pc_gen.io.inst_addr_misaligned := reg_exe_dtlb.io.aluio.inst_addr_misaligned_out
@@ -329,7 +335,7 @@ import common.projectConfig
   ) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
 
   scheduler.io.is_bubble := reg_id_exe.io.bsrio.bubble_out
-  scheduler.io.rs1_used_exe := (reg_id_exe.io.iiio.inst_info_out.ASelect === ARS1 ||
+  scheduler.io.rs1_used_exe := (reg_id_exe.io.iiio.inst_info_out.ASelect === AXXX ||
     reg_id_exe.io.iiio.inst_info_out.pcSelect === pcBranch) && reg_id_exe.io.iiio.inst_info_out.rs1Num.orR
   scheduler.io.rs1_addr_exe := reg_id_exe.io.iiio.inst_info_out.rs1Num
   scheduler.io.rs2_used_exe := (reg_id_exe.io.iiio.inst_info_out.BSelect === BXXX ||
@@ -355,7 +361,8 @@ import common.projectConfig
     "hdeadbeef".U,
     Seq(
       wbALU -> reg_exe_dtlb.io.aluio.alu_val_out,
-      wbPC -> (reg_exe_dtlb.io.bsrio.pc_out + 4.U)
+      wbPC -> (reg_exe_dtlb.io.bsrio.pc_out + 4.U),
+      wbCPC -> (reg_exe_dtlb.io.bsrio.pc_out + 2.U)
     )
   )
   scheduler.io.rd_fen_from_mem1 := reg_dtlb_mem1.io.iiio.inst_info_out.fwd_stage <= fwdMem1
@@ -364,7 +371,8 @@ import common.projectConfig
     "hdeadbeef".U,
     Seq(
       wbALU -> reg_dtlb_mem1.io.aluio.alu_val_out,
-      wbPC -> (reg_dtlb_mem1.io.bsrio.pc_out + 4.U)
+      wbPC -> (reg_dtlb_mem1.io.bsrio.pc_out + 4.U),
+      wbCPC -> (reg_dtlb_mem1.io.bsrio.pc_out + 2.U)
     )
   )
   scheduler.io.rd_fen_from_mem2 := reg_mem1_mem2.io.iiio.inst_info_out.fwd_stage <= fwdMem2
@@ -374,7 +382,8 @@ import common.projectConfig
     Seq(
       wbALU -> reg_mem1_mem2.io.aluio.alu_val_out,
       wbCSR -> reg_mem1_mem2.io.csrio.csr_val_out,
-      wbPC -> (reg_mem1_mem2.io.bsrio.pc_out + 4.U)
+      wbPC -> (reg_mem1_mem2.io.bsrio.pc_out + 4.U),
+      wbCPC -> (reg_mem1_mem2.io.bsrio.pc_out + 2.U)
     )
   )
   scheduler.io.rd_fen_from_mem3 := reg_mem2_mem3.io.iiio.inst_info_out.fwd_stage <= fwdMem2
@@ -384,7 +393,8 @@ import common.projectConfig
     Seq(
       wbALU -> reg_mem2_mem3.io.aluio.alu_val_out,
       wbCSR -> reg_mem2_mem3.io.csrio.csr_val_out,
-      wbPC -> (reg_mem2_mem3.io.bsrio.pc_out + 4.U)
+      wbPC -> (reg_mem2_mem3.io.bsrio.pc_out + 4.U),
+      wbCPC -> (reg_mem2_mem3.io.bsrio.pc_out + 2.U)
     )
   )
   scheduler.io.rd_fen_from_wb := reg_mem3_wb.io.iiio.inst_info_out.fwd_stage <= fwdWb
@@ -396,7 +406,8 @@ import common.projectConfig
       wbMEM -> reg_mem3_wb.io.memio.mem_val_out,
       wbCSR -> reg_mem3_wb.io.csrio.csr_val_out,
       wbCond -> reg_mem3_wb.io.memio.mem_val_out,
-      wbPC -> (reg_mem3_wb.io.bsrio.pc_out + 4.U)
+      wbPC -> (reg_mem3_wb.io.bsrio.pc_out + 4.U),
+      wbCPC -> (reg_mem3_wb.io.bsrio.pc_out + 2.U)
     )
   )
 
@@ -427,7 +438,7 @@ import common.projectConfig
   reg_exe_dtlb.io.bjio.predict_taken_but_not_br_in := predict_taken_but_not_br
   reg_exe_dtlb.io.bjio.bjpc_in := Mux(
     predict_taken_but_not || (predict_taken_but_not_br && !jump_flush),
-    (reg_id_exe.io.bsrio.pc_out + 4.U),
+    reg_id_exe.io.bsrio.pc_out + Mux(reg_id_exe.io.instio.inst_out(1, 0).andR, 4.U, 2.U),
     alu.io.out
   )
   reg_exe_dtlb.io.bjio.feedback_pc_in := feedback_pc
