@@ -31,11 +31,11 @@ class PcGenIO extends Bundle with phvntomParams {
 class PcGen extends Module with phvntomParams {
   val io = IO(new PcGenIO)
 
-  val pc = RegInit(UInt(xlen.W), startAddr)
+  val pc = RegInit(UInt(xlen.W), startAddr.asUInt)
 
   val last_stall = RegInit(Bool(), false.B)
   val has_flush_in_stall = RegInit(Bool(), false.B)
-  val pc_for_restore = RegInit(UInt(xlen.W), startAddr)
+  val pc_for_restore = RegInit(UInt(xlen.W), startAddr.asUInt)
 
   last_stall := io.stall
   io.last_stall_out := last_stall
