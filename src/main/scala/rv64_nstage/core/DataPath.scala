@@ -341,23 +341,19 @@ import common.projectConfig
     reg_id_exe.io.iiio.inst_info_out.brType.orR)
   misprediction := predict_not_but_taken || predict_taken_but_not
   wrong_target := branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out
-  inst_addr_misaligned := alu.io.out(
+  inst_addr_misaligned := !(withCExt.asBool) && alu.io.out(
     1
   ) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
 
   scheduler.io.is_bubble := reg_id_exe.io.bsrio.bubble_out
   scheduler.io.rs1_used_exe := (reg_id_exe.io.iiio.inst_info_out.ASelect === ARS1 ||
-    reg_id_exe.io.iiio.inst_info_out.pcSelect === pcBranch) && reg_id_exe.io.instio
-    .inst_out(19, 15)
-    .orR
-  scheduler.io.rs1_addr_exe := reg_id_exe.io.instio.inst_out(19, 15)
+    reg_id_exe.io.iiio.inst_info_out.pcSelect === pcBranch) && reg_id_exe.io.iiio.inst_info_out.rs1Num.orR
+  scheduler.io.rs1_addr_exe := reg_id_exe.io.iiio.inst_info_out.rs1Num
   scheduler.io.rs2_used_exe := (reg_id_exe.io.iiio.inst_info_out.BSelect === BXXX ||
     reg_id_exe.io.iiio.inst_info_out.amoSelect =/= amoXXX ||
     reg_id_exe.io.iiio.inst_info_out.pcSelect === pcBranch ||
-    reg_id_exe.io.iiio.inst_info_out.wbEnable === wenMem) && reg_id_exe.io.instio
-    .inst_out(24, 20)
-    .orR
-  scheduler.io.rs2_addr_exe := reg_id_exe.io.instio.inst_out(24, 20)
+    reg_id_exe.io.iiio.inst_info_out.wbEnable === wenMem) && reg_id_exe.io.iiio.inst_info_out.rs2Num.orR
+  scheduler.io.rs2_addr_exe := reg_id_exe.io.iiio.inst_info_out.rs2Num
   scheduler.io.rd_used_dtlb := reg_exe_dtlb.io.iiio.inst_info_out.modifyRd
   scheduler.io.rd_addr_dtlb := reg_exe_dtlb.io.instio.inst_out(11, 7)
   scheduler.io.rd_used_mem1 := reg_dtlb_mem1.io.iiio.inst_info_out.modifyRd
@@ -744,8 +740,8 @@ import common.projectConfig
       wbCond -> reg_mem3_wb.io.memio.mem_val_out
     )
   )
-  reg_file.io.rs1_addr := reg_id_exe.io.instio.inst_out(19, 15)
-  reg_file.io.rs2_addr := reg_id_exe.io.instio.inst_out(24, 20)
+  reg_file.io.rs1_addr := reg_id_exe.io.iiio.inst_info_out.rs1Num
+  reg_file.io.rs2_addr := reg_id_exe.io.iiio.inst_info_out.rs2Num
 
   // TODO from here is difftest, which is not formally included in the CPU
   // TODO Difftest

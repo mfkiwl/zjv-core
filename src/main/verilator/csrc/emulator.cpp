@@ -139,11 +139,11 @@ int main(int argc, char** argv)
             // difftest_check_point(sstatus);   difftest_check_point(sepc, "\n");
             // difftest_check_point(stval);     difftest_check_point(scause);          difftest_check_point(stvec, "\n");
             // difftest_check_point(mip);       difftest_check_point(sip, "\n");
-            // fprintf(stderr, "emu: uart %d plic0 %d plic1 %d prio %x ie %x ip %x thrs %x claim %x\n", 
+            // fprintf(stderr, "emu: uart %d plic0 %d plic1 %d prio %x ie %x ip %x thrs %x claim %x\n",
             //                  engine.get_emu_state()->uartirq, engine.get_emu_state()->plicmeip, engine.get_emu_state()->plicseip,
             //                  engine.get_emu_state()->plicprio, engine.get_emu_state()->plicie, engine.get_emu_state()->plicip, engine.get_emu_state()->plicthrs, engine.get_emu_state()->plicclaim);
-            // fprintf(stderr, "sim: uart %d plic0 %d plic1 %d prio %x ie %x ip %x thrs %x claim %x\n", 
-            //                  sim_uart_irq, (engine.sim_get_mip() & MIP_MEIP) != 0, (engine.sim_get_mip() & MIP_SEIP) != 0, 
+            // fprintf(stderr, "sim: uart %d plic0 %d plic1 %d prio %x ie %x ip %x thrs %x claim %x\n",
+            //                  sim_uart_irq, (engine.sim_get_mip() & MIP_MEIP) != 0, (engine.sim_get_mip() & MIP_SEIP) != 0,
             //                  sim_prio, sim_ie, sim_ip, sim_thrs, sim_claim);
             // difftest_check_general_register();
 

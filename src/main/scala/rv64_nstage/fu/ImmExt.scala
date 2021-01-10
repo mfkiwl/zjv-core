@@ -35,6 +35,9 @@ class ImmExt extends Module with phvntomParams {
     0.U
   )
   val ZImm = Cat(Fill(27, 0.U), io.inst(19, 15))
+  // Compressed
+  val CI4Imm = Cat(Fill(24, 0.U), io.inst(3, 2), io.inst(12), io.inst(6, 4), Fill(2, 0.U))
+  val CI8Imm = Cat(Fill(23, 0.U), io.inst(4, 2), io.inst(12), io.inst(6, 5), Fill(3, 0.U))
 
   val imm_32 = MuxLookup(
     io.instType,
@@ -45,7 +48,9 @@ class ImmExt extends Module with phvntomParams {
       BType -> BImm,
       UType -> UImm,
       JType -> JImm,
-      ZType -> ZImm
+      ZType -> ZImm,
+      CI4Type -> CI4Imm,
+      CI8Type -> CI8Imm
     )
   )
 
