@@ -48,6 +48,7 @@ class ImmExt extends Module with phvntomParams {
   val CUITypeImm  =Cat(Fill(14, io.inst(12)), io.inst(12), io.inst(6, 2), Fill(12, 0.U))
   val CI16SPTypeImm = Cat(Fill(22, io.inst(12)), io.inst(12), io.inst(4, 3), io.inst(5), io.inst(2), io.inst(6), Fill(4, 0.U))
   val CIWTypeImm = Cat(Fill(22, 0.U), io.inst(10, 7), io.inst(12, 11), io.inst(5), io.inst(6), Fill(2, 0.U))
+  val CBALUTypeImm = Cat(Fill(26, io.inst(12)), io.inst(12), io.inst(6, 2))
 
   val imm_32 = MuxLookup(
     io.instType,
@@ -70,7 +71,8 @@ class ImmExt extends Module with phvntomParams {
       CIType -> CITypeImm,
       CUIType -> CUITypeImm,
       CI16SPType -> CI16SPTypeImm,
-      CIWType -> CIWTypeImm
+      CIWType -> CIWTypeImm,
+      CBALUType -> CBALUTypeImm
     )
   )
 

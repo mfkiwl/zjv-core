@@ -24,11 +24,11 @@ class DataPathIO extends Bundle with phvntomParams {
 
 // This is a 10-stage pipeline
 // IF1 IF2 IF3 ID EXE DTLB MEM1 MEM2 MEM3 WB
-// TODO 1. Change C Decoder ---- 1.10 ---- Done
-// TODO 2. Change ImmExt and Datapath to support new inst-info bundle ---- 1.10 ---- Done
-// TODO 3. Use ID to detect C instruction to flush former stages and reset PC to be (REG_IF3_ID.PC + 2.U) ---- 1.11 ---- Done
+// TODO 1. Change C Decoder ---- Done
+// TODO 2. Change ImmExt and Datapath to support new inst-info bundle ---- Done
+// TODO 3. Use ID to detect C instruction to flush former stages and reset PC to be (REG_IF3_ID.PC + 2.U) ---- Done
 // TODO 4. Add 2 shadow bytes in every cacheline in I$ (These 2 stratigies guarantees C will be mostly dealt in frontend) ---- 1.11
-// TODO 5. Change CSR to support writable MISA register ---- 1.11 ---- Done
+// TODO 5. Change CSR to support writable MISA register ---- Done
 // TODO 5. Inst page fault support ---- 1.12
 // TODO 6. Not necessary, BPU support largely improves peformance ---- 1.12
 class DataPath extends Module with phvntomParams with projectConfig {

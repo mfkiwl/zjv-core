@@ -39,6 +39,7 @@ object ControlConst {
   val CUIType    = 16.U(5.W)
   val CI16SPType = 17.U(5.W)
   val CIWType    = 18.U(5.W)
+  val CBALUType  = 19.U(5.W)
   val Illegal    = 31.U(5.W)
   val instBits   = instXXX.getWidth
 
@@ -317,9 +318,9 @@ class ControlPath extends Module with phvntomParams {
       C_LI       -> List(CIType,  pcPlus2,  False,   brXXX,    APC,     BIMM,   aluCPB,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
       C_ADDI16SP -> List(CI16SPType,pcPlus2,False,   brXXX,    AXXX,    BIMM,   aluADD,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , false.B, io.inst(11, 7),  io.inst(24, 20), io.inst(11, 7)),
       C_LUI      -> List(CUIType, pcPlus2,  False,   brXXX,    APC,     BIMM,   aluCPB,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
-      //C_SRLI     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-      //C_SRAI     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
-      //C_ANDI     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      C_SRLI     -> List(CBALUType,pcPlus2, False,   brXXX,    AXXX,    BIMM,   aluSRL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , Cat("b01".U(2.W), io.inst(9, 7)), io.inst(24, 20), Cat("b01".U(2.W), io.inst(9, 7))),
+      C_SRAI     -> List(CBALUType,pcPlus2, False,   brXXX,    AXXX,    BIMM,   aluSRA,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , Cat("b01".U(2.W), io.inst(9, 7)), io.inst(24, 20), Cat("b01".U(2.W), io.inst(9, 7))),
+      C_ANDI     -> List(CBALUType,pcPlus2, False,   brXXX,    AXXX,    BIMM,   aluAND,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , Cat("b01".U(2.W), io.inst(9, 7)), io.inst(24, 20), Cat("b01".U(2.W), io.inst(9, 7))),
       C_SUB      -> List(instXXX, pcPlus2,  False,   brXXX,    AXXX,    BXXX,   aluSUB,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , Cat("b01".U(2.W), io.inst(9, 7)), Cat("b01".U(2.W), io.inst(4, 2)), Cat("b01".U(2.W), io.inst(9, 7))),
       C_XOR      -> List(instXXX, pcPlus2,  False,   brXXX,    AXXX,    BXXX,   aluXOR,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , Cat("b01".U(2.W), io.inst(9, 7)), Cat("b01".U(2.W), io.inst(4, 2)), Cat("b01".U(2.W), io.inst(9, 7))),
       C_OR       -> List(instXXX, pcPlus2,  False,   brXXX,    AXXX,    BXXX,   aluOR,   memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , Cat("b01".U(2.W), io.inst(9, 7)), Cat("b01".U(2.W), io.inst(4, 2)), Cat("b01".U(2.W), io.inst(9, 7))),
@@ -329,7 +330,7 @@ class ControlPath extends Module with phvntomParams {
       C_J        -> List(CJType,  pcJump,   False,   brXXX,    APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(19, 15), io.inst(24, 20), io.inst(11, 7)),
       C_BEQZ     -> List(CBType,  pcBranch, False,   beqType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(9, 7),   0.U(5.W)       , io.inst(11, 7)),
       C_BNEZ     -> List(CBType,  pcBranch, False,   bneType,  APC,     BIMM,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(9, 7),   0.U(5.W)       , io.inst(11, 7)),
-      //C_SLLI     -> List(IType,   pcPlus4,  False,   brXXX,    AXXX,    BXXX,   aluXXX,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B),
+      C_SLLI     -> List(CBALUType,pcPlus2, False,   brXXX,    AXXX,    BIMM,   aluSLL,  memXXX,    wbALU,   wenReg   ,  amoXXX,   fwdDTLB ,  flushXXX  , true.B , Cat("b01".U(2.W), io.inst(9, 7)), io.inst(24, 20), Cat("b01".U(2.W), io.inst(9, 7))),
       C_LWSP     -> List(CI4Type, pcPlus2,  False,   brXXX,    AXXX,    BIMM,   aluADD,  memWord,   wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , 2.U(5.W),        io.inst(24, 20), io.inst(11, 7)),
       C_LDSP     -> List(CI8Type, pcPlus2,  False,   brXXX,    AXXX,    BIMM,   aluADD,  memDouble, wbMEM,   wenReg   ,  amoXXX,   fwdWb   ,  flushXXX  , true.B , 2.U(5.W),        io.inst(24, 20), io.inst(11, 7)),
       C_JR       -> List(instXXX, pcPlus2,  False,   brXXX,    AXXX,    BXXX,   aluADD,  memXXX,    wbXXX,   wenXXX   ,  amoXXX,   fwdXXX  ,  flushXXX  , false.B, io.inst(11, 7),  io.inst(6, 2),   io.inst(11, 7)),
