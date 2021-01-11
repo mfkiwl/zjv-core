@@ -23,6 +23,9 @@ class PcGenIO extends Bundle with phvntomParams {
   val branch_pc = Input(UInt(xlen.W))
   val pc_plus = Input(UInt(xlen.W))
   val inst_addr_misaligned = Input(Bool())
+  // Compressed Extension
+  val compr_jump = Input(Bool())
+  val compr_pc = Input(UInt(xlen.W))
   // PC Output
   val pc_out = Output(UInt(xlen.W))
   val last_stall_out = Output(Bool())
@@ -55,6 +58,9 @@ class PcGen extends Module with phvntomParams {
   }.elsewhen(io.branch_jump && !io.inst_addr_misaligned) {
     pc_for_restore := io.branch_pc
     has_flush_in_stall := true.B
+  }.elsewhen(io.compr_jump) {
+    pc_for_restore := io.compr_pc
+    has_flush_in_stall := true.B
   }.elsewhen(io.stall && !last_stall) {
     has_flush_in_stall := false.B
     pc_for_restore := Mux(io.predict_jump, io.predict_jump_target, pc + 4.U)
@@ -73,6 +79,8 @@ class PcGen extends Module with phvntomParams {
       pc := io.pc_plus
     }.elsewhen(io.branch_jump && !io.inst_addr_misaligned) {
       pc := Cat(io.branch_pc(xlen - 1, 1), Fill(1, 0.U))
+    }.elsewhen(io.compr_jump) {
+      pc := Cat(io.compr_pc(xlen - 1, 1), Fill(1, 0.U))
     }.elsewhen(last_stall && has_flush_in_stall) {
       pc := Cat(pc_for_restore(xlen - 1, 1), Fill(1, 0.U))
     }.otherwise {

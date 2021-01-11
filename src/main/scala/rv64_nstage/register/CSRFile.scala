@@ -5,11 +5,10 @@ import chisel3.util._
 import rv64_nstage.control._
 import rv64_nstage.core._
 import rv64_nstage.control.ISA._
-import chisel3.experimental.chiselName
 
 import chisel3.util.experimental.BoringUtils
 
-@chiselName class InterruptIO extends Bundle with phvntomParams {
+class InterruptIO extends Bundle with phvntomParams {
   val mtip = Input(Bool())
   val msip = Input(Bool())
   val meip = Input(Bool())
@@ -134,13 +133,13 @@ object Interrupt {
 }
 
 
-@chiselName class InterruptJudgerIO extends Bundle with phvntomParams {
+class InterruptJudgerIO extends Bundle with phvntomParams {
   val int_vec = Input(UInt(12.W))
   val int_out = Output(UInt(4.W))
   val has_int = Output(Bool())
 }
 
-@chiselName class InterruptJudger extends Module with phvntomParams {
+class InterruptJudger extends Module with phvntomParams {
   val io = IO(new InterruptJudgerIO)
 
   when(io.int_vec(11)) {
@@ -168,7 +167,7 @@ object Interrupt {
 }
 
 
-@chiselName class ExceptionJudgerIO extends Bundle with phvntomParams {
+class ExceptionJudgerIO extends Bundle with phvntomParams {
   val breakpoint = Input(Bool())
   val inst_pf = Input(Bool())
   val inst_af = Input(Bool())
@@ -187,7 +186,7 @@ object Interrupt {
   val except_out = Output(UInt(4.W))
 }
 
-@chiselName class ExceptionJudger extends Module with phvntomParams {
+class ExceptionJudger extends Module with phvntomParams {
   val io = IO(new ExceptionJudgerIO)
 
   when(io.breakpoint) {
@@ -238,7 +237,7 @@ object Interrupt {
   }
 }
 
-@chiselName class CSRFileIO extends Bundle with phvntomParams {
+class CSRFileIO extends Bundle with phvntomParams {
   // CSRRX
   val which_reg = Input(UInt(12.W))
   val wen = Input(Bool())
@@ -265,6 +264,8 @@ object Interrupt {
   val bad_addr = Input(UInt(xlen.W))
   val is_wfi = Input(Bool())
   val is_sfence = Input(Bool())
+  // ISA
+  val with_c = Output(Bool())
   // Exception Return
   val is_mret = Input(Bool())
   val is_sret = Input(Bool())
@@ -279,6 +280,7 @@ object Interrupt {
   val epc_out = Output(UInt(xlen.W))
   val write_satp = Output(Bool())
   val write_status = Output(Bool())
+  val write_misa = Output(Bool())
   val satp_val = Output(UInt(xlen.W))
   val current_p = Output(UInt(2.W))
   val force_s_mode_mem = Output(Bool())
@@ -287,7 +289,7 @@ object Interrupt {
   val is_mpp_s_mode = Output(Bool())
 }
 
-@chiselName class CSRFile extends Module with phvntomParams {
+class CSRFile extends Module with phvntomParams {
   val io = IO(new CSRFileIO)
 
   // Special CSR Register Bit
@@ -379,12 +381,14 @@ object Interrupt {
   val midelegr = Cat(Fill(63 - 10 + 1, 0.U), midelegr_seip, Fill(3, 0.U), midelegr_stip,
     Fill(3, 0.U), midelegr_ssip, Fill(1, 0.U)
   )
-  val misar = Wire(UInt(xlen.W))
-  if (only_M) {
-    misar := "h8000000000001101".U
+  val misar = if (only_M) {
+    RegInit(UInt(xlen.W), "h8000000000001101".U)
+  } else if (withCExt) {
+    RegInit(UInt(xlen.W), "h8000000000141105".U)
   } else {
-    misar := "h8000000000141101".U
+    RegInit(UInt(xlen.W), "h8000000000141101".U)
   }
+  val supress_disable_c = io.current_pc(1).asBool
   val mvendoridr = 0.U(xlen.W)
   val marchidr = 5.U(xlen.W)
   val mscratchr = RegInit(0.U(xlen.W))
@@ -423,7 +427,6 @@ object Interrupt {
   val scounterenr = RegInit(0.U(32.W))
 
   //  [--------- User Mode Registers in CSR --------]
-  val uepcr = RegInit(0.U(xlen.W))
 
   // [--------- Debug Registers in CSR --------]
   val tselectr = RegInit(0.U(xlen.W))
@@ -508,7 +511,8 @@ object Interrupt {
   val eret = io.is_mret || io.is_sret || io.is_uret
   val check_bit = Mux(deleg_2_s, stvecr(0), mtvecr(0))
   trap_addr := Mux(deleg_2_s, Cat(stvecr(xlen - 1, 2), Fill(2, 0.U)), Cat(mtvecr(xlen - 1, 2), Fill(2, 0.U)))
-  eret_addr := Mux(io.is_mret, mepcr, Mux(io.is_sret, sepcr, uepcr))
+  eret_addr := Mux(io.is_mret, Cat(mepcr(xlen - 1, 2), Mux(misar(2), mepcr(1), 0.U(1.W)), 0.U(1.W)),
+    Cat(sepcr(xlen - 1, 2), Mux(misar(2), sepcr(1), 0.U(1.W)), 0.U(1.W)))
 
   // Output Comb Logic
   io.tvec_out := Mux(check_bit && has_int_comb, trap_addr + (int_num_comb << 2.U), trap_addr)
@@ -561,7 +565,7 @@ object Interrupt {
 
   // CSR Read
   when(io.which_reg === CSR.mepc) {
-    io.rdata := mepcr
+    io.rdata := Cat(mepcr(xlen - 1, 2), Mux(misar(2), mepcr(1), 0.U(1.W)), 0.U(1.W))
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.mip) {
@@ -681,7 +685,7 @@ object Interrupt {
     csr_not_exists := false.B
     bad_csr_access := bad_csr_s
   }.elsewhen(io.which_reg === CSR.sepc) {
-    io.rdata := sepcr
+    io.rdata := Cat(sepcr(xlen - 1, 2), Mux(misar(2), sepcr(1), 0.U(1.W)), 0.U(1.W))
     csr_not_exists := false.B
     bad_csr_access := bad_csr_s
   }.elsewhen(io.which_reg === CSR.scause) {
@@ -786,7 +790,15 @@ object Interrupt {
     }.elsewhen(io.is_uret) {
       // TODO add N Extension and U Mode
     }.otherwise {
-      when(io.which_reg === CSR.mepc) {
+      when(io.which_reg === CSR.misa) {
+        when(io.wen && (io.wdata(2) || !supress_disable_c)) {
+          misar := Cat(misar(xlen - 1, 3), io.wdata(2), misar(1, 0))
+        }.elsewhen(io.sen) {
+          misar := Cat(misar(xlen - 1, 3), misar(2) | io.wdata(2), misar(1, 0))
+        }.elsewhen(io.cen && !supress_disable_c) {
+          misar := Cat(misar(xlen - 1, 3), misar(2) & (~io.wdata(2)), misar(1, 0))
+        }
+      }.elsewhen(io.which_reg === CSR.mepc) {
         when(io.wen) {
           mepcr := io.wdata
         }.elsewhen(io.sen) {
@@ -1138,12 +1150,15 @@ object Interrupt {
     (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
   io.write_status := (((io.which_reg === CSR.mstatus || io.which_reg === CSR.sstatus) &&
     (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
+  io.write_misa := ((io.which_reg === CSR.misa &&
+    (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
   io.satp_val := satpr
   io.current_p := current_p
   io.force_s_mode_mem := mstatusr_mprv && mstatusr_mpp =/= CSR.PRV_M
   io.is_mpp_s_mode := mstatusr_mpp === CSR.PRV_S
   io.mstatus_sum := mstatusr_sum
   io.mstatus_mxr := mstatusr_mxr
+  io.with_c := misar(2)
 
   if (diffTest) {
     BoringUtils.addSource(mstatusr, "difftestmstatusr")
@@ -1167,7 +1182,7 @@ object Interrupt {
   }
 }
 
-@chiselName class CSRIO extends Bundle with phvntomParams {
+class CSRIO extends Bundle with phvntomParams {
   // CSRXX
   val stall = Input(Bool())
   val bubble = Input(Bool())
@@ -1194,6 +1209,7 @@ object Interrupt {
   val ret = Output(Bool())
   val write_satp = Output(Bool())
   val write_status = Output(Bool())
+  val write_misa = Output(Bool())
   val evec = Output(UInt(xlen.W))
   val epc = Output(UInt(xlen.W))
   val satp_val = Output(UInt(xlen.W))
@@ -1202,6 +1218,8 @@ object Interrupt {
   val mstatus_sum = Output(UInt(1.W))
   val mstatus_mxr = Output(UInt(1.W))
   val is_mpp_s_mode = Output(Bool())
+  // Misa
+  val with_c = Output(Bool())
   // Interrupt
   val tim_int = Input(Bool())
   val soft_int = Input(Bool())
@@ -1209,7 +1227,7 @@ object Interrupt {
   val s_external_int = Input(Bool())
 }
 
-@chiselName class CSR extends Module with phvntomParams {
+class CSR extends Module with phvntomParams {
   val io = IO(new CSRIO)
   val csr_regfile = Module(new CSRFile)
 
@@ -1222,7 +1240,7 @@ object Interrupt {
   csr_regfile.io.sen := io.cmd === ControlConst.wenCSRS
   csr_regfile.io.wdata := io.in
   csr_regfile.io.stall := io.stall
-  csr_regfile.io.current_pc := Cat(io.pc(xlen - 1, 2), 0.U(2.W))
+  csr_regfile.io.current_pc := Cat(io.pc(xlen - 1, 1), 0.U(1.W))
   csr_regfile.io.is_mret := io.inst === "b00110000001000000000000001110011".U  // mret
   csr_regfile.io.is_sret := io.inst === "b00010000001000000000000001110011".U  // sret
   csr_regfile.io.is_uret := io.inst === "b00000000001000000000000001110011".U  // uret
@@ -1256,10 +1274,12 @@ object Interrupt {
   io.stall_req := false.B
   io.write_satp := csr_regfile.io.write_satp
   io.write_status := csr_regfile.io.write_status
+  io.write_misa := csr_regfile.io.write_misa
   io.satp_val := csr_regfile.io.satp_val
   io.current_p := csr_regfile.io.current_p
   io.force_s_mode_mem := csr_regfile.io.force_s_mode_mem
   io.mstatus_sum := csr_regfile.io.mstatus_sum
   io.mstatus_mxr := csr_regfile.io.mstatus_mxr
   io.is_mpp_s_mode := csr_regfile.io.is_mpp_s_mode
+  io.with_c := csr_regfile.io.with_c
 }

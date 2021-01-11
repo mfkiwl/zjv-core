@@ -5,9 +5,8 @@ import chisel3.util._
 import rv64_nstage.control.ControlConst._
 import rv64_nstage.control._
 import rv64_nstage.core.phvntomParams
-import chisel3.experimental.chiselName
 
-@chiselName class BasicStageRegIO extends Bundle with phvntomParams {
+class BasicStageRegIO extends Bundle with phvntomParams {
   // Stall Signal
   val stall = Input(Bool())
   // Interrupt or Misprediction Flush
@@ -23,14 +22,14 @@ import chisel3.experimental.chiselName
   val pc_out = Output(UInt(xlen.W))
 }
 
-@chiselName class InstFaultIO extends Bundle with phvntomParams {
+class InstFaultIO extends Bundle with phvntomParams {
   val inst_af_in = Input(Bool())
   val inst_pf_in = Input(Bool())
   val inst_af_out = Output(Bool())
   val inst_pf_out = Output(Bool())
 }
 
-@chiselName class BPUPredictIO extends Bundle with phvntomParams {
+class BPUPredictIO extends Bundle with phvntomParams {
   val predict_taken_in = Input(Bool())
   val target_in = Input(UInt(xlen.W))
   val xored_index_in = Input(UInt(bpuEntryBits.W))
@@ -39,17 +38,17 @@ import chisel3.experimental.chiselName
   val xored_index_out = Output(UInt(bpuEntryBits.W))
 }
 
-@chiselName class InstIO extends Bundle with phvntomParams {
-  val inst_in = Input(UInt(32.W)) // TODO only supports 32-bit inst now
-  val inst_out = Output(UInt(32.W)) // TODO only supports 32-bit inst now
+class InstIO extends Bundle with phvntomParams {
+  val inst_in = Input(UInt(32.W)) 
+  val inst_out = Output(UInt(32.W)) 
 }
 
-@chiselName class InstInfoIO extends Bundle with phvntomParams {
+class InstInfoIO extends Bundle with phvntomParams {
   val inst_info_in = Flipped(new InstInfo)
   val inst_info_out = Flipped(Flipped(new InstInfo))
 }
 
-@chiselName class ExeInfoIO extends Bundle with phvntomParams {
+class ExeInfoIO extends Bundle with phvntomParams {
   val alu_val_in = Input(UInt(xlen.W))
   val inst_addr_misaligned_in = Input(Bool())
   val mem_wdata_in = Input(UInt(xlen.W))
@@ -58,7 +57,7 @@ import chisel3.experimental.chiselName
   val mem_wdata_out = Output(UInt(xlen.W))
 }
 
-@chiselName class BrJumpDelayIO extends Bundle with phvntomParams {
+class BrJumpDelayIO extends Bundle with phvntomParams {
   val misprediction_in = Input(Bool())
   val wrong_target_in = Input(Bool())
   val predict_taken_but_not_br_in = Input(Bool())
@@ -79,14 +78,14 @@ import chisel3.experimental.chiselName
   val feedback_br_taken_out = Output(Bool())
 }
 
-@chiselName class MultDivIO extends Bundle with phvntomParams {
+class MultDivIO extends Bundle with phvntomParams {
   val rs1_after_fwd_in = Input(UInt(xlen.W))
   val rs2_after_fwd_in = Input(UInt(xlen.W))
   val rs1_after_fwd_out = Output(UInt(xlen.W))
   val rs2_after_fwd_out = Output(UInt(xlen.W))
 }
 
-@chiselName class IntMemPfIO extends Bundle with phvntomParams {
+class IntMemPfIO extends Bundle with phvntomParams {
   val s_external_int_in = Input(Bool())
   val external_int_in = Input(Bool())
   val software_int_in = Input(Bool())
@@ -102,7 +101,7 @@ import chisel3.experimental.chiselName
 }
 
 // TODO Access Fault is PURELY For Difftest
-@chiselName class CSRInfoIO extends Bundle with phvntomParams {
+class CSRInfoIO extends Bundle with phvntomParams {
   val csr_val_in = Input(UInt(xlen.W))
   val expt_in = Input(Bool())
   val int_resp_in = Input(Bool())
@@ -117,18 +116,18 @@ import chisel3.experimental.chiselName
   val af_out = Output(Bool())
 }
 
-@chiselName class MemDataIO extends Bundle with phvntomParams {
+class MemDataIO extends Bundle with phvntomParams {
   val mem_val_in = Input(UInt(xlen.W))
   val mem_val_out = Output(UInt(xlen.W))
 }
 
-@chiselName class RegIf1If2IO extends Bundle with phvntomParams {
+class RegIf1If2IO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
   val bpio = Flipped(Flipped(new BPUPredictIO))
 }
 
-@chiselName class RegIf1If2 extends Module with phvntomParams {
+class RegIf1If2 extends Module with phvntomParams {
   val io = IO(new RegIf1If2IO)
 
   val bubble = RegInit(Bool(), true.B)
@@ -188,18 +187,18 @@ import chisel3.experimental.chiselName
   io.bpio.xored_index_out := xored_index
 }
 
-@chiselName class RegIf3IdIO extends Bundle with phvntomParams {
+class RegIf3IdIO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
   val instio = Flipped(Flipped(new InstIO))
   val bpio = Flipped(Flipped(new BPUPredictIO))
 }
 
-@chiselName class RegIf3Id extends Module with phvntomParams {
+class RegIf3Id extends Module with phvntomParams {
   val io = IO(new RegIf3IdIO)
   
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
+  val inst = RegInit(UInt(32.W), BUBBLE)
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
@@ -260,7 +259,7 @@ import chisel3.experimental.chiselName
   io.bpio.xored_index_out := xored_index
 }
 
-@chiselName class RegIdExeIO extends Bundle with phvntomParams {
+class RegIdExeIO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
   val instio = Flipped(Flipped(new InstIO))
@@ -268,11 +267,11 @@ import chisel3.experimental.chiselName
   val bpio = Flipped(Flipped(new BPUPredictIO))
 }
 
-@chiselName class RegIdExe extends Module with phvntomParams {
+class RegIdExe extends Module with phvntomParams {
   val io = IO(new RegIdExeIO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
+  val inst = RegInit(UInt(32.W), BUBBLE) 
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
@@ -342,7 +341,7 @@ import chisel3.experimental.chiselName
   io.bpio.xored_index_out := xored_index
 }
 
-@chiselName class RegExeDTLBIO extends Bundle with phvntomParams {
+class RegExeDTLBIO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
   val instio = Flipped(Flipped(new InstIO))
@@ -354,11 +353,11 @@ import chisel3.experimental.chiselName
   val bpufb_stall_update = Output(Bool())
 }
 
-@chiselName class RegExeDTLB extends Module with phvntomParams {
+class RegExeDTLB extends Module with phvntomParams {
   val io = IO(new RegExeDTLBIO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
+  val inst = RegInit(UInt(32.W), BUBBLE) 
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
@@ -509,7 +508,7 @@ import chisel3.experimental.chiselName
   io.bpio.xored_index_out := xored_index
 }
 
-@chiselName class RegDTLBMem1IO extends Bundle with phvntomParams {
+class RegDTLBMem1IO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
   val instio = Flipped(Flipped(new InstIO))
@@ -518,11 +517,11 @@ import chisel3.experimental.chiselName
   val intio = Flipped(Flipped(new IntMemPfIO))
 }
 
-@chiselName class RegDTLBMem1 extends Module with phvntomParams {
+class RegDTLBMem1 extends Module with phvntomParams {
   val io = IO(new RegDTLBMem1IO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
+  val inst = RegInit(UInt(32.W), BUBBLE) 
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
@@ -627,7 +626,7 @@ import chisel3.experimental.chiselName
   io.intio.s_external_int_out := s_extern_int
 }
 
-@chiselName class RegMem1Mem2IO extends Bundle with phvntomParams {
+class RegMem1Mem2IO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val instio = Flipped(Flipped(new InstIO))
   val iiio = Flipped(Flipped(new InstInfoIO))
@@ -635,11 +634,11 @@ import chisel3.experimental.chiselName
   val csrio = Flipped(Flipped(new CSRInfoIO))
 }
 
-@chiselName class RegMem1Mem2 extends Module with phvntomParams {
+class RegMem1Mem2 extends Module with phvntomParams {
   val io = IO(new RegMem1Mem2IO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
+  val inst = RegInit(UInt(32.W), BUBBLE) 
   val pc = RegInit(UInt(xlen.W), 0.U)
   val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W), 0.U(5.W))
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
@@ -729,7 +728,7 @@ import chisel3.experimental.chiselName
   io.csrio.af_out := af
 }
 
-@chiselName class RegMem3WbIO extends Bundle with phvntomParams {
+class RegMem3WbIO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val instio = Flipped(Flipped(new InstIO))
   val iiio = Flipped(Flipped(new InstInfoIO))
@@ -738,11 +737,11 @@ import chisel3.experimental.chiselName
   val memio = Flipped(Flipped(new MemDataIO))
 }
 
-@chiselName class RegMem3Wb extends Module with phvntomParams {
+class RegMem3Wb extends Module with phvntomParams {
   val io = IO(new RegMem3WbIO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
+  val inst = RegInit(UInt(32.W), BUBBLE) 
   val pc = RegInit(UInt(xlen.W), 0.U)
   val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(5.W), 0.U(5.W), 0.U(5.W))
   val inst_info = RegInit(UInt((instBits + pcSelectBits +

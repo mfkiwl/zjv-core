@@ -3,7 +3,6 @@ package rv64_nstage.core
 import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
-import chisel3.experimental.chiselName
 import device.MemIO
 import rv64_nstage.control._
 import rv64_nstage.control.ControlConst._
@@ -14,7 +13,7 @@ import utils._
 import mem._
 import common.projectConfig
 
-@chiselName class DataPathIO extends Bundle with phvntomParams {
+class DataPathIO extends Bundle with phvntomParams {
   val ctrl = Flipped(new ControlPathIO)
   val imem = Flipped(new MemIO)
   val dmem = Flipped(new MemIO)
@@ -27,11 +26,12 @@ import common.projectConfig
 // IF1 IF2 IF3 ID EXE DTLB MEM1 MEM2 MEM3 WB
 // TODO 1. Change C Decoder ---- 1.10 ---- Done
 // TODO 2. Change ImmExt and Datapath to support new inst-info bundle ---- 1.10 ---- Done
-// TODO 3. Use IF3 to detect C instruction to stall former stages ---- 1.11
+// TODO 3. Use ID to detect C instruction to flush former stages and reset PC to be (REG_IF3_ID.PC + 2.U) ---- 1.11 ---- Done
 // TODO 4. Add 2 shadow bytes in every cacheline in I$ (These 2 stratigies guarantees C will be mostly dealt in frontend) ---- 1.11
+// TODO 5. Change CSR to support writable MISA register ---- 1.11 ---- Done
 // TODO 5. Inst page fault support ---- 1.12
 // TODO 6. Not necessary, BPU support largely improves peformance ---- 1.12
-@chiselName class DataPath extends Module with phvntomParams with projectConfig {
+class DataPath extends Module with phvntomParams with projectConfig {
   val io = IO(new DataPathIO)
 
   val pc_gen = Module(new PcGen)
@@ -66,6 +66,7 @@ import common.projectConfig
   val stall_req_mem3_atomic = WireInit(Bool(), false.B)
 
   // Flush Signals
+  val compr_flush = WireInit(Bool(), false.B)
   val br_jump_flush = WireInit(Bool(), false.B)
   val i_fence_flush = WireInit(Bool(), false.B)
   val s_fence_flush = WireInit(Bool(), false.B)
@@ -100,6 +101,7 @@ import common.projectConfig
 
   // If2 Signals
   val inst_if3 = WireInit(UInt(32.W), BUBBLE)
+  val compr_flush_addr = WireInit(UInt(xlen.W), startAddr.asUInt)
 
   // Exe Signals
   val inst_addr_misaligned = WireInit(Bool(), false.B)
@@ -161,6 +163,8 @@ import common.projectConfig
   pc_gen.io.branch_jump := br_jump_flush
   pc_gen.io.branch_pc := reg_exe_dtlb.io.bjio.bjpc_out
   pc_gen.io.inst_addr_misaligned := reg_exe_dtlb.io.aluio.inst_addr_misaligned_out
+  pc_gen.io.compr_jump := compr_flush
+  pc_gen.io.compr_pc := compr_flush_addr
 
   // BPU
   bpu.io.pc_to_predict := pc_gen.io.pc_out
@@ -205,8 +209,8 @@ import common.projectConfig
   stall_req_if1_atomic := immu.io.front.stall_req || bpu.io.stall_req
 
   reg_if1_if2.io.bsrio.stall := stall_if1_if2
-  reg_if1_if2.io.bsrio.flush_one := (br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush ||
-    i_fence_flush || s_fence_flush)
+  reg_if1_if2.io.bsrio.flush_one := (compr_flush || br_jump_flush || expt_int_flush || error_ret_flush ||
+    write_satp_flush || i_fence_flush || s_fence_flush)
   reg_if1_if2.io.bsrio.bubble_in := stall_req_if1_atomic
   reg_if1_if2.io.bsrio.pc_in := pc_gen.io.pc_out
   reg_if1_if2.io.bsrio.last_stage_atomic_stall_req := stall_req_if1_atomic
@@ -246,8 +250,8 @@ import common.projectConfig
 
   // Reg IF2 IF3
   reg_if2_if3.io.bsrio.stall := stall_if2_if3
-  reg_if2_if3.io.bsrio.flush_one := (br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush ||
-    i_fence_flush || s_fence_flush)
+  reg_if2_if3.io.bsrio.flush_one := (compr_flush || br_jump_flush || expt_int_flush || error_ret_flush ||
+    write_satp_flush || i_fence_flush || s_fence_flush)
   reg_if2_if3.io.bsrio.bubble_in := reg_if1_if2.io.bsrio.bubble_out
   reg_if2_if3.io.bsrio.pc_in := reg_if1_if2.io.bsrio.pc_out
   reg_if2_if3.io.bsrio.last_stage_atomic_stall_req := false.B
@@ -263,7 +267,8 @@ import common.projectConfig
   reg_if3_id.io.bsrio.last_stage_atomic_stall_req := stall_req_if3_atomic
   reg_if3_id.io.bsrio.next_stage_atomic_stall_req := false.B
   reg_if3_id.io.bsrio.stall := stall_if3_id
-  reg_if3_id.io.bsrio.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
+  reg_if3_id.io.bsrio.flush_one := (compr_flush || br_jump_flush || expt_int_flush || error_ret_flush ||
+    write_satp_flush || i_fence_flush || s_fence_flush)
   reg_if3_id.io.bsrio.bubble_in := stall_req_if3_atomic || reg_if2_if3.io.bsrio.bubble_out
   reg_if3_id.io.instio.inst_in := Mux(
     reg_if2_if3.io.ifio.inst_af_out || reg_if2_if3.io.ifio.inst_pf_out,
@@ -272,20 +277,25 @@ import common.projectConfig
   )
   reg_if3_id.io.bsrio.pc_in := reg_if2_if3.io.bsrio.pc_out
   reg_if3_id.io.ifio.inst_af_in := reg_if2_if3.io.ifio.inst_af_out
-  reg_if3_id.io.bsrio.next_stage_flush_req := false.B
+  reg_if3_id.io.bsrio.next_stage_flush_req := compr_flush && !(br_jump_flush || expt_int_flush || error_ret_flush ||
+    write_satp_flush || i_fence_flush || s_fence_flush)
   reg_if3_id.io.ifio.inst_pf_in := reg_if2_if3.io.ifio.inst_pf_out
   reg_if3_id.io.bpio.predict_taken_in := reg_if2_if3.io.bpio.predict_taken_out
   reg_if3_id.io.bpio.target_in := reg_if2_if3.io.bpio.target_out
   reg_if3_id.io.bpio.xored_index_in := reg_if2_if3.io.bpio.xored_index_out
 
   // Decoder
+  compr_flush := !(reg_if3_id.io.instio.inst_out(1, 0).andR)
+  compr_flush_addr := reg_if3_id.io.bsrio.pc_out + 2.U
   io.ctrl.inst := reg_if3_id.io.instio.inst_out
+  // printf("inst %x, pc %x\n", reg_if3_id.io.instio.inst_out, reg_if3_id.io.bsrio.pc_out)
 
   // Reg ID EXE
   reg_id_exe.io.bsrio.last_stage_atomic_stall_req := false.B
   reg_id_exe.io.bsrio.next_stage_atomic_stall_req := stall_req_exe_atomic
   reg_id_exe.io.bsrio.stall := stall_id_exe
-  reg_id_exe.io.bsrio.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
+  reg_id_exe.io.bsrio.flush_one := (br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush ||
+    i_fence_flush || s_fence_flush)
   reg_id_exe.io.bsrio.bubble_in := reg_if3_id.io.bsrio.bubble_out
   reg_id_exe.io.instio.inst_in := reg_if3_id.io.instio.inst_out
   reg_id_exe.io.bsrio.pc_in := reg_if3_id.io.bsrio.pc_out
@@ -330,9 +340,9 @@ import common.projectConfig
     reg_id_exe.io.iiio.inst_info_out.brType.orR)
   misprediction := predict_not_but_taken || predict_taken_but_not
   wrong_target := branch_cond.io.branch && reg_id_exe.io.bpio.predict_taken_out
-  inst_addr_misaligned := !(withCExt.asBool) && alu.io.out(
-    1
-  ) && (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch)
+  inst_addr_misaligned := !(withCExt.asBool) && alu.io.out(1) &&
+    (reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump || branch_cond.io.branch) &&
+    !csr.io.with_c
 
   scheduler.io.is_bubble := reg_id_exe.io.bsrio.bubble_out
   scheduler.io.rs1_used_exe := (reg_id_exe.io.iiio.inst_info_out.ASelect === AXXX ||
@@ -575,7 +585,7 @@ import common.projectConfig
 
   expt_int_flush := csr.io.expt
   error_ret_flush := csr.io.ret
-  write_satp_flush := csr.io.write_satp || csr.io.write_status
+  write_satp_flush := csr.io.write_satp || csr.io.write_status || csr.io.write_misa
   i_fence_flush := (reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushI ||
     reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushAll) && !expt_int_flush
   s_fence_flush := (reg_dtlb_mem1.io.iiio.inst_info_out.flushType === flushAll ||

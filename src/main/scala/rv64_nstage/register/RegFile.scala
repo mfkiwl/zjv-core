@@ -1,11 +1,10 @@
 package rv64_nstage.register
 
 import chisel3._
-import chisel3.experimental.chiselName
 import chisel3.util.experimental._
 import rv64_nstage.core.phvntomParams
 
-@chiselName class RegFileIO extends Bundle with phvntomParams {
+class RegFileIO extends Bundle with phvntomParams {
   val rs1_addr = Input(UInt(regWidth.W))
   val rs1_data = Output(UInt(xlen.W))
   val rs2_addr = Input(UInt(regWidth.W))
@@ -15,7 +14,7 @@ import rv64_nstage.core.phvntomParams
   val rd_data  = Input(UInt(xlen.W))
 }
 
-@chiselName class RegFile extends Module with phvntomParams {
+class RegFile extends Module with phvntomParams {
   val io = IO(new RegFileIO)
 
   val regs = RegInit(VecInit(Seq.fill(regNum)(0.U(xlen.W))))

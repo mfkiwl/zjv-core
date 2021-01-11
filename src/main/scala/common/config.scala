@@ -30,7 +30,7 @@ trait projectConfig {
   val prtHotSpot    = false
   val vscode        = false
   // Mode and VA
-  val withCExt      = false     // with C Extension, no Inst-Misaligned Exception
+  val withCExt      = true     // with C Extension, no Inst-Misaligned Exception
   val only_M        = false
   val validVABits   = 39
   // Cache Config

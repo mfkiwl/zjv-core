@@ -2,7 +2,7 @@
 
 void dtengine_t::sim_init(std::string elfpath) {
     sim_state = new difftest_state_t;
-    const char* isa = "RV64IMA";
+    const char* isa = "RV64IMAC";
     const char* priv = "MSU";
     const char* varch = "vlen:128,elen:64,slen:128";
     size_t nprocs = 1;
