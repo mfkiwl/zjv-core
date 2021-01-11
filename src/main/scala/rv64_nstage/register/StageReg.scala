@@ -2,6 +2,7 @@ package rv64_nstage.register
 
 import chisel3._
 import chisel3.util._
+import chisel3.util.experimental.BoringUtils
 import rv64_nstage.control.ControlConst._
 import rv64_nstage.control._
 import rv64_nstage.core.phvntomParams
@@ -209,6 +210,10 @@ class RegIf3Id extends Module with phvntomParams {
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
   val this_stall = io.bsrio.stall || io.bsrio.last_stage_atomic_stall_req
+  val half_fetched = RegInit(Bool(), false.B)
+  val half_fw = WireDefault(false.B)
+  BoringUtils.addSink(half_fw, "half_fetched_if3")
+  BoringUtils.addSource(half_fetched, "half_fetched_regif3id")
 
   last_delay := this_stall
 
@@ -223,6 +228,7 @@ class RegIf3Id extends Module with phvntomParams {
       pc := 0.U
       bubble := true.B
       inst := BUBBLE
+      half_fetched := false.B
       inst_af := false.B
       inst_pf := false.B
       predict_tk := false.B
@@ -232,6 +238,7 @@ class RegIf3Id extends Module with phvntomParams {
       pc := io.bsrio.pc_in
       bubble := false.B
       inst := io.instio.inst_in
+      half_fetched := half_fw
       inst_af := io.ifio.inst_af_in
       inst_pf := io.ifio.inst_pf_in
       predict_tk := io.bpio.predict_taken_in
@@ -242,6 +249,7 @@ class RegIf3Id extends Module with phvntomParams {
     pc := 0.U
     bubble := true.B
     inst := BUBBLE
+    half_fetched := false.B
     inst_af := false.B
     inst_pf := false.B
     predict_tk := false.B

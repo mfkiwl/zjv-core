@@ -27,10 +27,11 @@ class DataPathIO extends Bundle with phvntomParams {
 // TODO 1. Change C Decoder ---- Done
 // TODO 2. Change ImmExt and Datapath to support new inst-info bundle ---- Done
 // TODO 3. Use ID to detect C instruction to flush former stages and reset PC to be (REG_IF3_ID.PC + 2.U) ---- Done
-// TODO 4. Add 2 shadow bytes in every cacheline in I$ (These 2 stratigies guarantees C will be mostly dealt in frontend) ---- 1.11
+// TODO 4. Add 2 shadow bytes in every cacheline in I$ (These 2 stratigies guarantees C will be mostly dealt in frontend) ---- Done
 // TODO 5. Change CSR to support writable MISA register ---- Done
 // TODO 5. Inst page fault support ---- 1.12
 // TODO 6. Not necessary, BPU support largely improves peformance ---- 1.12
+// TODO 7. Update Shadow Bytes too ---- 1.12
 class DataPath extends Module with phvntomParams with projectConfig {
   val io = IO(new DataPathIO)
 
@@ -285,8 +286,10 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_if3_id.io.bpio.xored_index_in := reg_if2_if3.io.bpio.xored_index_out
 
   // Decoder
-  compr_flush := !(reg_if3_id.io.instio.inst_out(1, 0).andR)
-  compr_flush_addr := reg_if3_id.io.bsrio.pc_out + 2.U
+  val half_fetched = WireDefault(false.B)
+  BoringUtils.addSink(half_fetched, "half_fetched_regif3id")
+  compr_flush := !reg_if3_id.io.instio.inst_out(1, 0).andR || half_fetched
+  compr_flush_addr := Mux(half_fetched, reg_if3_id.io.bsrio.pc_out, reg_if3_id.io.bsrio.pc_out + 2.U)
   io.ctrl.inst := reg_if3_id.io.instio.inst_out
   // printf("inst %x, pc %x\n", reg_if3_id.io.instio.inst_out, reg_if3_id.io.bsrio.pc_out)
 
@@ -296,7 +299,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_id_exe.io.bsrio.stall := stall_id_exe
   reg_id_exe.io.bsrio.flush_one := (br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush ||
     i_fence_flush || s_fence_flush)
-  reg_id_exe.io.bsrio.bubble_in := reg_if3_id.io.bsrio.bubble_out
+  reg_id_exe.io.bsrio.bubble_in := reg_if3_id.io.bsrio.bubble_out || half_fetched
   reg_id_exe.io.instio.inst_in := reg_if3_id.io.instio.inst_out
   reg_id_exe.io.bsrio.pc_in := reg_if3_id.io.bsrio.pc_out
   reg_id_exe.io.iiio.inst_info_in := io.ctrl.inst_info_out

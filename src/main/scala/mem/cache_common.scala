@@ -6,6 +6,7 @@ import rv64_nstage.core._
 import device._
 
 case class CacheConfig(
+    shadowByte: Boolean = false,
     readOnly: Boolean = false,
     hasMMIO: Boolean = true,
     name: String = "cache", // used for debug info
@@ -21,6 +22,7 @@ case class CacheConfig(
 trait CacheParameters extends phvntomParams {
   implicit val cacheConfig: CacheConfig
 
+  val shadowByte = cacheConfig.shadowByte
   val readOnly = cacheConfig.readOnly
   val hasMMIO = cacheConfig.hasMMIO
   val cacheName = cacheConfig.name // used for debug info
@@ -65,6 +67,7 @@ class MetaData(implicit val cacheConfig: CacheConfig)
     extends Bundle
     with CacheParameters {
   val valid = Bool()
+  val svalid = if (shadowByte) { Bool() } else { null }
   val dirty = if (!readOnly) { Bool() }
   else { null }
   val meta = if (replacementPolicy == "lru") { UInt(log2Ceil(nWays).W) }
@@ -78,6 +81,7 @@ class CacheLineData(implicit val cacheConfig: CacheConfig)
     extends Bundle
     with CacheParameters {
   val data = Vec(nLine, UInt(blockBits.W))
+  val shadow = if (shadowByte) UInt(16.W) else null
   override def toPrintable: Printable =
     p"CacheLineData(data = ${data})"
 }

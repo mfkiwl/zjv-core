@@ -20,11 +20,19 @@ class Tile extends Module with phvntomParams {
   core.reset := reset
 
   val icache = if (hasCache) {
-    Module(
-      new ICacheForwardSplitSync3StageMMIO()(
-        CacheConfig(name = "icache", readOnly = true)
+    if (withCExt) {
+      Module(
+        new ShadowICache()(
+          CacheConfig(name = "icache", readOnly = true, shadowByte = true)
+        )
       )
-    )
+    } else {
+      Module(
+        new ICacheForwardSplitSync3StageMMIO()(
+          CacheConfig(name = "icache", readOnly = true)
+        )
+      )
+    }
   } else { Module(new CacheDummy()(CacheConfig(name = "icache", lines = 1))) }
   val dcache = if (hasCache) {
     Module(
