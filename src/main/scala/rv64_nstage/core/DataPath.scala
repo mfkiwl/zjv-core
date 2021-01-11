@@ -29,9 +29,9 @@ class DataPathIO extends Bundle with phvntomParams {
 // TODO 3. Use ID to detect C instruction to flush former stages and reset PC to be (REG_IF3_ID.PC + 2.U) ---- Done
 // TODO 4. Add 2 shadow bytes in every cacheline in I$ (These 2 stratigies guarantees C will be mostly dealt in frontend) ---- Done
 // TODO 5. Change CSR to support writable MISA register ---- Done
-// TODO 5. Inst page fault support ---- 1.12
-// TODO 6. Not necessary, BPU support largely improves peformance ---- 1.12
-// TODO 7. Update Shadow Bytes too ---- 1.12
+// TODO 6. Inst page fault support ---- 1.12
+// TODO 7. Not necessary, BPU support largely improves peformance ---- 1.12
+// TODO 8. Update Shadow Bytes too ---- 1.12
 class DataPath extends Module with phvntomParams with projectConfig {
   val io = IO(new DataPathIO)
 
@@ -313,7 +313,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
   // ALU, Multipier, Branch and Jump
   imm_ext.io.inst := reg_id_exe.io.instio.inst_out
   imm_ext.io.instType := reg_id_exe.io.iiio.inst_info_out.instType
-
   alu.io.opType := reg_id_exe.io.iiio.inst_info_out.aluType
   alu.io.a := Mux(
     reg_id_exe.io.iiio.inst_info_out.ASelect === APC,
