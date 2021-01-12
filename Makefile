@@ -29,7 +29,7 @@ VERILATOR_SRC_DIR   :=  $(SRC_DIR)/main/verilator
 VERILATOR_VSRC_DIR	:=	$(VERILATOR_SRC_DIR)/vsrc
 VERILATOR_CSRC_DIR	:=	$(VERILATOR_SRC_DIR)/csrc
 VERILATOR_DEST_DIR	:=	$(WORK_DIR)/verilator
-VERILATOR_CXXFLAGS	:=	-O0 -std=c++11 -g -I$(VERILATOR_CSRC_DIR) -I$(VERILATOR_DEST_DIR)/build -I$(SPIKE_SRC_DIR) -I$(SPIKE_SRC_DIR)/softfloat -I$(SPIKE_DEST_DIR)
+VERILATOR_CXXFLAGS	:=	-O3 -std=c++11 -g -I$(VERILATOR_CSRC_DIR) -I$(VERILATOR_DEST_DIR)/build -I$(SPIKE_SRC_DIR) -I$(SPIKE_SRC_DIR)/softfloat -I$(SPIKE_DEST_DIR)
 VERILATOR_LDFLAGS 	:=	-lpthread -ldl -L$(SPIKE_DEST_DIR) -lfesvr -lriscv -lfdt -lsoftfloat
 VERILATOR_SOURCE 	:= $(sort $(wildcard $(VERILATOR_CSRC_DIR)/*.cpp)) $(sort $(wildcard $(VERILATOR_VSRC_DIR)/*.v))
 
