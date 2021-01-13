@@ -23,6 +23,11 @@ class BasicStageRegIO extends Bundle with phvntomParams {
   val pc_out = Output(UInt(xlen.W))
 }
 
+class IMMUIO extends Bundle with phvntomParams {
+  val use_immu_in = Input(Bool())
+  val use_immu_out = Output(Bool())
+}
+
 class InstFaultIO extends Bundle with phvntomParams {
   val inst_af_in = Input(Bool())
   val inst_pf_in = Input(Bool())
@@ -125,6 +130,7 @@ class MemDataIO extends Bundle with phvntomParams {
 class RegIf1If2IO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
+  val immuio = Flipped(Flipped(new IMMUIO))
   val bpio = Flipped(Flipped(new BPUPredictIO))
 }
 
@@ -138,6 +144,7 @@ class RegIf1If2 extends Module with phvntomParams {
   val predict_tk = RegInit(Bool(), false.B)
   val ptar = RegInit(UInt(xlen.W), 0.U)
   val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
+  val use_immu = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -159,6 +166,7 @@ class RegIf1If2 extends Module with phvntomParams {
       inst_pf := false.B
       predict_tk := false.B
       ptar := 0.U
+      use_immu := false.B
       xored_index := 0.U
     }.otherwise {
       pc := io.bsrio.pc_in
@@ -167,6 +175,7 @@ class RegIf1If2 extends Module with phvntomParams {
       inst_pf := io.ifio.inst_pf_in
       predict_tk := io.bpio.predict_taken_in
       ptar := io.bpio.target_in
+      use_immu := io.immuio.use_immu_in
       xored_index := io.bpio.xored_index_in
     }
   }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
@@ -176,6 +185,7 @@ class RegIf1If2 extends Module with phvntomParams {
     inst_pf := false.B
     predict_tk := false.B
     ptar := 0.U
+    use_immu := false.B
     xored_index := 0.U
   }
 
@@ -185,12 +195,14 @@ class RegIf1If2 extends Module with phvntomParams {
   io.ifio.inst_pf_out := inst_pf
   io.bpio.predict_taken_out := predict_tk
   io.bpio.target_out := ptar
+  io.immuio.use_immu_out := use_immu
   io.bpio.xored_index_out := xored_index
 }
 
 class RegIf3IdIO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
+  val immuio = Flipped(Flipped(new IMMUIO))
   val instio = Flipped(Flipped(new InstIO))
   val bpio = Flipped(Flipped(new BPUPredictIO))
 }
@@ -205,6 +217,7 @@ class RegIf3Id extends Module with phvntomParams {
   val inst_pf = RegInit(Bool(), false.B)
   val predict_tk = RegInit(Bool(), false.B)
   val ptar = RegInit(UInt(xlen.W), 0.U)
+  val use_immu = RegInit(Bool(), false.B)
   val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
 
   val delay_flush = RegInit(Bool(), false.B)
@@ -233,6 +246,7 @@ class RegIf3Id extends Module with phvntomParams {
       inst_pf := false.B
       predict_tk := false.B
       ptar := 0.U
+      use_immu := false.B
       xored_index := 0.U
     }.otherwise {
       pc := io.bsrio.pc_in
@@ -243,6 +257,7 @@ class RegIf3Id extends Module with phvntomParams {
       inst_pf := io.ifio.inst_pf_in
       predict_tk := io.bpio.predict_taken_in
       ptar := io.bpio.target_in
+      use_immu := io.immuio.use_immu_in
       xored_index := io.bpio.xored_index_in
     }
   }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
@@ -254,6 +269,7 @@ class RegIf3Id extends Module with phvntomParams {
     inst_pf := false.B
     predict_tk := false.B
     ptar := 0.U
+    use_immu := false.B
     xored_index := 0.U
   }
 
@@ -264,6 +280,7 @@ class RegIf3Id extends Module with phvntomParams {
   io.ifio.inst_pf_out := inst_pf
   io.bpio.predict_taken_out := predict_tk
   io.bpio.target_out := ptar
+  io.immuio.use_immu_out := use_immu
   io.bpio.xored_index_out := xored_index
 }
 

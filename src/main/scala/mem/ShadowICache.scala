@@ -190,12 +190,8 @@ class ShadowICache(implicit val cacheConfig: CacheConfig)
         state := s_flush
       }.elsewhen(s3_valid && !s3_hit) {
         state := Mux(s3_ismmio, s_mmioReq, s_memReadReq)
-//        printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-//        printf("data_miss pc %x, read addr %x\n\n", s3_addr, read_address)
       }.elsewhen(s3_valid && !s3_shadow_hit) {
         state := s_memReadReq
-//        printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-//        printf("shadow_miss pc %x, read addr %x\n\n", s3_addr, read_address)
       }
     }
     is(s_memReadReq) { when(io.mem.req.fire()) { state := s_memReadResp } }
@@ -267,11 +263,8 @@ class ShadowICache(implicit val cacheConfig: CacheConfig)
           mem_result := Cat(Fill(48, 0.U), real_data(15, 0))
         }
         is(memWordU) {
-//          printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-//          printf("Response shadow %x, real %x\n\n", result_shadow_data, real_data(31, 0))
           mask := Fill(32, 1.U(1.W)) << offset
           real_data := (result_data & mask) >> offset
-//          printf("result %x, target %x, real %x, rd&m %x\n", result_data, target_data.asUInt, real_data, result_data & mask)
           mem_result := Cat(Fill(32, 0.U), Mux(s3_read_shadow, Cat(result_shadow_data, real_data(15, 0)), real_data(31, 0)))
         }
       }
@@ -293,11 +286,6 @@ class ShadowICache(implicit val cacheConfig: CacheConfig)
         write_meta_tmp(s3_access_index).tag := s3_tag
         meta_index := s3_index
       }
-      // printf(
-      //   p"[${GTimer()}]: icache read: offset=${Hexadecimal(offset)}, mask=${Hexadecimal(mask)}, real_data=${Hexadecimal(real_data)}\n"
-      // )
-      // printf(p"\twrite_data_tmp=${write_data_tmp}\n")
-      // printf(p"\twrite_meta_tmp=${write_meta_tmp}\n")
     }
   }
 
@@ -324,46 +312,4 @@ class ShadowICache(implicit val cacheConfig: CacheConfig)
 //    printf("cache\n")
 //  }
   BoringUtils.addSource(half_fetched, "half_fetched_if3")
-
-  // printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
-  // printf(
-  //   "stall=%d, s2_need_forward=%d, state=%d, s3_hit=%d, result=%x\n",
-  //   stall,
-  //   s2_need_forward,
-  //   state,
-  //   s3_hit,
-  //   result
-  // )
-  // printf(
-  //   "flush_counter.value=%x, flush_finish=%d\n",
-  //   flush_counter.value,
-  //   flush_finish
-  // )
-  // printf("s1_valid=%d, s1_addr=%x, s1_index=%x\n", s1_valid, s1_addr, s1_index)
-  // printf("s1_data=%x, s1_wen=%d, s1_memtype=%d\n", s1_data, s1_wen, s1_memtype)
-  // printf("s2_valid=%d, s2_addr=%x, s2_index=%x\n", s2_valid, s2_addr, s2_index)
-  // printf("s2_data=%x, s2_wen=%d, s2_memtype=%d\n", s2_data, s2_wen, s2_memtype)
-  // printf("s3_valid=%d, s3_addr=%x, s3_index=%x\n", s3_valid, s3_addr, s3_index)
-  // printf("s3_data=%x, s3_wen=%d, s3_memtype=%d\n", s3_data, s3_wen, s3_memtype)
-  // printf(
-  //   "s3_tag=%x, s3_lineoffset=%x, s3_wordoffset=%x\n",
-  //   s3_tag,
-  //   s3_lineoffset,
-  //   s3_wordoffset
-  // )
-  // printf(p"s2_hitVec=${s2_hitVec}, s3_access_index=${s3_access_index}\n")
-  // printf(
-  //   p"s2_victim_index=${s2_victim_index}, s2_victim_vec=${s2_victim_vec}, s3_access_vec = ${s3_access_vec}\n"
-  // )
-  // printf(p"array_cacheline=${array_cacheline}\n")
-  // printf(p"array_meta=${array_meta}\n")
-  // printf(p"s2_cacheline=${s2_cacheline}\n")
-  // printf(p"s2_meta=${s2_meta}\n")
-  // printf(p"s3_cacheline=${s3_cacheline}\n")
-  // printf(p"s3_meta=${s3_meta}\n")
-  // printf(p"----------${cacheName} io.in----------\n")
-  // printf(p"${io.in}\n")
-  // printf(p"----------${cacheName} io.mem----------\n")
-  // printf(p"${io.mem}\n")
-  // printf("-----------------------------------------------\n")
 }
