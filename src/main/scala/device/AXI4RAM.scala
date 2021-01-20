@@ -3,7 +3,7 @@ package device
 import chisel3._
 import chisel3.util._
 import bus._
-import common._
+import config._
 import utils._
 
 class AXI4RAM(memByte: Int, name: String = "ram")

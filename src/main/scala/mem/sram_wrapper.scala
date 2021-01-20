@@ -2,7 +2,7 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_nstage.core._
+import tile._
 
 class SRAMDPWrapperIO(val depth: Int = 32, val dataWidth: Int = 64) extends Bundle with phvntomParams {
   val depthLength = log2Ceil(depth)

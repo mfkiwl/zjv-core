@@ -2,7 +2,7 @@ package bus
 
 import chisel3._
 import chisel3.util._
-import rv64_nstage.core._
+import tile._
 import utils._
 
 abstract class AXI4LiteSlave[B <: Data](

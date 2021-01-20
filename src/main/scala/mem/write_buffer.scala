@@ -2,7 +2,7 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_nstage.core._
+import tile._
 import device._
 import utils._
 

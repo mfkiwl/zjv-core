@@ -2,8 +2,8 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_nstage.core._
-import common.projectConfig
+import tile._
+import config.projectConfig
 
 object AddressSpace extends phvntomParams with projectConfig {
   def mmio =

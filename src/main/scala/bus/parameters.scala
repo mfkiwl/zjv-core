@@ -2,7 +2,7 @@ package bus
 
 import chisel3._
 import chisel3.util
-import rv64_nstage.core._
+import tile._
 
 trait AXI4Parameters extends phvntomParams {
   // These are all fixed by the AXI4 standard:
