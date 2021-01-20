@@ -7,7 +7,7 @@ import tile.common.control._
 
 class DiffTestIO extends Bundle with phvntomParams {
   val streqs   = Output(Vec(10, UInt(xlen.W)))
-  val regs     = Output(Vec(regNum, UInt(xlen.W)))
+  val regs     = Output(Vec(regNum/2, UInt(xlen.W)))
   val pc       = Output(UInt(xlen.W))
   val inst     = Output(UInt(xlen.W))
   val valid    = Output(Bool())

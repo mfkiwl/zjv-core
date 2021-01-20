@@ -25,6 +25,13 @@ object CSR {
   val PRV_H = 0x2.U(2.W)
   val PRV_M = 0x3.U(2.W)
 
+  val F_RNE = 0x0.U(3.W)
+  val F_RTZ = 0x1.U(3.W)
+  val F_RDN = 0x2.U(3.W)
+  val F_RUP = 0x3.U(3.W)
+  val F_RMM = 0x4.U(3.W)
+  val F_DYN = 0x7.U(3.W)
+
   val cycle = 0xc00.U(12.W)
   val time = 0xc01.U(12.W)
   val instret = 0xc02.U(12.W)
@@ -38,6 +45,11 @@ object CSR {
   val cyclehw = 0x980.U(12.W)
   val timehw = 0x981.U(12.W)
   val instrethw = 0x982.U(12.W)
+
+  // FLOATING POINT
+  val fflags = 0x001.U(12.W)
+  val frm = 0x002.U(12.W)
+  val fcsr = 0x003.U(12.W)
 
   // MACHINE MODE
   val mvendorid = 0xf11.U(12.W)
@@ -291,6 +303,13 @@ class CSRFile extends Module with phvntomParams {
   val io = IO(new CSRFileIO)
 
   // Special CSR Register Bit
+  // FCSR
+  val fcsrr_frm = RegInit(0.U(3.W))
+  val fcsrr_nv = RegInit(0.U(1.W))
+  val fcsrr_dz = RegInit(0.U(1.W))
+  val fcsrr_of = RegInit(0.U(1.W))
+  val fcsrr_uf = RegInit(0.U(1.W))
+  val fcsrr_nx = RegInit(0.U(1.W))
   // MCAUSE and SCAUSE
   val mcauser_int = RegInit(0.U(1.W))
   val mcauser_cause = RegInit(0.U(4.W))
@@ -382,7 +401,7 @@ class CSRFile extends Module with phvntomParams {
   val misar = if (only_M) {
     RegInit(UInt(xlen.W), "h8000000000001101".U)
   } else if (withCExt) {
-    RegInit(UInt(xlen.W), "h8000000000141105".U)
+    RegInit(UInt(xlen.W), "h8000000000141125".U)
   } else {
     RegInit(UInt(xlen.W), "h8000000000141101".U)
   }
@@ -431,6 +450,9 @@ class CSRFile extends Module with phvntomParams {
   val tdata1r = RegInit(0.U(xlen.W))
   val tdata2r = RegInit(0.U(xlen.W))
   val tdata3r = RegInit(0.U(xlen.W))
+
+  // [--------- Floating Point Registers in CSR ---------]
+  val fcsrr = Cat(0.U((24 + 32).W), fcsrr_frm, fcsrr_nv, fcsrr_dz, fcsrr_of, fcsrr_uf, fcsrr_nx)
 
   // Interrupt Pending For Read Signals
   val seip_for_read = io.int_pend.seip || mipr_seip
@@ -558,8 +580,6 @@ class CSRFile extends Module with phvntomParams {
   }.elsewhen(!io.stall && !io.bubble) {
     minstretr := minstretr + 1.U(1.W)
   }
-
-  //  printf("mtvec %x, priv %x, has_expt %x, expt_num %x\n", mtvecr, current_p, has_expt_comb, expt_num_comb)
 
   // CSR Read
   when(io.which_reg === CSR.mepc) {
@@ -722,6 +742,10 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := minstretr
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
+  }.elsewhen(io.which_reg === CSR.fcsr) {
+    io.rdata := fcsrr
+    csr_not_exists := false.B
+    bad_csr_access := false.B
   }.otherwise {
     io.rdata := "hdeadbeef".U
     csr_not_exists := true.B
@@ -1139,6 +1163,29 @@ class CSRFile extends Module with phvntomParams {
           pmpcfg0r := pmpcfg0r | io.wdata
         }.elsewhen(io.cen) {
           pmpcfg0r := pmpcfg0r & (~io.wdata)
+        }
+      }.elsewhen(io.which_reg === CSR.fcsr) {
+        when(io.wen) {
+          fcsrr_frm := io.wdata(7, 5)
+          fcsrr_nv := io.wdata(4)
+          fcsrr_dz := io.wdata(3)
+          fcsrr_of := io.wdata(2)
+          fcsrr_uf := io.wdata(1)
+          fcsrr_nx := io.wdata(0)
+        }.elsewhen(io.sen) {
+          fcsrr_frm := fcsrr_frm | io.wdata(7, 5)
+          fcsrr_nv := fcsrr_nv | io.wdata(4)
+          fcsrr_dz := fcsrr_dz | io.wdata(3)
+          fcsrr_of := fcsrr_of | io.wdata(2)
+          fcsrr_uf := fcsrr_uf | io.wdata(1)
+          fcsrr_nx := fcsrr_nx | io.wdata(0)
+        }.elsewhen(io.cen) {
+          fcsrr_frm := fcsrr_frm & (~io.wdata(7, 5))
+          fcsrr_nv := fcsrr_nv & (~io.wdata(4))
+          fcsrr_dz := fcsrr_dz & (~io.wdata(3))
+          fcsrr_of := fcsrr_of & (~io.wdata(2))
+          fcsrr_uf := fcsrr_uf & (~io.wdata(1))
+          fcsrr_nx := fcsrr_nx & (~io.wdata(0))
         }
       }
     }

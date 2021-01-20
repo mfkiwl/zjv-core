@@ -25,6 +25,6 @@ class RegFile extends Module with phvntomParams {
   }
 
   if (diffTest) {
-    BoringUtils.addSource(VecInit((0 to regNum-1).map(i => regs(i))), "difftestRegs")
+    BoringUtils.addSource(VecInit((0 to regNum/2-1).map(i => regs(i))), "difftestRegs")
   }
 }

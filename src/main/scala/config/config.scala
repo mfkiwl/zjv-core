@@ -19,8 +19,9 @@ trait projectConfig {
   // TODO Delete redundant options
   // Basic
   val xlen          = 64
+  val flen          = 32
   val bitWidth      = log2Ceil(xlen)
-  val regNum        = 32
+  val regNum        = 64
   val regWidth      = log2Ceil(regNum)
   // Test and trace
   val diffTest      = true
