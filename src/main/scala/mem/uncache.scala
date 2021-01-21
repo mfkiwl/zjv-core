@@ -2,17 +2,16 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
+import rv64_nstage.core._
+import rv64_nstage.control.ControlConst._
 import bus._
 import device._
 import utils._
-import ControlConst._
 import scala.annotation.switch
 
 class UncacheIO(val dataWidth: Int = 64) extends Bundle with phvntomParams {
   val in = new MemIO(dataWidth)
   val out = new AXI4Bundle
-  // val offset = Output(UInt(xlen.W))
 }
 
 // serve as a simple convertor from MemIO to AXI4 interface
@@ -37,10 +36,33 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
   io.out.r.ready := false.B
   io.in.resp.valid := false.B // stall
   io.in.flush_ready := true.B
-  io.in.req.ready := state === s_IDLE && ((io.out.ar.ready && !io.in.req.bits.wen) || (io.out.aw.ready && io.in.req.bits.wen))
+  io.in.req.ready := (state === s_WAIT_AXI_READY && io.out.ar.ready && !io.in.req.bits.wen) || (state === s_WB_WAIT_AWREADY && io.out.aw.ready && io.in.req.bits.wen)
 
   io.out.aw.bits.id := 0.U
   io.out.ar.bits.id := 0.U
+
+  val addr_aligned = Wire(UInt(xlen.W))
+  addr_aligned := io.in.req.bits.addr
+  switch(io.in.req.bits.memtype) {
+    is(memXXX) { addr_aligned := io.in.req.bits.addr }
+    is(memByte) { addr_aligned := io.in.req.bits.addr }
+    is(memHalf) {
+      addr_aligned := Cat(io.in.req.bits.addr(xlen - 1, 1), 0.U(1.W))
+    }
+    is(memWord) {
+      addr_aligned := Cat(io.in.req.bits.addr(xlen - 1, 2), 0.U(2.W))
+    }
+    is(memDouble) {
+      addr_aligned := Cat(io.in.req.bits.addr(xlen - 1, 3), 0.U(3.W))
+    }
+    is(memByteU) { addr_aligned := io.in.req.bits.addr }
+    is(memHalfU) {
+      addr_aligned := Cat(io.in.req.bits.addr(xlen - 1, 1), 0.U(1.W))
+    }
+    is(memWordU) {
+      addr_aligned := Cat(io.in.req.bits.addr(xlen - 1, 2), 0.U(2.W))
+    }
+  }
 
   when(state === s_IDLE) {
     when(io.in.req.valid) {
@@ -52,10 +74,10 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
     io.out.aw.valid := false.B
     io.out.w.valid := false.B
     io.out.b.ready := true.B
-    io.out.aw.bits.addr := io.in.req.bits.addr
+    io.out.aw.bits.addr := addr_aligned
     io.out.aw.bits.len := 0.U // 1 word
     io.out.aw.bits.size := "b011".U // 8 bytes
-    io.out.aw.bits.burst := BURST_INCR
+    io.out.aw.bits.burst := BURST_FIXED
     io.out.aw.bits.lock := 0.U
     io.out.aw.bits.cache := 0.U
     io.out.aw.bits.prot := 0.U
@@ -96,6 +118,7 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
 
     when(state === s_WB_WAIT_AWREADY) {
       io.out.aw.valid := true.B
+      // io.out.w.valid := true.B
       when(io.out.aw.ready) {
         state := s_WB_WRITE
       }
@@ -113,22 +136,23 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
       }
     }
   }.otherwise {
+    io.out.ar.bits.addr := addr_aligned
     io.out.ar.bits.len := 0.U // one word
     io.out.ar.bits.size := "b011".U // 8 bytes
-    io.out.ar.bits.burst := BURST_INCR
+    io.out.ar.bits.burst := BURST_FIXED
     io.out.ar.valid := false.B
     when(state === s_WAIT_AXI_READY) {
       io.out.ar.valid := true.B
-      io.out.ar.bits.addr := io.in.req.bits.addr
       when(io.out.ar.ready) {
         state := s_RECEIVING
       }
     }.elsewhen(state === s_RECEIVING) {
+      io.out.r.ready := true.B
       when(io.out.r.valid) {
-        io.out.r.ready := true.B
-        when(io.out.r.bits.last) {
-          state := s_FINISH
-        }
+        // io.in.resp.valid := true.B
+        // when(io.out.r.bits.last) {
+        state := s_FINISH
+        // }
       }
     }.elsewhen(state === s_REFILL) {
       state := s_FINISH

@@ -2,18 +2,12 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
+import rv64_nstage.core._
+import rv64_nstage.control.ControlConst._
 import bus._
 import device._
 import utils._
-import ControlConst._
 import scala.annotation.switch
-
-// class UncacheIO extends Bundle with phvntomParams {
-//   val in = new MemIO
-//   val out = new AXI4Bundle
-//   val offset = Output(UInt(xlen.W))
-// }
 
 // serve as a simple convertor from MemIO to AXI4 interface
 class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
@@ -38,7 +32,7 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
   io.out.r.ready := false.B
   io.in.resp.valid := false.B // stall
   io.in.flush_ready := true.B
-  io.in.req.ready := state === s_IDLE && ((io.out.ar.ready && !io.in.req.bits.wen) || (io.out.aw.ready && io.in.req.bits.wen))
+  io.in.req.ready := (state === s_WAIT_AXI_READY && io.out.ar.ready && !io.in.req.bits.wen) || (state === s_WB_WAIT_AWREADY && io.out.aw.ready && io.in.req.bits.wen)
 
   io.out.aw.bits.id := 0.U
   io.out.ar.bits.id := 0.U
@@ -71,8 +65,10 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
 
     when(state === s_WB_WAIT_AWREADY) {
       io.out.aw.valid := true.B
+      // io.out.w.valid := true.B
       when(io.out.aw.ready) {
         state := s_WB_WRITE
+        // writeBeatCnt.inc()
       }
     }.elsewhen(state === s_WB_WRITE) {
       io.out.w.valid := true.B
@@ -91,24 +87,24 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
       }
     }
   }.otherwise {
+    io.out.ar.bits.addr := io.in.req.bits.addr
     io.out.ar.bits.len := (burst_length - 1).U // len - 1
     io.out.ar.bits.size := "b011".U // 8 bytes
     io.out.ar.bits.burst := BURST_INCR
-    io.out.ar.valid := false.B
+    val rlast = readBeatCnt.value === (burst_length - 1).U
     when(state === s_WAIT_AXI_READY) {
       io.out.ar.valid := true.B
-      io.out.ar.bits.addr := io.in.req.bits.addr
       when(io.out.ar.ready) {
         state := s_RECEIVING
       }
     }.elsewhen(state === s_RECEIVING) {
-      io.out.ar.valid := true.B
-      when(io.out.r.valid) {
-        io.out.r.ready := true.B
+      // io.out.ar.valid := true.B
+      io.out.r.ready := true.B
+      when(io.out.r.valid) {        
         when(io.out.r.fire()) {
           readBeatCnt.inc()
         }
-        when(io.out.r.bits.last) {
+        when(rlast) {
           state := s_FINISH
         }
       }
@@ -124,13 +120,12 @@ class DUncache(val dataWidth: Int = 64, val mname: String = "DUncache")
     }
   }
 
-  // io.offset := io.in.req.bits.addr(blen - 1, 0)
-  io.in.resp.bits.data := DontCare
+  // io.offset := io.in.req.bits.addr(blen - 1, 0)  
   val data_vec = Reg(Vec(burst_length, UInt(xlen.W)))
+  io.in.resp.bits.data := data_vec.asUInt
   when(state === s_RECEIVING && io.out.r.valid) {
     // io.in.resp.valid := readBeatCnt.value === burst_length.U
     data_vec(readBeatCnt.value) := io.out.r.bits.data
-    io.in.resp.bits.data := data_vec.asUInt
   }
 
   // printf(p"[${GTimer()}]: ${mname} Debug Start-----------\n")

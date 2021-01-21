@@ -3,7 +3,7 @@ package common
 import chisel3._
 import chisel3.util._
 
-import rv64_3stage._
+import rv64_nstage.core._
 
 object ISA extends phvntomParams {
   // RV32I

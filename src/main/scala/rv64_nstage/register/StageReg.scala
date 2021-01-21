@@ -5,8 +5,9 @@ import chisel3.util._
 import rv64_nstage.control.ControlConst._
 import rv64_nstage.control._
 import rv64_nstage.core.phvntomParams
+import chisel3.experimental.chiselName
 
-class BasicStageRegIO extends Bundle with phvntomParams {
+@chiselName class BasicStageRegIO extends Bundle with phvntomParams {
   // Stall Signal
   val stall = Input(Bool())
   // Interrupt or Misprediction Flush
@@ -22,14 +23,14 @@ class BasicStageRegIO extends Bundle with phvntomParams {
   val pc_out = Output(UInt(xlen.W))
 }
 
-class InstFaultIO extends Bundle with phvntomParams {
+@chiselName class InstFaultIO extends Bundle with phvntomParams {
   val inst_af_in = Input(Bool())
   val inst_pf_in = Input(Bool())
   val inst_af_out = Output(Bool())
   val inst_pf_out = Output(Bool())
 }
 
-class BPUPredictIO extends Bundle with phvntomParams {
+@chiselName class BPUPredictIO extends Bundle with phvntomParams {
   val predict_taken_in = Input(Bool())
   val target_in = Input(UInt(xlen.W))
   val xored_index_in = Input(UInt(bpuEntryBits.W))
@@ -38,17 +39,17 @@ class BPUPredictIO extends Bundle with phvntomParams {
   val xored_index_out = Output(UInt(bpuEntryBits.W))
 }
 
-class InstIO extends Bundle with phvntomParams {
+@chiselName class InstIO extends Bundle with phvntomParams {
   val inst_in = Input(UInt(32.W)) // TODO only supports 32-bit inst now
   val inst_out = Output(UInt(32.W)) // TODO only supports 32-bit inst now
 }
 
-class InstInfoIO extends Bundle with phvntomParams {
+@chiselName class InstInfoIO extends Bundle with phvntomParams {
   val inst_info_in = Flipped(new InstInfo)
   val inst_info_out = Flipped(Flipped(new InstInfo))
 }
 
-class ExeInfoIO extends Bundle with phvntomParams {
+@chiselName class ExeInfoIO extends Bundle with phvntomParams {
   val alu_val_in = Input(UInt(xlen.W))
   val inst_addr_misaligned_in = Input(Bool())
   val mem_wdata_in = Input(UInt(xlen.W))
@@ -57,7 +58,35 @@ class ExeInfoIO extends Bundle with phvntomParams {
   val mem_wdata_out = Output(UInt(xlen.W))
 }
 
-class IntMemPfIO extends Bundle with phvntomParams {
+@chiselName class BrJumpDelayIO extends Bundle with phvntomParams {
+  val misprediction_in = Input(Bool())
+  val wrong_target_in = Input(Bool())
+  val predict_taken_but_not_br_in = Input(Bool())
+  val bjpc_in = Input(UInt(xlen.W))
+  val feedback_pc_in = Input(UInt(xlen.W))
+  val feedback_xored_index_in = Input(UInt(bpuEntryBits.W))
+  val feedback_is_br_in = Input(Bool())
+  val feedback_target_pc_in = Input(UInt(xlen.W))
+  val feedback_br_taken_in = Input(Bool())
+  val misprediction_out = Output(Bool())
+  val wrong_target_out = Output(Bool())
+  val predict_taken_but_not_br_out = Output(Bool())
+  val bjpc_out = Output(UInt(xlen.W))
+  val feedback_pc_out = Output(UInt(xlen.W))
+  val feedback_xored_index_out = Output(UInt(bpuEntryBits.W))
+  val feedback_is_br_out = Output(Bool())
+  val feedback_target_pc_out = Output(UInt(xlen.W))
+  val feedback_br_taken_out = Output(Bool())
+}
+
+@chiselName class MultDivIO extends Bundle with phvntomParams {
+  val rs1_after_fwd_in = Input(UInt(xlen.W))
+  val rs2_after_fwd_in = Input(UInt(xlen.W))
+  val rs1_after_fwd_out = Output(UInt(xlen.W))
+  val rs2_after_fwd_out = Output(UInt(xlen.W))
+}
+
+@chiselName class IntMemPfIO extends Bundle with phvntomParams {
   val s_external_int_in = Input(Bool())
   val external_int_in = Input(Bool())
   val software_int_in = Input(Bool())
@@ -73,7 +102,7 @@ class IntMemPfIO extends Bundle with phvntomParams {
 }
 
 // TODO Access Fault is PURELY For Difftest
-class CSRInfoIO extends Bundle with phvntomParams {
+@chiselName class CSRInfoIO extends Bundle with phvntomParams {
   val csr_val_in = Input(UInt(xlen.W))
   val expt_in = Input(Bool())
   val int_resp_in = Input(Bool())
@@ -88,18 +117,18 @@ class CSRInfoIO extends Bundle with phvntomParams {
   val af_out = Output(Bool())
 }
 
-class MemDataIO extends Bundle with phvntomParams {
+@chiselName class MemDataIO extends Bundle with phvntomParams {
   val mem_val_in = Input(UInt(xlen.W))
   val mem_val_out = Output(UInt(xlen.W))
 }
 
-class RegIf1If2IO extends Bundle with phvntomParams {
+@chiselName class RegIf1If2IO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
   val bpio = Flipped(Flipped(new BPUPredictIO))
 }
 
-class RegIf1If2 extends Module with phvntomParams {
+@chiselName class RegIf1If2 extends Module with phvntomParams {
   val io = IO(new RegIf1If2IO)
 
   val bubble = RegInit(Bool(), true.B)
@@ -159,15 +188,15 @@ class RegIf1If2 extends Module with phvntomParams {
   io.bpio.xored_index_out := xored_index
 }
 
-class RegIf2IdIO extends Bundle with phvntomParams {
+@chiselName class RegIf3IdIO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
   val instio = Flipped(Flipped(new InstIO))
   val bpio = Flipped(Flipped(new BPUPredictIO))
 }
 
-class RegIf2Id extends Module with phvntomParams {
-  val io = IO(new RegIf2IdIO)
+@chiselName class RegIf3Id extends Module with phvntomParams {
+  val io = IO(new RegIf3IdIO)
   
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
@@ -231,7 +260,7 @@ class RegIf2Id extends Module with phvntomParams {
   io.bpio.xored_index_out := xored_index
 }
 
-class RegIdExeIO extends Bundle with phvntomParams {
+@chiselName class RegIdExeIO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
   val instio = Flipped(Flipped(new InstIO))
@@ -239,7 +268,7 @@ class RegIdExeIO extends Bundle with phvntomParams {
   val bpio = Flipped(Flipped(new BPUPredictIO))
 }
 
-class RegIdExe extends Module with phvntomParams {
+@chiselName class RegIdExe extends Module with phvntomParams {
   val io = IO(new RegIdExeIO)
 
   val bubble = RegInit(Bool(), true.B)
@@ -250,10 +279,10 @@ class RegIdExe extends Module with phvntomParams {
   val predict_tk = RegInit(Bool(), false.B)
   val ptar = RegInit(UInt(xlen.W), 0.U)
   val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1).W),
     default_inst_info)
 
   val delay_flush = RegInit(Bool(), false.B)
@@ -313,15 +342,19 @@ class RegIdExe extends Module with phvntomParams {
   io.bpio.xored_index_out := xored_index
 }
 
-class RegExeDTLBIO extends Bundle with phvntomParams {
+@chiselName class RegExeDTLBIO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
   val instio = Flipped(Flipped(new InstIO))
   val iiio = Flipped(Flipped(new InstInfoIO))
   val aluio = Flipped(Flipped(new ExeInfoIO))
+  val bjio = Flipped(Flipped(new BrJumpDelayIO))
+  val bpio = Flipped(Flipped(new BPUPredictIO))
+  val mdio = Flipped(Flipped(new MultDivIO))
+  val bpufb_stall_update = Output(Bool())
 }
 
-class RegExeDTLB extends Module with phvntomParams {
+@chiselName class RegExeDTLB extends Module with phvntomParams {
   val io = IO(new RegExeDTLBIO)
 
   val bubble = RegInit(Bool(), true.B)
@@ -329,14 +362,29 @@ class RegExeDTLB extends Module with phvntomParams {
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
   val mem_wdata = RegInit(UInt(xlen.W), 0.U)
+  val misprediction = RegInit(Bool(), false.B)
+  val wrong_target = RegInit(Bool(), false.B)
+  val predict_taken_but_not_br = RegInit(Bool(), false.B)
+  val bjpc = RegInit(UInt(xlen.W), startAddr.asUInt)
+  val feedback_pc = RegInit(UInt(xlen.W), startAddr.asUInt)
+  val feedback_xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
+  val feedback_is_br = RegInit(Bool(), false.B)
+  val feedback_target_pc = RegInit(UInt(xlen.W), startAddr.asUInt)
+  val feedback_br_taken = RegInit(Bool(), false.B)
+  val rs1_after_fwd = RegInit(UInt(xlen.W), 0.U)
+  val rs2_after_fwd = RegInit(UInt(xlen.W), 0.U)
+  val bpufb_stall_update = RegInit(Bool(), false.B)
+  val predict_tk = RegInit(Bool(), false.B)
+  val ptar = RegInit(UInt(xlen.W), 0.U)
+  val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -361,6 +409,21 @@ class RegExeDTLB extends Module with phvntomParams {
       alu_val := 0.U
       inst_addr_misaligned := false.B
       mem_wdata := 0.U
+      misprediction := false.B
+      wrong_target := false.B
+      predict_taken_but_not_br := false.B
+      bjpc := startAddr.asUInt
+      feedback_pc := startAddr.asUInt
+      feedback_xored_index := 0.U
+      feedback_is_br := false.B
+      feedback_target_pc := startAddr.asUInt
+      feedback_br_taken := false.B
+      rs1_after_fwd := 0.U
+      rs2_after_fwd := 0.U
+      bpufb_stall_update := true.B
+      predict_tk := false.B
+      ptar := 0.U
+      xored_index := 0.U
     }.otherwise {
       pc := io.bsrio.pc_in
       bubble := false.B
@@ -371,6 +434,21 @@ class RegExeDTLB extends Module with phvntomParams {
       alu_val := io.aluio.alu_val_in
       inst_addr_misaligned := io.aluio.inst_addr_misaligned_in
       mem_wdata := io.aluio.mem_wdata_in
+      misprediction := io.bjio.misprediction_in
+      wrong_target := io.bjio.wrong_target_in
+      predict_taken_but_not_br := io.bjio.predict_taken_but_not_br_in
+      bjpc := io.bjio.bjpc_in
+      feedback_pc := io.bjio.feedback_pc_in
+      feedback_xored_index := io.bjio.feedback_xored_index_in
+      feedback_is_br := io.bjio.feedback_is_br_in
+      feedback_target_pc := io.bjio.feedback_target_pc_in
+      feedback_br_taken := io.bjio.feedback_br_taken_in
+      rs1_after_fwd := io.mdio.rs1_after_fwd_in
+      rs2_after_fwd := io.mdio.rs2_after_fwd_in
+      bpufb_stall_update := false.B
+      predict_tk := io.bpio.predict_taken_in
+      ptar := io.bpio.target_in
+      xored_index := io.bpio.xored_index_in
     }
   }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
     pc := 0.U
@@ -382,6 +460,27 @@ class RegExeDTLB extends Module with phvntomParams {
     alu_val := 0.U
     inst_addr_misaligned := false.B
     mem_wdata := 0.U
+    misprediction := false.B
+    wrong_target := false.B
+    predict_taken_but_not_br := false.B
+    bjpc := startAddr.asUInt
+    feedback_pc := startAddr.asUInt
+    feedback_xored_index := 0.U
+    feedback_is_br := false.B
+    feedback_target_pc := startAddr.asUInt
+    feedback_br_taken := false.B
+    rs1_after_fwd := 0.U
+    rs2_after_fwd := 0.U
+    bpufb_stall_update := true.B
+    predict_tk := false.B
+    ptar := 0.U
+    xored_index := 0.U
+  }.elsewhen(io.bsrio.flush_one) {
+    bpufb_stall_update := true.B
+    misprediction := false.B
+    wrong_target := false.B
+    predict_taken_but_not_br := false.B
+    inst_info.asTypeOf(new InstInfo).pcSelect := pcPlus4
   }
 
   io.bsrio.bubble_out := bubble
@@ -393,9 +492,24 @@ class RegExeDTLB extends Module with phvntomParams {
   io.aluio.inst_addr_misaligned_out := inst_addr_misaligned
   io.aluio.mem_wdata_out := mem_wdata
   io.ifio.inst_pf_out := inst_pf
+  io.bjio.misprediction_out := misprediction
+  io.bjio.wrong_target_out := wrong_target
+  io.bjio.predict_taken_but_not_br_out := predict_taken_but_not_br
+  io.bjio.bjpc_out := bjpc
+  io.bjio.feedback_pc_out := feedback_pc
+  io.bjio.feedback_xored_index_out := feedback_xored_index
+  io.bjio.feedback_is_br_out := feedback_is_br
+  io.bjio.feedback_target_pc_out := feedback_target_pc
+  io.bjio.feedback_br_taken_out := feedback_br_taken
+  io.mdio.rs1_after_fwd_out := rs1_after_fwd
+  io.mdio.rs2_after_fwd_out := rs2_after_fwd
+  io.bpufb_stall_update := bpufb_stall_update
+  io.bpio.predict_taken_out := predict_tk
+  io.bpio.target_out := ptar
+  io.bpio.xored_index_out := xored_index
 }
 
-class RegDTLBMem1IO extends Bundle with phvntomParams {
+@chiselName class RegDTLBMem1IO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val ifio = Flipped(Flipped(new InstFaultIO))
   val instio = Flipped(Flipped(new InstIO))
@@ -404,7 +518,7 @@ class RegDTLBMem1IO extends Bundle with phvntomParams {
   val intio = Flipped(Flipped(new IntMemPfIO))
 }
 
-class RegDTLBMem1 extends Module with phvntomParams {
+@chiselName class RegDTLBMem1 extends Module with phvntomParams {
   val io = IO(new RegDTLBMem1IO)
 
   val bubble = RegInit(Bool(), true.B)
@@ -414,10 +528,10 @@ class RegDTLBMem1 extends Module with phvntomParams {
   val inst_pf = RegInit(Bool(), false.B)
   val mem_af = RegInit(Bool(), false.B)
   val mem_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -513,7 +627,7 @@ class RegDTLBMem1 extends Module with phvntomParams {
   io.intio.s_external_int_out := s_extern_int
 }
 
-class RegMem1Mem2IO extends Bundle with phvntomParams {
+@chiselName class RegMem1Mem2IO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val instio = Flipped(Flipped(new InstIO))
   val iiio = Flipped(Flipped(new InstInfoIO))
@@ -521,16 +635,16 @@ class RegMem1Mem2IO extends Bundle with phvntomParams {
   val csrio = Flipped(Flipped(new CSRInfoIO))
 }
 
-class RegMem1Mem2 extends Module with phvntomParams {
+@chiselName class RegMem1Mem2 extends Module with phvntomParams {
   val io = IO(new RegMem1Mem2IO)
 
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -615,7 +729,7 @@ class RegMem1Mem2 extends Module with phvntomParams {
   io.csrio.af_out := af
 }
 
-class RegMem2WbIO extends Bundle with phvntomParams {
+@chiselName class RegMem3WbIO extends Bundle with phvntomParams {
   val bsrio = Flipped(Flipped(new BasicStageRegIO))
   val instio = Flipped(Flipped(new InstIO))
   val iiio = Flipped(Flipped(new InstInfoIO))
@@ -624,16 +738,16 @@ class RegMem2WbIO extends Bundle with phvntomParams {
   val memio = Flipped(Flipped(new MemDataIO))
 }
 
-class RegMem2Wb extends Module with phvntomParams {
-  val io = IO(new RegMem2WbIO)
+@chiselName class RegMem3Wb extends Module with phvntomParams {
+  val io = IO(new RegMem3WbIO)
 
   val bubble = RegInit(Bool(), true.B)
   val inst = RegInit(UInt(32.W), 0.U) // TODO only supports 32-bit inst now
   val pc = RegInit(UInt(xlen.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX)
+  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B)
   val inst_info = RegInit(UInt((instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1).W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)

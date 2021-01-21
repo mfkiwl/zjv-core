@@ -2,7 +2,7 @@ package bus
 
 import chisel3._
 import chisel3.util._
-import rv64_3stage._
+import rv64_nstage.core._
 import utils._
 
 abstract class AXI4Slave[B <: Data](
@@ -15,25 +15,6 @@ abstract class AXI4Slave[B <: Data](
     val extra = if (_extra != null) Some(Flipped(Flipped(_extra))) else None
   })
 
-  def MaskExpand(m: UInt) =
-    Cat(m.asBools.map(Fill(8, _)).reverse) // expand each bit to 8 bits mask
-  def HoldUnless[T <: Data](x: T, en: Bool): T =
-    Mux(en, x, RegEnable(x, 0.U.asTypeOf(x), en))
-  def BoolStopWatch(
-      start: Bool,
-      stop: Bool,
-      startHighPriority: Boolean = false
-  ) = {
-    val r = RegInit(false.B)
-    if (startHighPriority) {
-      when(stop) { r := false.B }
-      when(start) { r := true.B }
-    } else {
-      when(start) { r := true.B }
-      when(stop) { r := false.B }
-    }
-    r
-  }
   val fullMask = MaskExpand(io.in.w.bits.strb) // mask invalid data
   def genWdata(originData: UInt) =
     (originData & ~fullMask) | (io.in.w.bits.data & fullMask)

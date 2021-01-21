@@ -6,23 +6,7 @@ import rv64_nstage.control.ControlPath
 import device.MemIO
 import rv64_nstage.register.InterruptIO
 
-trait phvntomParams {
-  val xlen          = 64
-  val bitWidth      = log2Ceil(xlen)
-  val regNum        = 32
-  val regWidth      = log2Ceil(regNum)
-  val diffTest      = true
-  val pipeTrace     = false
-  val rtThread      = true
-  val only_M        = false
-  val validVABits   = 39
-  val hasL2Cache    = true
-  val bpuEntryBits  = 8
-  val historyBits   = 4 // TODO >= 4
-  val predictorBits = 2 // TODO Do NOT Modify
-  val cachiLine     = 4
-  val cachiBlock    = 64
-  val traceBPU      = false
+trait phvntomParams extends common.projectConfig {
 }
 
 

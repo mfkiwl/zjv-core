@@ -3,10 +3,12 @@ package device
 import chisel3._
 import chisel3.util._
 import bus._
+import common._
 import utils._
 
 class AXI4RAM(memByte: Int, name: String = "ram")
-    extends AXI4Slave(name = name) {
+    extends AXI4Slave(name = name)
+    with projectConfig {
   // val offsetBits = log2Up(memByte)
   // val offsetMask = (1 << offsetBits) - 1
   // def index(addr: UInt) = (addr & offsetMask.U) >> log2Ceil(xlen / 8)
@@ -17,15 +19,27 @@ class AXI4RAM(memByte: Int, name: String = "ram")
   val rIdx = raddr + (readBeatCnt << offset)
   val wen = io.in.w.fire() // && inRange(wIdx)
 
-  val mem = Module(new SimMem)
-  mem.io.clk := clock
-  mem.io.raddr := rIdx // raddr
-  mem.io.waddr := wIdx // waddr
-  mem.io.wdata := io.in.w.bits.data
-  mem.io.wmask := fullMask
-  mem.io.wen := wen
-  val rdata = mem.io.rdata
-  io.in.r.bits.data := RegEnable(rdata, ren)
+  if (fpga) {
+    val mem = Module(new FPGAMem)
+    mem.io.clk := clock
+    mem.io.raddr := rIdx // raddr
+    mem.io.waddr := wIdx // waddr
+    mem.io.wdata := io.in.w.bits.data
+    mem.io.wmask := fullMask
+    mem.io.wen := wen
+    val rdata = mem.io.rdata
+    io.in.r.bits.data := RegEnable(rdata, ren)
+  } else {
+    val mem = Module(new SimMem)
+    mem.io.clk := clock
+    mem.io.raddr := rIdx // raddr
+    mem.io.waddr := wIdx // waddr
+    mem.io.wdata := io.in.w.bits.data
+    mem.io.wmask := fullMask
+    mem.io.wen := wen
+    val rdata = mem.io.rdata
+    io.in.r.bits.data := RegEnable(rdata, ren)
+  }
 
   // printf(p"[${GTimer()}]: AXI4RAM Debug Start----------\n")
   // printf(
@@ -38,10 +52,9 @@ class AXI4RAM(memByte: Int, name: String = "ram")
   //   writeBeatCnt
   // )
   // printf(
-  //   "raddr = %x, rIdx = %x, rdata = %x, readBeatCnt = %d\n",
+  //   "raddr = %x, rIdx = %x, readBeatCnt = %d\n",
   //   raddr,
   //   rIdx,
-  //   rdata,
   //   readBeatCnt
   // )
   // printf("----------AXI4RAM Debug Done----------\n")

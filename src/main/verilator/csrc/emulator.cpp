@@ -2,6 +2,7 @@
 
 
 extern unsigned int sim_uart_irq, sim_prio, sim_ie, sim_ip, sim_thrs, sim_claim;
+extern reg_t physic_addr;
 
 int main(int argc, char** argv)
 {
@@ -62,9 +63,9 @@ int main(int argc, char** argv)
    //       engine.emu_step(1);
    // }
 
-   while (!engine.is_finish()) {
-         engine.sim_solo();
-   }
+   //  while (!engine.is_finish()) {
+   //        engine.sim_solo();
+   //  }
 
    while (!engine.is_finish()) {
       engine.emu_step(1);
@@ -85,6 +86,13 @@ int main(int argc, char** argv)
       if (engine.is_finish()) {
          if (engine.emu_difftest_poweroff() == (long)PROGRAM_PASS) {
             fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS with IPC %f ] ==========\x1b[0m\n", argv[1], 1.0 * sim_cnt / engine.trace_count);
+            fprintf(stderr, "\t\t \x1b[32msr_itlb %ld, sr_i$ %ld, sr_exe %ld, sr_dtlb %ld, sr_d$ %ld, bj_flush %f\x1b[0m\n",
+                engine.get_emu_state()->streqs[0],
+                engine.get_emu_state()->streqs[2],
+                engine.get_emu_state()->streqs[4],
+                engine.get_emu_state()->streqs[5],
+                engine.get_emu_state()->streqs[8],
+                1.0 * engine.get_emu_state()->streqs[9] / engine.get_emu_state()->streqs[7]);
             //sleep(5);
          }
          else
@@ -96,8 +104,16 @@ int main(int argc, char** argv)
       if(engine.emu_get_interrupt()) {
          engine.sim_check_interrupt();
          int_total_cnt++;
-         if (int_total_cnt > 50) {
+
+         if (int_total_cnt > 250) {
             fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS with IPC %f ] ==========\x1b[0m\n", argv[1], 1.0 * sim_cnt / engine.trace_count);
+            fprintf(stderr, "\t\t \x1b[32msr_itlb %ld, sr_i$ %ld, sr_exe %ld, sr_dtlb %ld, sr_d$ %ld, bj_flush %lf\x1b[0m\n",
+                engine.get_emu_state()->streqs[0],
+                engine.get_emu_state()->streqs[2],
+                engine.get_emu_state()->streqs[4],
+                engine.get_emu_state()->streqs[5],
+                engine.get_emu_state()->streqs[8],
+                1.0 * engine.get_emu_state()->streqs[9] / engine.get_emu_state()->streqs[7]);
             printf("Total Int Cnt is %d!\n", int_total_cnt);
             //sleep(5);
             exit(0);
@@ -131,9 +147,11 @@ int main(int argc, char** argv)
             //                  sim_prio, sim_ie, sim_ip, sim_thrs, sim_claim);
             // difftest_check_general_register();
 
-      if((faultExitLatency || (engine.emu_get_pc() != engine.sim_get_pc()) ||
-	      (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
 
+      if((faultExitLatency || (engine.emu_get_pc() != engine.sim_get_pc()) || 
+         (engine.emu_get_mem() && (engine.emu_get_pa() != physic_addr)) ||
+         (engine.get_emu_state()->plicmeip != ((engine.sim_get_mip() & MIP_MEIP) != 0)) ||
+	      (memcmp(engine.get_sim_state()->regs, engine.get_emu_state()->regs, 32*sizeof(reg_t)) != 0 ))) {
             faultExitLatency++;
             fprintf(stderr, "\n\t\t \x1b[31m========== [ %s FAIL ] ==========\x1b[0m\n", argv[1]);
 
@@ -147,6 +165,7 @@ int main(int argc, char** argv)
             difftest_check_point(sstatus);   difftest_check_point(sepc, "\n");
             difftest_check_point(stval);     difftest_check_point(scause);          difftest_check_point(stvec, "\n");
             difftest_check_point(mip);       difftest_check_point(sip, "\n");
+            fprintf(stderr, "emu: pa 0x%016lX, sim: pa 0x%016lX\n", engine.emu_get_pa(), physic_addr);
             fprintf(stderr, "emu: uart %d plic0 %d plic1 %d prio %x ie %x ip %x thrs %x claim %x\n", 
                              engine.get_emu_state()->uartirq, engine.get_emu_state()->plicmeip, engine.get_emu_state()->plicseip,
                              engine.get_emu_state()->plicprio, engine.get_emu_state()->plicie, engine.get_emu_state()->plicip, engine.get_emu_state()->plicthrs, engine.get_emu_state()->plicclaim);

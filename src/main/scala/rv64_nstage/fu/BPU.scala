@@ -3,6 +3,24 @@ package rv64_nstage.fu
 import chisel3._
 import rv64_nstage.core._
 import chisel3.util._
+import common.projectConfig
+
+/* ------ Here is the WRAPPER of BTB ------ */
+
+class BTBSRAMWrapperIO extends Bundle with phvntomParams {
+  val CLK = Input(Clock())
+  val CEN = Input(Bool())
+  val WEN = Input(Bool())
+  val	A = Input(UInt(8.W))
+  val D = Input(UInt(39.W))
+  val Q = Output(UInt(39.W))
+}
+
+class S011HD1P_X128Y2D39 extends BlackBox {
+  val io = IO(new BTBSRAMWrapperIO)
+}
+
+/* --------- BTB WRAPPER ends here --------- */
 
 class PHTIO extends Bundle with phvntomParams {
   // Combinational History Query
@@ -87,16 +105,46 @@ class BTBIO extends Bundle with phvntomParams {
   val update_target = Input(UInt(xlen.W))
 }
 
-class BTB extends Module with phvntomParams {
+class BTB extends Module with phvntomParams with projectConfig {
   val io = IO(new BTBIO)
 
-  val btb_entries = RegInit(VecInit(Seq.fill(1 << bpuEntryBits)("h80000000".U)))
+  if (chiplink) {
+    /* ------ Use Generated RAM to Replace SyncReadMem ------ */
+    val btb_entries = Module(new S011HD1P_X128Y2D39)
+    val nwenr = RegInit(Bool(), true.B)
+    nwenr := !io.update_valid
+    val ar = RegInit(UInt(bpuEntryBits.W), 0.U)
+    ar := Mux(io.update_valid, io.update_index, io.index_in)
+    val dr = RegInit(UInt(39.W), 0.U)
+    dr := io.update_target(38, 0)
 
-  when(io.update_valid) {
-    btb_entries(io.update_index) := io.update_target
-  }
+//    btb_entries.io.CLK := (~(clock.asBool)).asClock
+//    btb_entries.io.CEN := false.B
+//    btb_entries.io.WEN := nwenr
+//    btb_entries.io.A := ar
+//    btb_entries.io.D := dr
 
-  io.target_out := btb_entries(io.index_in)
+    btb_entries.io.CLK := clock
+    btb_entries.io.CEN := false.B
+    btb_entries.io.WEN := !io.update_valid
+    btb_entries.io.A := Mux(io.update_valid, io.update_index, io.index_in)
+    btb_entries.io.D := io.update_target(38, 0)
+
+    io.target_out := Cat(Fill(xlen - 39, btb_entries.io.Q(38)), btb_entries.io.Q)
+  } else {
+    val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(39.W))
+    val read_data = btb_entries.read(io.index_in, !io.update_valid)
+
+    io.target_out := Cat(Fill(xlen - 39, read_data(38)), read_data)
+
+    when(io.update_valid) {
+      btb_entries.write(io.update_index, io.update_target(38, 0))
+    }
+ }
+
+//  when(io.update_valid) {
+//    printf("~wen %x, addr %x, data %x, out %x\n", btb_entries.io.WEN, btb_entries.io.A, btb_entries.io.D, io.target_out)
+//  }
 }
 
 class BPUIO extends Bundle with phvntomParams {
@@ -112,7 +160,10 @@ class BPUIO extends Bundle with phvntomParams {
   val feedback_is_br = Input(Bool())
   val feedback_target_pc = Input(UInt(xlen.W))
   val feedback_br_taken = Input(Bool())
-  // TODO Modify Data from CALL-RET
+  // Stall Req For Sync Mem
+  val stall_req = Output(Bool())
+  // Modify BTB
+  val update_btb = Input(Bool())
 }
 
 // TODO The first step will determine if the PC should change.
@@ -131,14 +182,18 @@ class BPU extends Module with phvntomParams {
 //  io.branch_taken, io.pc_in_btb)
 
 //  val history_from_pht = pht.io.history_out
-  val predict_taken_from_bht = bht.io.predit_taken
-  val xored_index = io.pc_to_predict(bpuEntryBits + 1, 2) // ^ history_from_pht
+ val predict_taken_from_bht = bht.io.predit_taken
+ val xored_index = io.pc_to_predict(bpuEntryBits + 1, 2) // ^ history_from_pht
 
-  // TODO Here, we do not care C Extension for now
+//   TODO Here, we do not care C Extension for now
 //  pht.io.index_in := io.pc_to_predict(bpuEntryBits + 1, 2)
 //  pht.io.update_valid := io.feedback_is_br
 //  pht.io.update_index_in := io.feedback_pc(bpuEntryBits + 1, 2)
 //  pht.io.update_taken_in := io.feedback_br_taken
+
+// when(!io.stall_update && io.feedback_is_br) {
+//   printf("index %x, is_br %x, tar_pc %x\n", io.feedback_pc, io.feedback_is_br, io.feedback_target_pc)
+// }
 
   bht.io.xored_index_in := xored_index
   bht.io.update_valid := io.feedback_is_br
@@ -147,11 +202,23 @@ class BPU extends Module with phvntomParams {
   bht.io.stall_update := io.stall_update
 
   btb.io.index_in := io.pc_to_predict(bpuEntryBits + 1, 2)
-  btb.io.update_valid := io.feedback_is_br && io.feedback_br_taken
+  btb.io.update_valid := io.update_btb && !io.stall_update
+//  btb.io.update_valid := io.feedback_is_br && io.feedback_br_taken
   btb.io.update_index := io.feedback_pc(bpuEntryBits + 1, 2)
   btb.io.update_target := io.feedback_target_pc
 
   io.branch_taken := predict_taken_from_bht
   io.pc_in_btb := btb.io.target_out
   io.xored_index_out := xored_index
+
+  val last_stall_req = RegInit(Bool(), false.B)
+  val last_pc_in = RegInit(UInt(xlen.W), 0.U)
+  last_stall_req := io.stall_req
+  last_pc_in := io.pc_to_predict
+
+  when(last_pc_in =/= io.pc_to_predict && io.branch_taken) {
+    io.stall_req := true.B
+  }.otherwise {
+    io.stall_req := false.B
+  }
 }

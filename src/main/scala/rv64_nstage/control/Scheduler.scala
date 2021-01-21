@@ -18,6 +18,8 @@ class ALUSchedulerIO extends Bundle with phvntomParams {
   val rd_addr_mem1 = Input(UInt(regWidth.W))
   val rd_used_mem2 = Input(Bool())
   val rd_addr_mem2 = Input(UInt(regWidth.W))
+  val rd_used_mem3 = Input(Bool())
+  val rd_addr_mem3 = Input(UInt(regWidth.W))
   val rd_used_wb = Input(Bool())
   val rd_addr_wb = Input(UInt(regWidth.W))
   val rs1_from_reg = Input(UInt(xlen.W))
@@ -28,6 +30,8 @@ class ALUSchedulerIO extends Bundle with phvntomParams {
   val rd_from_mem1 = Input(UInt(xlen.W))
   val rd_fen_from_mem2 = Input(Bool())
   val rd_from_mem2 = Input(UInt(xlen.W))
+  val rd_fen_from_mem3 = Input(Bool())
+  val rd_from_mem3 = Input(UInt(xlen.W))
   val rd_fen_from_wb = Input(Bool())
   val rd_from_wb = Input(UInt(xlen.W))
   val stall_req = Output(Bool())
@@ -47,6 +51,7 @@ class ALUScheduler extends Module with phvntomParams {
   val rs1_haz_dtlb = io.rs1_addr_exe === io.rd_addr_dtlb && io.rd_used_dtlb
   val rs1_haz_mem1 = io.rs1_addr_exe === io.rd_addr_mem1 && io.rd_used_mem1
   val rs1_haz_mem2 = io.rs1_addr_exe === io.rd_addr_mem2 && io.rd_used_mem2
+  val rs1_haz_mem3 = io.rs1_addr_exe === io.rd_addr_mem3 && io.rd_used_mem3
   val rs1_haz_wb = io.rs1_addr_exe === io.rd_addr_wb && io.rd_used_wb
   val rs1_hazard = Wire(Bool())
 
@@ -54,6 +59,7 @@ class ALUScheduler extends Module with phvntomParams {
   val rs2_haz_dtlb = io.rs2_addr_exe === io.rd_addr_dtlb && io.rd_used_dtlb
   val rs2_haz_mem1 = io.rs2_addr_exe === io.rd_addr_mem1 && io.rd_used_mem1
   val rs2_haz_mem2 = io.rs2_addr_exe === io.rd_addr_mem2 && io.rd_used_mem2
+  val rs2_haz_mem3 = io.rs2_addr_exe === io.rd_addr_mem3 && io.rd_used_mem3
   val rs2_haz_wb = io.rs2_addr_exe === io.rd_addr_wb && io.rd_used_wb
   val rs2_hazard = Wire(Bool())
   
@@ -78,6 +84,14 @@ class ALUScheduler extends Module with phvntomParams {
       when(io.rd_fen_from_mem2) {
         rs1_hazard := false.B
         io.rs1_val := io.rd_from_mem2
+      }.otherwise {
+        rs1_hazard := true.B
+        io.rs1_val := io.rs1_from_reg
+      }
+    }.elsewhen(rs1_haz_mem3) {
+      when(io.rd_fen_from_mem3) {
+        rs1_hazard := false.B
+        io.rs1_val := io.rd_from_mem3
       }.otherwise {
         rs1_hazard := true.B
         io.rs1_val := io.rs1_from_reg
@@ -120,6 +134,14 @@ class ALUScheduler extends Module with phvntomParams {
       when(io.rd_fen_from_mem2) {
         rs2_hazard := false.B
         io.rs2_val := io.rd_from_mem2
+      }.otherwise {
+        rs2_hazard := true.B
+        io.rs2_val := io.rs2_from_reg
+      }
+    }.elsewhen(rs2_haz_mem3) {
+      when(io.rd_fen_from_mem3) {
+        rs2_hazard := false.B
+        io.rs2_val := io.rd_from_mem3
       }.otherwise {
         rs2_hazard := true.B
         io.rs2_val := io.rs2_from_reg

@@ -5,10 +5,11 @@ import chisel3.util._
 import rv64_nstage.control._
 import rv64_nstage.core._
 import rv64_nstage.control.ISA._
+import chisel3.experimental.chiselName
 
 import chisel3.util.experimental.BoringUtils
 
-class InterruptIO extends Bundle with phvntomParams {
+@chiselName class InterruptIO extends Bundle with phvntomParams {
   val mtip = Input(Bool())
   val msip = Input(Bool())
   val meip = Input(Bool())
@@ -133,13 +134,13 @@ object Interrupt {
 }
 
 
-class InterruptJudgerIO extends Bundle with phvntomParams {
+@chiselName class InterruptJudgerIO extends Bundle with phvntomParams {
   val int_vec = Input(UInt(12.W))
   val int_out = Output(UInt(4.W))
   val has_int = Output(Bool())
 }
 
-class InterruptJudger extends Module with phvntomParams {
+@chiselName class InterruptJudger extends Module with phvntomParams {
   val io = IO(new InterruptJudgerIO)
 
   when(io.int_vec(11)) {
@@ -167,7 +168,7 @@ class InterruptJudger extends Module with phvntomParams {
 }
 
 
-class ExceptionJudgerIO extends Bundle with phvntomParams {
+@chiselName class ExceptionJudgerIO extends Bundle with phvntomParams {
   val breakpoint = Input(Bool())
   val inst_pf = Input(Bool())
   val inst_af = Input(Bool())
@@ -186,7 +187,7 @@ class ExceptionJudgerIO extends Bundle with phvntomParams {
   val except_out = Output(UInt(4.W))
 }
 
-class ExceptionJudger extends Module with phvntomParams {
+@chiselName class ExceptionJudger extends Module with phvntomParams {
   val io = IO(new ExceptionJudgerIO)
 
   when(io.breakpoint) {
@@ -237,7 +238,7 @@ class ExceptionJudger extends Module with phvntomParams {
   }
 }
 
-class CSRFileIO extends Bundle with phvntomParams {
+@chiselName class CSRFileIO extends Bundle with phvntomParams {
   // CSRRX
   val which_reg = Input(UInt(12.W))
   val wen = Input(Bool())
@@ -277,6 +278,7 @@ class CSRFileIO extends Bundle with phvntomParams {
   val tvec_out = Output(UInt(xlen.W))
   val epc_out = Output(UInt(xlen.W))
   val write_satp = Output(Bool())
+  val write_status = Output(Bool())
   val satp_val = Output(UInt(xlen.W))
   val current_p = Output(UInt(2.W))
   val force_s_mode_mem = Output(Bool())
@@ -285,7 +287,7 @@ class CSRFileIO extends Bundle with phvntomParams {
   val is_mpp_s_mode = Output(Bool())
 }
 
-class CSRFile extends Module with phvntomParams {
+@chiselName class CSRFile extends Module with phvntomParams {
   val io = IO(new CSRFileIO)
 
   // Special CSR Register Bit
@@ -360,8 +362,8 @@ class CSRFile extends Module with phvntomParams {
     mier_mtie, false.B, mier_stie, false.B,
     mier_msie, false.B, mier_ssie, false.B
   )
-  val mipr = Cat(0.U((xlen - 12).W), 
-    io.int_pend.meip, false.B, mipr_seip, false.B, 
+  val mipr = Cat(0.U((xlen - 12).W),
+    io.int_pend.meip, false.B, mipr_seip, false.B,
     io.int_pend.mtip, false.B, mipr_stip, false.B,
     io.int_pend.msip, false.B, mipr_ssip, false.B
   )
@@ -499,19 +501,15 @@ class CSRFile extends Module with phvntomParams {
   val has_expt_comb = expt_judger.io.has_except
   val expt_num_comb = expt_judger.io.except_out
 
-  //  printf("In CSR: ill %x; wfi %x; sfence %x; tsr %x; csr_ne %x; bad_csr_ac %x; wen %x; sen %x; cen %x\n", io.illegal_inst,
-  //    tw_wfi_illegal, tvm_sfence_illegal, tsr_sret_illegal, csr_not_exists, bad_csr_access, io.wen, io.sen, io.cen)
-
   // Combinational Logic for Trap-Ret Delegations and Addresses
   val trap_addr = WireInit(0.U(xlen.W))
   val eret_addr = WireInit(0.U(xlen.W))
-  val deleg = Mux(has_int_comb, midelegr, medelegr)
-  val deleg_2_s = Mux(has_int_comb, deleg(int_num_comb), deleg(expt_num_comb)) && current_p < CSR.PRV_M
+  val deleg_2_s = Mux(has_int_comb, midelegr(int_num_comb), medelegr(expt_num_comb)) && current_p < CSR.PRV_M
   val eret = io.is_mret || io.is_sret || io.is_uret
   val check_bit = Mux(deleg_2_s, stvecr(0), mtvecr(0))
   trap_addr := Mux(deleg_2_s, Cat(stvecr(xlen - 1, 2), Fill(2, 0.U)), Cat(mtvecr(xlen - 1, 2), Fill(2, 0.U)))
   eret_addr := Mux(io.is_mret, mepcr, Mux(io.is_sret, sepcr, uepcr))
-  //printf("In CSR mtvec %x, tveco %x, has_expt %x, exno %x\n", mtvecr, io.tvec_out, has_expt_comb, expt_num_comb)
+
   // Output Comb Logic
   io.tvec_out := Mux(check_bit && has_int_comb, trap_addr + (int_num_comb << 2.U), trap_addr)
   io.epc_out := eret_addr
@@ -715,7 +713,7 @@ class CSRFile extends Module with phvntomParams {
     csr_not_exists := false.B
     bad_csr_access := false.B
   }.elsewhen(io.which_reg === CSR.mcycle) {
-    io.rdata := mcycler + 3.U(2.W)
+    io.rdata := mcycler + 4.U(3.W)
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
   }.elsewhen(io.which_reg === CSR.minstret) {
@@ -1136,7 +1134,9 @@ class CSRFile extends Module with phvntomParams {
     }
   }
 
-  io.write_satp := (((io.which_reg === CSR.satp || io.which_reg === CSR.mstatus || io.which_reg === CSR.sstatus) &&
+  io.write_satp := ((io.which_reg === CSR.satp &&
+    (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
+  io.write_status := (((io.which_reg === CSR.mstatus || io.which_reg === CSR.sstatus) &&
     (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
   io.satp_val := satpr
   io.current_p := current_p
@@ -1167,7 +1167,7 @@ class CSRFile extends Module with phvntomParams {
   }
 }
 
-class CSRIO extends Bundle with phvntomParams {
+@chiselName class CSRIO extends Bundle with phvntomParams {
   // CSRXX
   val stall = Input(Bool())
   val bubble = Input(Bool())
@@ -1193,6 +1193,7 @@ class CSRIO extends Bundle with phvntomParams {
   val int = Output(Bool())
   val ret = Output(Bool())
   val write_satp = Output(Bool())
+  val write_status = Output(Bool())
   val evec = Output(UInt(xlen.W))
   val epc = Output(UInt(xlen.W))
   val pc_plus = Output(UInt(xlen.W))
@@ -1209,7 +1210,7 @@ class CSRIO extends Bundle with phvntomParams {
   val s_external_int = Input(Bool())
 }
 
-class CSR extends Module with phvntomParams {
+@chiselName class CSR extends Module with phvntomParams {
   val io = IO(new CSRIO)
   val csr_regfile = Module(new CSRFile)
 
@@ -1254,6 +1255,7 @@ class CSR extends Module with phvntomParams {
   io.ret := csr_regfile.io.is_ret_out
   io.stall_req := false.B
   io.write_satp := csr_regfile.io.write_satp
+  io.write_status := csr_regfile.io.write_status
   io.pc_plus := io.pc + 4.U(3.W)
   io.satp_val := csr_regfile.io.satp_val
   io.current_p := csr_regfile.io.current_p
