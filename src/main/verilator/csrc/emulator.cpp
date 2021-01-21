@@ -62,9 +62,9 @@ int main(int argc, char** argv)
    //       engine.emu_step(1);
    // }
 
-   // while (!engine.is_finish()) {
-   //       engine.sim_solo();
-   // }
+   while (!engine.is_finish()) {
+         engine.sim_solo();
+   }
 
    while (!engine.is_finish()) {
       engine.emu_step(1);
