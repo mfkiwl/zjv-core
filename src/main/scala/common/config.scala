@@ -11,10 +11,9 @@ trait RISCVConfig {
 
 trait projectConfig {
   val startAddr = 0x80000000L
-  var debug: Boolean = true
-  var fpga: Boolean = false
+  var fpga: Boolean = true
   var chiplink: Boolean = false
-  var ila: Boolean = false
+  var ila: Boolean = true
   var board: String = "None"
   var hasICache: Boolean = false
   var hasDCache: Boolean = false
@@ -23,7 +22,7 @@ trait projectConfig {
   val bitWidth      = log2Ceil(xlen)
   val regNum        = 32
   val regWidth      = log2Ceil(regNum)
-  val diffTest      = true
+  val diffTest      = false
   val pipeTrace     = false
   val prtHotSpot    = false
   val vscode        = false

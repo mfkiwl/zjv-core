@@ -7,23 +7,17 @@ import common.projectConfig
 
 object AddressSpace extends phvntomParams with projectConfig {
   def mmio =
-    if (ila) {
+    if (fpga || ila) {
       List( // (start, size)
-        (0x80000000L, 0x00001000L), // uart
+        (0x40000000L, 0x30000000L), // MMIO Out of Tile : SPI UART BRAM
         (0x38000000L, 0x00010000L), // CLINT
-        (0x3c000000L, 0x04000000L) // PLIC
+        (0x3c000000L, 0x04000000L)  // PLIC
       )
     } else if (chiplink) {
       List( // (start, size)
         (0x40000000L, 0x40000000L), // external devices
         (0x38000000L, 0x00010000L), // CLINT
         (0x3c000000L, 0x04000000L) // PLIC
-      )
-    } else if (fpga) {
-      List( // (start, size)
-        (0x2000000L, 0x10000L), // CLINT
-        (0xc000000L, 0x4000000L), // PLIC
-        (0x10000000L, 0x100L) // uart
       )
     } else {
       List( // (start, size)
