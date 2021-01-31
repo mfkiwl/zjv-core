@@ -11,7 +11,7 @@ trait RISCVConfig {
 
 trait projectConfig {
   // TODO hot values can be modified in makefile
-  var fpga: Boolean = false
+  var fpga: Boolean = true
   // Cold Values
   var chiplink: Boolean = false
   var ila: Boolean = fpga

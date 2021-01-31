@@ -1,28 +1,23 @@
-default: generate_project
+default: generate_project generate_bitstream
 
-BOARD ?= nexys-a7
-
-# vivado project name
-PRJ ?= phvntom
-PRJ_FULL = $(PRJ)
 VIVADO_FLAG = -nolog -nojournal -notrace
 
 #--------------------------------------------------------------------
 # Project building and implementation
 #--------------------------------------------------------------------
 
-PRJ_ROOT = board/$(BOARD)/build/$(PRJ_FULL)
-XPR_FILE = $(PRJ_ROOT)/$(PRJ_FULL).xpr
-$(XPR_FILE):
-	vivado $(VIVADO_FLAG) -mode batch -source generate_project.tcl -tclargs $(PRJ_ROOT) $(BOARD)
-
 generate_bitstream:
 	vivado $(VIVADO_FLAG) -mode batch -source generate_bit.tcl -tclargs $(PRJ_ROOT) $(BOARD)
 
-generate_project: $(XPR_FILE)
-	vivado $(VIVADO_FLAG) $(XPR_FILE) &
+generate_project:
+	rm -rf ZJV4FPGA
+	rm -rf ZJV
+	mkdir ZJV
+	cp -R vsrc/* ZJV
+	vivado $(VIVADO_FLAG) -mode batch -source ZJV.tcl
+	rm -rf ZJV
 
 clean:
-	rm -rf $(PRJ_ROOT) vivado* .Xil
+	rm -rf ZJV ZJV4FPGA .Xil
 
 .PHONY: default generate_bitstream generate_project
