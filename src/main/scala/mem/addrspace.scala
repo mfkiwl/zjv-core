@@ -5,11 +5,20 @@ import chisel3.util._
 import rv64_nstage.core._
 import common.projectConfig
 
+// On FPGA
+// (0x04000000L, 0x30000000L)  // MMIO Out of Tile : SPI UART BRAM
+//    (0x04000000L, 0x00001000L)  // UART 13bit (because of Vivado's UART IP Design)
+//    (0x04010000L, 0x00010000)  // BRAM 16bit
+//    (0X04020000L, 0x00010000)  // SPI 16bit
+// (0x38000000L, 0x00010000L)  // CLINT
+// (0x3c000000L, 0x04000000L)  // PLIC
+// (0x80000000L, undecidedL )  // SDRAM
+
 object AddressSpace extends phvntomParams with projectConfig {
   def mmio =
     if (fpga || ila) {
       List( // (start, size)
-        (0x40000000L, 0x30000000L), // MMIO Out of Tile : SPI UART BRAM
+        (0x00000000L, 0x30000000L), // MMIO Out of Tile : SPI UART BRAM
         (0x38000000L, 0x00010000L), // CLINT
         (0x3c000000L, 0x04000000L)  // PLIC
       )

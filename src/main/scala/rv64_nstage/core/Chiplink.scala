@@ -168,8 +168,8 @@ class SOCIO extends Bundle with phvntomParams with projectConfig {
   // val frontend_ruser = Output(UInt(1.W))
   val mtip = Input(Bool())
   val meip = Input(Bool())
-  val ila_bundle = if (ila) { Output(new ILABundle) }
-  else { null }
+//  val ila_bundle = if (ila) { Output(new ILABundle) }
+//  else { null }
 }
 class ChiplinkTile extends Module with phvntomParams with projectConfig {
   val io = IO(new ChiplinkIO)
@@ -411,18 +411,18 @@ class ysyx_zjv extends Module with phvntomParams with projectConfig {
     io.mmio_arid := chiplinkTile.io.mmio.ar.bits.id
     chiplinkTile.io.mmio.r.bits.id := io.mmio_rid
 
-    def BoringUtilsConnect(sink: UInt, id: String) {
-      val temp = WireInit(0.U(64.W))
-      BoringUtils.addSink(temp, id)
-      sink := temp
-    }
-
-    BoringUtilsConnect(io.ila_bundle.pc      ,"ilaPC")
-    BoringUtilsConnect(io.ila_bundle.inst   ,"ilaInst")
-    BoringUtilsConnect(io.ila_bundle.wbvalid   ,"ilaValid")
-    BoringUtilsConnect(io.ila_bundle.int  ,"ilaInt")
-    BoringUtilsConnect(io.ila_bundle.alu  ,"ilaALU")
-    BoringUtilsConnect(io.ila_bundle.mem  ,"ilaMem")
+//    def BoringUtilsConnect(sink: UInt, id: String) {
+//      val temp = WireInit(0.U(64.W))
+//      BoringUtils.addSink(temp, id)
+//      sink := temp
+//    }
+//
+//    BoringUtilsConnect(io.ila_bundle.pc      ,"ilaPC")
+//    BoringUtilsConnect(io.ila_bundle.inst   ,"ilaInst")
+//    BoringUtilsConnect(io.ila_bundle.wbvalid   ,"ilaValid")
+//    BoringUtilsConnect(io.ila_bundle.int  ,"ilaInt")
+//    BoringUtilsConnect(io.ila_bundle.alu  ,"ilaALU")
+//    BoringUtilsConnect(io.ila_bundle.mem  ,"ilaMem")
   }
 }
 

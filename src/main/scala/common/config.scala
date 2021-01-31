@@ -10,10 +10,10 @@ trait RISCVConfig {
 }
 
 trait projectConfig {
-  val startAddr = 0x80000000L
   var fpga: Boolean = true
   var chiplink: Boolean = false
   var ila: Boolean = true
+  val startAddr = if (fpga || ila) 0x04010000L else 0x80000000L
   var board: String = "None"
   var hasICache: Boolean = false
   var hasDCache: Boolean = false
