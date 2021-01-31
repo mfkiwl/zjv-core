@@ -19,6 +19,10 @@ log*
 *.war
 *.ear
 
+# Vivado
+*.jou
+*.log
+
 # FIRRTL
 *.fir
 *.vcd
