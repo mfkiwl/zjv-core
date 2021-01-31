@@ -10,9 +10,11 @@ trait RISCVConfig {
 }
 
 trait projectConfig {
+  // TODO hot values can be modified in makefile
   var fpga: Boolean = true
+  // Cold Values
   var chiplink: Boolean = false
-  var ila: Boolean = true
+  var ila: Boolean = fpga
   val startAddr = if (fpga || ila) 0x04010000L else 0x80000000L
   var board: String = "None"
   var hasICache: Boolean = false
@@ -22,7 +24,7 @@ trait projectConfig {
   val bitWidth      = log2Ceil(xlen)
   val regNum        = 32
   val regWidth      = log2Ceil(regNum)
-  val diffTest      = false
+  val diffTest      = !fpga
   val pipeTrace     = false
   val prtHotSpot    = false
   val vscode        = false

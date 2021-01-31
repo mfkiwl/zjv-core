@@ -824,12 +824,12 @@ import common.projectConfig
       BoringUtils.addSource(dtest_alu, "difftestALU")
       BoringUtils.addSource(dtest_mem, "difftestMem")
     } else if (ila) {
-      BoringUtils.addSource(dtest_pc, "ilaPC")
-      BoringUtils.addSource(dtest_inst, "ilaInst")
-      BoringUtils.addSource(dtest_wbvalid, "ilaValid")
-      BoringUtils.addSource(dtest_int, "ilaInt")
-      BoringUtils.addSource(dtest_alu, "ilaALU")
-      BoringUtils.addSource(dtest_mem, "ilaMem")
+//      BoringUtils.addSource(dtest_pc, "ilaPC")
+//      BoringUtils.addSource(dtest_inst, "ilaInst")
+//      BoringUtils.addSource(dtest_wbvalid, "ilaValid")
+//      BoringUtils.addSource(dtest_int, "ilaInt")
+//      BoringUtils.addSource(dtest_alu, "ilaALU")
+//      BoringUtils.addSource(dtest_mem, "ilaMem")
     }
 
 //    printf("REG IF1 IF2 pc %x, tar %x\n", reg_if1_if2.io.bsrio.pc_in, reg_if1_if2.io.bpio.target_in)
