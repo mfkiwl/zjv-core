@@ -97,9 +97,9 @@ generate_chiplink:
 
 generate_fpga:
 	sbt "runMain $(TARGET_CORE).fpga"
-	mv ./build/verilog/rv64_nstage.core/fpga_zjv.v ./fpga/vsrc/ZJV.srcs/sources_1/imports/verilog/Top.v
-	mkdir -p ./fpga/vsrc/ZJV.srcs/sim_1/imports/verilog/
-	cp -R ./fpga/vsrc/ZJV.srcs/sources_1/imports/verilog/* ./fpga/vsrc/ZJV.srcs/sim_1/imports/verilog/
+	mv ./build/verilog/rv64_nstage.core/fpga_zjv.v ./zjv-fpga-acc/vsrc/ZJV.srcs/sources_1/imports/verilog/Top.v
+	mkdir -p ./zjv-fpga-acc/vsrc/ZJV.srcs/sim_1/imports/verilog/
+	cp -R ./zjv-fpga-acc/vsrc/ZJV.srcs/sources_1/imports/verilog/* ./zjv-fpga-acc/vsrc/ZJV.srcs/sim_1/imports/verilog/
 	# scp ./build/verilog/rv64_nstage.core/ysyx_zjv.v ysyx:/home/oscpu/ZJV/phvntom-chiplink/cpu/
 	# scp ./build/verilog/rv64_nstage.core/ysyx_zjv.v jump_ysyx:/home/oscpu/ZJV/hardware/sources/ysyx_zjv.v
 

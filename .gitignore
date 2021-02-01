@@ -20,7 +20,7 @@ log*
 *.ear
 
 # Vivado
-zjv-fpga-acc/
+
 
 # FIRRTL
 *.fir
