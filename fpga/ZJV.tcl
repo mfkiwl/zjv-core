@@ -54,7 +54,6 @@
 #    "./ZJV/ZJV.srcs/sim_1/imports/verilog/nasti_lite_bridge/nasti_lite_writer.sv"
 #    "./ZJV/ZJV.srcs/sim_1/imports/verilog/nasti_lite_bridge/nasti_lite_reader.sv"
 #    "./ZJV/ZJV.srcs/sim_1/imports/verilog/MemMappedIO.v"
-#    "./ZJV/Test_behav.wcfg"
 #
 # 3. The following remote source files that were added to the original project:-
 #
@@ -97,7 +96,6 @@ proc checkRequiredFiles { origin_dir} {
    "./ZJV/ZJV.srcs/sim_1/imports/verilog/nasti_lite_bridge/nasti_lite_writer.sv" \
    "./ZJV/ZJV.srcs/sim_1/imports/verilog/nasti_lite_bridge/nasti_lite_reader.sv" \
    "./ZJV/ZJV.srcs/sim_1/imports/verilog/MemMappedIO.v" \
-   "./ZJV/Test_behav.wcfg" \
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -437,7 +435,6 @@ set files [list \
  [file normalize "${origin_dir}/ZJV/ZJV.srcs/sim_1/imports/verilog/nasti_lite_bridge/nasti_lite_writer.sv"]\
  [file normalize "${origin_dir}/ZJV/ZJV.srcs/sim_1/imports/verilog/nasti_lite_bridge/nasti_lite_reader.sv"]\
  [file normalize "${origin_dir}/ZJV/ZJV.srcs/sim_1/imports/verilog/MemMappedIO.v"]\
- [file normalize "${origin_dir}/ZJV/Test_behav.wcfg" ]\
 ]
 set imported_files [import_files -fileset sim_1 $files]
 

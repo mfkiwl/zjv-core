@@ -28,6 +28,7 @@ fpga/ZJV4FPGA
 fpga/.Xil
 fpga/vsrc/ZJV.srcs/sources_1/imports/verilog/Top.v
 fpga/vsrc/ZJV.srcs/sim_1/imports/verilog/Top.v
+fpga/vsrc/ZJV.srcs/sim_1/
 
 # FIRRTL
 *.fir
