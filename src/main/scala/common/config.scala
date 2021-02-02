@@ -15,7 +15,7 @@ trait projectConfig {
   // Cold Values
   var chiplink: Boolean = false
   var ila: Boolean = fpga
-  val startAddr = if (fpga || ila) 0x04010000L else 0x80000000L
+  val startAddr = if (fpga || ila) 0x10010000L else 0x80000000L
   var board: String = "None"
   var hasICache: Boolean = false
   var hasDCache: Boolean = false
