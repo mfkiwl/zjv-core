@@ -8,8 +8,9 @@ import common.projectConfig
 // On FPGA
 // (0x10000000L, 0x02000000L)  // MMIO Out of Tile : SPI UART BRAM
 //    (0x10000000L, 0x00001000L) // UART 13bit (because of Vivado's UART IP Design)
-//    (0x10010000L, 0x00010000)  // BRAM 16bit
-//    (0X10020000L, 0x00010000)  // SPI 16bit
+//    (0x10010000L, 0x00010000)  // BRAM for bootloader 16bit
+//    (0x10020000L, 0x00010000)  // BRAM for official RINUX image 16bit
+//    (0X10030000L, 0x00010000)  // SPI 16bit
 // (0x02000000L, 0x00010000L)  // CLINT
 // (0x0c000000L, 0x04000000L)  // PLIC
 // (0x80000000L, undecidedL )  // SDRAM
