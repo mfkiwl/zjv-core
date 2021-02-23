@@ -262,6 +262,7 @@ class CSRFileIO extends Bundle with phvntomParams {
   // Exceptions in RegExeMem1
   val inst_af = Input(Bool())
   val inst_pf = Input(Bool())
+  val high_pf = Input(Bool())
   val inst_ma = Input(Bool())
   val illegal_inst = Input(Bool())
   val mem_af = Input(Bool())
@@ -500,7 +501,7 @@ class CSRFile extends Module with phvntomParams {
       (io.wen || io.cen || io.sen)))
   expt_vec(Exception.InstAccessFault) := io.inst_af
   expt_vec(Exception.InstAddrMisaligned) := io.inst_ma
-  expt_vec(Exception.InstPageFault) := io.inst_pf
+  expt_vec(Exception.InstPageFault) := io.inst_pf || io.high_pf
   expt_vec(Exception.LoadAccessFault) := io.mem_af && io.is_load
   expt_vec(Exception.LoadAddrMisaligned) := io.mem_ma && io.is_load
   expt_vec(Exception.LoadPageFault) := io.mem_pf && io.is_load
@@ -542,10 +543,10 @@ class CSRFile extends Module with phvntomParams {
   io.is_ret_out := !io.stall && !io.bubble && eret
 
   // Write Signal for MTVAL or STVAL
-  val write_tval = io.mem_af || io.mem_pf || io.mem_ma || io.inst_af || io.inst_pf || io.inst_ma
+  val write_tval = io.mem_af || io.mem_pf || io.mem_ma || io.inst_af || io.inst_pf || io.inst_ma || io.high_pf
   val tval_value = Mux(expt_num_comb === Exception.InstAccessFault ||
     expt_num_comb === Exception.InstPageFault,
-    io.current_pc,
+    Mux(io.high_pf, io.current_pc + 2.U, io.current_pc),
     Mux(expt_num_comb === Exception.InstAddrMisaligned,
       Cat(io.bad_addr(xlen - 1, 1), Fill(1, 0.U)),
       io.bad_addr
@@ -1247,6 +1248,7 @@ class CSRIO extends Bundle with phvntomParams {
   val inst_access_fault = Input(Bool())
   val mem_access_fault = Input(Bool())
   val inst_page_fault = Input(Bool())
+  val high_page_fault = Input(Bool())
   val mem_page_fault = Input(Bool())
   // Output
   val expt = Output(Bool())
@@ -1293,6 +1295,7 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.bubble := io.bubble
   csr_regfile.io.inst_af := io.inst_access_fault
   csr_regfile.io.inst_pf := io.inst_page_fault
+  csr_regfile.io.high_pf := io.high_page_fault
   csr_regfile.io.inst_ma := io.illegal_inst_addr
   csr_regfile.io.illegal_inst := io.illegal
   csr_regfile.io.mem_af := io.mem_access_fault

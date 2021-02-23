@@ -54,6 +54,11 @@ class InstInfoIO extends Bundle with phvntomParams {
   val inst_info_out = Flipped(Flipped(new InstInfo))
 }
 
+class HighPageFaultIO extends Bundle with phvntomParams {
+  val high_pf_in = Input(Bool())
+  val high_pf_out = Output(Bool())
+}
+
 class ExeInfoIO extends Bundle with phvntomParams {
   val alu_val_in = Input(UInt(xlen.W))
   val inst_addr_misaligned_in = Input(Bool())
@@ -290,6 +295,7 @@ class RegIdExeIO extends Bundle with phvntomParams {
   val instio = Flipped(Flipped(new InstIO))
   val iiio = Flipped(Flipped(new InstInfoIO))
   val bpio = Flipped(Flipped(new BPUPredictIO))
+  val hpfio = Flipped(Flipped(new HighPageFaultIO))
 }
 
 class RegIdExe extends Module with phvntomParams {
@@ -308,6 +314,7 @@ class RegIdExe extends Module with phvntomParams {
     1 + brBits + ASelectBits + BSelectBits +
     aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth).W),
     default_inst_info)
+  val hpf = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -332,6 +339,7 @@ class RegIdExe extends Module with phvntomParams {
       ptar := 0.U
       xored_index := 0.U
       inst_info := default_inst_info
+      hpf := false.B
     }.otherwise {
       pc := io.bsrio.pc_in
       bubble := false.B
@@ -342,6 +350,7 @@ class RegIdExe extends Module with phvntomParams {
       ptar := io.bpio.target_in
       xored_index := io.bpio.xored_index_in
       inst_info := io.iiio.inst_info_in.asUInt
+      hpf := io.hpfio.high_pf_in
     }
   }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
     pc := 0.U
@@ -353,6 +362,7 @@ class RegIdExe extends Module with phvntomParams {
     ptar := 0.U
     xored_index := 0.U
     inst_info := default_inst_info
+    hpf := false.B
   }
 
   io.bsrio.bubble_out := bubble
@@ -364,6 +374,7 @@ class RegIdExe extends Module with phvntomParams {
   io.bpio.predict_taken_out := predict_tk
   io.bpio.target_out := ptar
   io.bpio.xored_index_out := xored_index
+  io.hpfio.high_pf_out := hpf
 }
 
 class RegExeDTLBIO extends Bundle with phvntomParams {
@@ -376,6 +387,7 @@ class RegExeDTLBIO extends Bundle with phvntomParams {
   val bpio = Flipped(Flipped(new BPUPredictIO))
   val mdio = Flipped(Flipped(new MultDivIO))
   val bpufb_stall_update = Output(Bool())
+  val hpfio = Flipped(Flipped(new HighPageFaultIO))
 }
 
 class RegExeDTLB extends Module with phvntomParams {
@@ -409,6 +421,7 @@ class RegExeDTLB extends Module with phvntomParams {
   val predict_tk = RegInit(Bool(), false.B)
   val ptar = RegInit(UInt(xlen.W), 0.U)
   val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
+  val hpf = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -448,6 +461,7 @@ class RegExeDTLB extends Module with phvntomParams {
       predict_tk := false.B
       ptar := 0.U
       xored_index := 0.U
+      hpf := false.B
     }.otherwise {
       pc := io.bsrio.pc_in
       bubble := false.B
@@ -473,6 +487,7 @@ class RegExeDTLB extends Module with phvntomParams {
       predict_tk := io.bpio.predict_taken_in
       ptar := io.bpio.target_in
       xored_index := io.bpio.xored_index_in
+      hpf := io.hpfio.high_pf_in
     }
   }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
     pc := 0.U
@@ -499,6 +514,7 @@ class RegExeDTLB extends Module with phvntomParams {
     predict_tk := false.B
     ptar := 0.U
     xored_index := 0.U
+    hpf := false.B
   }.elsewhen(io.bsrio.flush_one) {
     bpufb_stall_update := true.B
     misprediction := false.B
@@ -531,6 +547,7 @@ class RegExeDTLB extends Module with phvntomParams {
   io.bpio.predict_taken_out := predict_tk
   io.bpio.target_out := ptar
   io.bpio.xored_index_out := xored_index
+  io.hpfio.high_pf_out := hpf
 }
 
 class RegDTLBMem1IO extends Bundle with phvntomParams {
@@ -540,6 +557,7 @@ class RegDTLBMem1IO extends Bundle with phvntomParams {
   val iiio = Flipped(Flipped(new InstInfoIO))
   val aluio = Flipped(Flipped(new ExeInfoIO))
   val intio = Flipped(Flipped(new IntMemPfIO))
+  val hpfio = Flipped(Flipped(new HighPageFaultIO))
 }
 
 class RegDTLBMem1 extends Module with phvntomParams {
@@ -564,6 +582,7 @@ class RegDTLBMem1 extends Module with phvntomParams {
   val extern_int = RegInit(Bool(), false.B)
   val s_extern_int = RegInit(Bool(), false.B)
   val timer_int = RegInit(Bool(), false.B)
+  val hpf = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -594,6 +613,7 @@ class RegDTLBMem1 extends Module with phvntomParams {
       extern_int := false.B
       timer_int := false.B
       s_extern_int := false.B
+      hpf := false.B
     }.otherwise {
       pc := io.bsrio.pc_in
       bubble := false.B
@@ -610,6 +630,7 @@ class RegDTLBMem1 extends Module with phvntomParams {
       extern_int := io.intio.external_int_in
       timer_int := io.intio.timer_int_in
       s_extern_int := io.intio.s_external_int_in
+      hpf := io.hpfio.high_pf_in
     }
   }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
     pc := 0.U
@@ -627,6 +648,7 @@ class RegDTLBMem1 extends Module with phvntomParams {
     extern_int := false.B
     timer_int := false.B
     s_extern_int := false.B
+    hpf := false.B
   }.otherwise {
     soft_int := false.B
     extern_int := false.B
@@ -649,6 +671,7 @@ class RegDTLBMem1 extends Module with phvntomParams {
   io.intio.software_int_out := soft_int
   io.intio.timer_int_out := timer_int
   io.intio.s_external_int_out := s_extern_int
+  io.hpfio.high_pf_out := hpf
 }
 
 class RegMem1Mem2IO extends Bundle with phvntomParams {

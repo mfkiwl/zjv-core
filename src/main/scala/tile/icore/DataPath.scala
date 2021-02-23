@@ -168,7 +168,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   pc_gen.io.inst_addr_misaligned := reg_exe_dtlb.io.aluio.inst_addr_misaligned_out
   pc_gen.io.compr_jump := compr_flush
   pc_gen.io.compr_pc := compr_flush_addr
-//printf("br_jump %x, br_pc %x, branch_out %x\n", br_jump_flush, reg_exe_dtlb.io.bjio.bjpc_out, branch_cond.io.branch)
+
   // BPU
   bpu.io.pc_to_predict := pc_gen.io.pc_out
   bpu.io.feedback_pc := reg_exe_dtlb.io.bjio.feedback_pc_out
@@ -320,6 +320,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_id_exe.io.ifio.inst_af_in := reg_if3_id.io.ifio.inst_af_out
   reg_id_exe.io.bsrio.next_stage_flush_req := false.B
   reg_id_exe.io.ifio.inst_pf_in := reg_if3_id.io.ifio.inst_pf_out
+  reg_id_exe.io.hpfio.high_pf_in := dp_arbiter.io.high_page_fault
   reg_id_exe.io.bpio.predict_taken_in := reg_if3_id.io.bpio.predict_taken_out
   reg_id_exe.io.bpio.target_in := reg_if3_id.io.bpio.target_out
   reg_id_exe.io.bpio.xored_index_in := reg_if3_id.io.bpio.xored_index_out
@@ -459,6 +460,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_exe_dtlb.io.bsrio.next_stage_flush_req := (br_jump_flush && !(expt_int_flush || error_ret_flush ||
     write_satp_flush || i_fence_flush || s_fence_flush))
   reg_exe_dtlb.io.ifio.inst_pf_in := reg_id_exe.io.ifio.inst_pf_out
+  reg_exe_dtlb.io.hpfio.high_pf_in := reg_id_exe.io.hpfio.high_pf_out
   reg_exe_dtlb.io.bjio.misprediction_in := misprediction
   reg_exe_dtlb.io.bjio.wrong_target_in := wrong_target
   reg_exe_dtlb.io.bjio.predict_taken_but_not_br_in := predict_taken_but_not_br
@@ -556,6 +558,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_dtlb_mem1.io.ifio.inst_af_in := reg_exe_dtlb.io.ifio.inst_af_out
   reg_dtlb_mem1.io.bsrio.next_stage_flush_req := expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
   reg_dtlb_mem1.io.ifio.inst_pf_in := reg_exe_dtlb.io.ifio.inst_pf_out
+  reg_dtlb_mem1.io.hpfio.high_pf_in := reg_exe_dtlb.io.hpfio.high_pf_out
   reg_dtlb_mem1.io.intio.mem_af_in := mem_af
   reg_dtlb_mem1.io.intio.mem_pf_in := dmmu.io.front.pf
 
@@ -592,6 +595,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
     reg_dtlb_mem1.io.iiio.inst_info_out.wbEnable === wenMem) || reg_dtlb_mem1.io.iiio.inst_info_out.amoSelect.orR
   csr.io.inst_access_fault := reg_dtlb_mem1.io.ifio.inst_af_out
   csr.io.inst_page_fault := reg_dtlb_mem1.io.ifio.inst_pf_out
+  csr.io.high_page_fault := reg_dtlb_mem1.io.hpfio.high_pf_out
   csr.io.mem_access_fault := reg_dtlb_mem1.io.intio.mem_af_out
   csr.io.mem_page_fault := reg_dtlb_mem1.io.intio.mem_pf_out
   csr.io.tim_int := reg_dtlb_mem1.io.intio.timer_int_out

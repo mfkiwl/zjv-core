@@ -26,6 +26,7 @@ class DoublePageArbiterIO extends Bundle with phvntomParams {
   val full_inst = Output(UInt(xlen.W))
   val full_inst_pc = Output(UInt(xlen.W))
   val full_inst_ready = Output(Bool())
+  val high_page_fault = Output(Bool())
 }
 
 class DoublePageArbiter extends Module with phvntomParams {
@@ -70,4 +71,12 @@ class DoublePageArbiter extends Module with phvntomParams {
   io.full_inst := Cat(io.inst(15, 0), low_inst_buff)
   io.full_inst_pc := low_vpc_buf
   io.full_inst_ready := state === s_wait && next_state === s_idle
+  io.high_page_fault := state === s_wait && next_state === s_idle && io.page_fault
+
+  when (io.high_page_fault) {
+    printf("\n\nfrom double page arbiter: high page fault occurred\n\n\n")
+  }
+  when (state === s_wait && next_state === s_idle) {
+    printf("\n\nfrom double page arbiter: cross page detected\n\n\n")
+  }
 }
