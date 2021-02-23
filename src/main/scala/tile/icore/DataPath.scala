@@ -168,7 +168,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   pc_gen.io.inst_addr_misaligned := reg_exe_dtlb.io.aluio.inst_addr_misaligned_out
   pc_gen.io.compr_jump := compr_flush
   pc_gen.io.compr_pc := compr_flush_addr
-
+//printf("br_jump %x, br_pc %x, branch_out %x\n", br_jump_flush, reg_exe_dtlb.io.bjio.bjpc_out, branch_cond.io.branch)
   // BPU
   bpu.io.pc_to_predict := pc_gen.io.pc_out
   bpu.io.feedback_pc := reg_exe_dtlb.io.bjio.feedback_pc_out
@@ -293,7 +293,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   // Some Special Michanism to Deal with C
   val half_fetched = WireDefault(false.B)
   BoringUtils.addSink(half_fetched, "half_fetched_regif3id")
-  compr_flush := !reg_if3_id.io.instio.inst_out(1, 0).andR || half_fetched || dp_arbiter.io.flush_req
+  compr_flush := (!reg_if3_id.io.instio.inst_out(1, 0).andR && !(reg_if3_id.io.bpio.predict_taken_out)) || half_fetched || dp_arbiter.io.flush_req
   compr_flush_addr := Mux(dp_arbiter.io.flush_req, dp_arbiter.io.flush_target_vpc,
     Mux(half_fetched, reg_if3_id.io.bsrio.pc_out, reg_if3_id.io.bsrio.pc_out + 2.U))
 
