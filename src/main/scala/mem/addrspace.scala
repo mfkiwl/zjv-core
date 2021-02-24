@@ -2,8 +2,8 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_nstage.core._
-import common.projectConfig
+import tile._
+import config.projectConfig
 
 // On FPGA
 // (0x10000000L, 0x02000000L)  // MMIO Out of Tile : SPI UART BRAM

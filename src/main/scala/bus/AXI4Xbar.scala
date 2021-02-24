@@ -3,7 +3,7 @@ package bus
 import chisel3._
 import chisel3.util._
 import utils._
-import common.projectConfig
+import config.projectConfig
 
 class Crossbar1toN(addressSpace: List[(Long, Long)])
     extends Module

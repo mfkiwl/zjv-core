@@ -5,7 +5,7 @@
 WORK_DIR	:=	$(CURDIR)/build
 SRC_DIR		:=	$(CURDIR)/src
 
-TARGET_CORE ?= rv64_nstage.core
+TARGET_CORE ?= tile
 VSRC_DIR := $(WORK_DIR)/verilog/$(TARGET_CORE)
 N ?= 1
 

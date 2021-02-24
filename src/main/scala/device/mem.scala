@@ -3,8 +3,8 @@ package device
 import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFile
-import rv64_nstage.core._
-import rv64_nstage.control.ControlConst._
+import tile._
+import tile.common.control.ControlConst._
 
 class MemReq(val dataWidth: Int = 64) extends Bundle with phvntomParams { // write
   val addr = Output(UInt(xlen.W))

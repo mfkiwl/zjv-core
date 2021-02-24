@@ -2,8 +2,10 @@ package mem
 
 import chisel3._
 import chisel3.util._
-import rv64_nstage.core._
-import rv64_nstage.control.ControlConst._
+import tile._
+import config.projectConfig
+import tile.common.control._
+import tile.common.control.ControlConst._
 import bus._
 import device._
 import utils._

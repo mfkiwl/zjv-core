@@ -2,7 +2,7 @@ package device
 
 import chisel3._
 import chisel3.util._
-import rv64_nstage.core._
+import tile._
 import bus._
 import utils._
 
@@ -20,14 +20,16 @@ class Clint(name: String = "clint")
   val sim = true
   val speeder = false
 
-  val clk =
-    (if (!sim) 40 /* 40MHz / 1000000 */
-     else if (fpga) 10000
-    else 100)
+  val clk = {
+    if (!sim) 40 /* 40MHz / 1000000 */
+    else if (diffTest) 100
+    else 10000
+  }
+
   val freq = RegInit(clk.U(16.W))
   val inc = RegInit(1.U(16.W))
 
-  val cnt = RegInit(1.U(16.W))
+  val cnt = RegInit(2.U(16.W))
   val nextCnt = cnt + 1.U
   cnt := Mux(nextCnt < freq, nextCnt, 0.U)
   val tick = (nextCnt === freq)
