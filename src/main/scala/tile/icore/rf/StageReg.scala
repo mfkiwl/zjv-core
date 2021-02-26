@@ -210,6 +210,7 @@ class RegIf3IdIO extends Bundle with phvntomParams {
   val immuio = Flipped(Flipped(new IMMUIO))
   val instio = Flipped(Flipped(new InstIO))
   val bpio = Flipped(Flipped(new BPUPredictIO))
+  val half_fetched_regif3id = Output(Bool())
 }
 
 class RegIf3Id extends Module with phvntomParams {
@@ -231,7 +232,6 @@ class RegIf3Id extends Module with phvntomParams {
   val half_fetched = RegInit(Bool(), false.B)
   val half_fw = WireDefault(false.B)
   BoringUtils.addSink(half_fw, "half_fetched_if3")
-  BoringUtils.addSource(half_fetched, "half_fetched_regif3id")
 
   last_delay := this_stall
 
@@ -287,6 +287,7 @@ class RegIf3Id extends Module with phvntomParams {
   io.bpio.target_out := ptar
   io.immuio.use_immu_out := use_immu
   io.bpio.xored_index_out := xored_index
+  io.half_fetched_regif3id := half_fetched
 }
 
 class RegIdExeIO extends Bundle with phvntomParams {

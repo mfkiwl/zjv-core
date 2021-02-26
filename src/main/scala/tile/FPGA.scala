@@ -4,17 +4,14 @@ import chisel3._
 import chisel3.stage._
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
-
 import common._
 import bus._
 import device._
-import mem._
-import config.projectConfig
-
 import firrtl.stage.RunFirrtlTransformAnnotation
+import mem._
 
 
-class FPGATile extends Module with phvntomParams with projectConfig {
+class FPGATile extends Module with phvntomParams {
   val io = IO(new ChiplinkIO)
 
   val core = Module(new Core)
@@ -23,13 +20,19 @@ class FPGATile extends Module with phvntomParams with projectConfig {
   // mem path
   val icache = if (hasCache) {
     if (ila) {
-      Module(
-        new ICacheForwardSplitSync3StageMMIO()(CacheConfig(readOnly = true))
-      )
+      if (withCExt) {
+        Module(
+          new ShadowICache()(CacheConfig(name = "icache", readOnly = true, shadowByte = true))
+        )
+      } else {
+        Module(
+          new ICacheForwardSplitSync3StageMMIO()(CacheConfig(name = "icache", readOnly = true))
+        )
+      }
     } else {
       Module(
         new ICacheForwardSplitSync3StageMMIOReorg()(
-          CacheConfig(readOnly = true)
+          CacheConfig(name = "icache", readOnly = true)
         )
       )
     }
@@ -119,7 +122,7 @@ class FPGATile extends Module with phvntomParams with projectConfig {
   mmioxbar_external.io.out(2) <> plic.io.in
 }
 
-class fpga_zjv extends Module with phvntomParams with projectConfig {
+class fpga_zjv extends Module with phvntomParams {
   val io = IO(new SOCIO)
 
   val FPGATile = Module(new FPGATile)
@@ -276,9 +279,7 @@ object fpga {
     (new chisel3.stage.ChiselStage).execute(
       Array("-td", "build/verilog/" + packageName, "-X", "verilog"),
       Seq(
-        ChiselGeneratorAnnotation(() => new fpga_zjv),
-        RunFirrtlTransformAnnotation(new AddModulePrefix()),
-        ModulePrefixAnnotation("zjv_")
+        ChiselGeneratorAnnotation(() => new fpga_zjv)
       )
     )
   }

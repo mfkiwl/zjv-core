@@ -291,8 +291,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_if3_id.io.immuio.use_immu_in := reg_if2_if3.io.immuio.use_immu_out
 
   // Some Special Michanism to Deal with C
-  val half_fetched = WireDefault(false.B)
-  BoringUtils.addSink(half_fetched, "half_fetched_regif3id")
+  val half_fetched = reg_if3_id.io.half_fetched_regif3id
   compr_flush := (!reg_if3_id.io.instio.inst_out(1, 0).andR && !(reg_if3_id.io.bpio.predict_taken_out)) || half_fetched || dp_arbiter.io.flush_req
   compr_flush_addr := Mux(dp_arbiter.io.flush_req, dp_arbiter.io.flush_target_vpc,
     Mux(half_fetched, reg_if3_id.io.bsrio.pc_out, reg_if3_id.io.bsrio.pc_out + 2.U))
