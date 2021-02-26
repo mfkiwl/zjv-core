@@ -12,11 +12,11 @@ import tile.phvntomParams
 // Step 2: Use [PC + 2] to get the upper half in next page
 //         Then we can check if there is a instruction page fault
 // Step 3: After several cycles, the upper half will be HERE with the information of page fault
-//         We first [assemble the instruction] and flush [IF1 to IF3], with [PC + 4] to be the new PC
+//         We first [CONCAT the instruction] and flush [IF1 to IF3], with [PC + 4] to be the new PC
 // Step 4: We carry all information along the pipeline
 class DoublePageArbiterIO extends Bundle with phvntomParams {
   val vpc = Input(UInt(xlen.W))
-  val inst = Input(UInt((xlen / 2).W))
+  val inst = Input(UInt(xlen.W))
   val page_fault = Input(Bool())
   val is_compressed = Input(Bool())
   val use_immu = Input(Bool())
@@ -68,15 +68,17 @@ class DoublePageArbiter extends Module with phvntomParams {
   io.flush_req := state === s_idle && next_state === s_wait || state === s_wait && next_state === s_idle
   io.flush_target_vpc := io.vpc + 2.U
   io.insert_bubble_next := next_state === s_wait
-  io.full_inst := Cat(io.inst(15, 0), low_inst_buff)
+  io.full_inst := Cat(io.inst(15, 0), low_inst_buff(15, 0))
   io.full_inst_pc := low_vpc_buf
   io.full_inst_ready := state === s_wait && next_state === s_idle
   io.high_page_fault := state === s_wait && next_state === s_idle && io.page_fault
 
-  when (io.high_page_fault) {
-    printf("\n\nfrom double page arbiter: high page fault occurred\n\n\n")
-  }
-  when (state === s_wait && next_state === s_idle) {
-    printf("\n\nfrom double page arbiter: cross page detected\n\n\n")
-  }
+  // when (io.high_page_fault) {
+  //   printf("\n\nfrom double page arbiter: high page fault occurred\n\n\n")
+  // }
+  // when (state === s_wait && next_state === s_idle) {
+  //   printf("\n\nfrom double page arbiter: cross page detected\n\n\n")
+  // }
+
+  // printf("STATE: %x, NEXT_STATE: %x, IOINST: %x, FULLINST: %x\n\n", state, next_state, io.inst, io.full_inst)
 }
