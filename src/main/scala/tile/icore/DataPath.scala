@@ -312,7 +312,8 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_id_exe.io.bsrio.stall := stall_id_exe
   reg_id_exe.io.bsrio.flush_one := (br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush ||
     i_fence_flush || s_fence_flush)
-  reg_id_exe.io.bsrio.bubble_in := reg_if3_id.io.bsrio.bubble_out || half_fetched || dp_arbiter.io.insert_bubble_next
+  reg_id_exe.io.bsrio.bubble_in := Mux(dp_arbiter.io.full_inst_ready, false.B,
+    reg_if3_id.io.bsrio.bubble_out || half_fetched || dp_arbiter.io.insert_bubble_next)
   reg_id_exe.io.instio.inst_in := Mux(dp_arbiter.io.full_inst_ready, dp_arbiter.io.full_inst, reg_if3_id.io.instio.inst_out)
   reg_id_exe.io.bsrio.pc_in := Mux(dp_arbiter.io.full_inst_ready, dp_arbiter.io.full_inst_pc, reg_if3_id.io.bsrio.pc_out)
   reg_id_exe.io.iiio.inst_info_in := io.ctrl.inst_info_out
@@ -629,7 +630,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_mem1_mem2.io.bsrio.next_stage_flush_req := false.B
   reg_mem1_mem2.io.csrio.compare_in := reservation.io.compare
   reg_mem1_mem2.io.csrio.comp_res_in := (!reservation.io.succeed).asUInt
-  reg_mem1_mem2.io.csrio.af_in := csr.io.expt && (csr.io.inst_access_fault || csr.io.inst_page_fault)
+  reg_mem1_mem2.io.csrio.af_in := csr.io.expt && (csr.io.inst_access_fault || csr.io.inst_page_fault || csr.io.high_page_fault)
 
   // REG MEM2 MEM3
   reg_mem2_mem3.io.bsrio.last_stage_atomic_stall_req := false.B

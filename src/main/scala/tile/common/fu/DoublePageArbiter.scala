@@ -36,11 +36,12 @@ class DoublePageArbiter extends Module with phvntomParams {
     (vpc + 2.U)(12) =/= vpc(12)
   }
 
-  val s_idle :: s_wait :: Nil = Enum(2)
+  val s_idle :: s_wait :: s_concat :: Nil = Enum(3)
   val state = RegInit(s_idle)
   val next_state = WireDefault(s_idle)
   val low_vpc_buf = RegInit(UInt(xlen.W), startAddr.asUInt)
   val low_inst_buff = RegInit(UInt((xlen / 2).W), BUBBLE(15, 0))
+  val last_vpc = RegNext(io.vpc)
 
   state := next_state
 
@@ -50,12 +51,14 @@ class DoublePageArbiter extends Module with phvntomParams {
     }.otherwise {
       next_state := s_idle
     }
-  }.otherwise {
+  }.elsewhen(state === s_wait) {
     when (io.vpc === low_vpc_buf + 2.U) {
-      next_state := s_idle
+      next_state := s_concat
     }.otherwise {
       next_state := s_wait
     }
+  }.otherwise {
+    next_state := s_idle
   }
 
   when (state === s_idle) {
@@ -65,20 +68,20 @@ class DoublePageArbiter extends Module with phvntomParams {
     }
   }
 
-  io.flush_req := state === s_idle && next_state === s_wait || state === s_wait && next_state === s_idle
-  io.flush_target_vpc := io.vpc + 2.U
-  io.insert_bubble_next := next_state === s_wait
-  io.full_inst := Cat(io.inst(15, 0), low_inst_buff(15, 0))
+  io.flush_req := state === s_idle && next_state === s_wait || state === s_concat
+  io.flush_target_vpc := Mux(state === s_concat, last_vpc, io.vpc) + 2.U
+  io.insert_bubble_next := next_state === s_wait || next_state === s_concat
+  io.full_inst := Cat(RegNext(io.inst(15, 0)), low_inst_buff(15, 0))
   io.full_inst_pc := low_vpc_buf
-  io.full_inst_ready := state === s_wait && next_state === s_idle
-  io.high_page_fault := state === s_wait && next_state === s_idle && io.page_fault
+  io.full_inst_ready := state === s_concat
+  io.high_page_fault := state === s_concat && RegNext(io.page_fault)
 
-  // when (io.high_page_fault) {
-  //   printf("\n\nfrom double page arbiter: high page fault occurred\n\n\n")
-  // }
-  // when (state === s_wait && next_state === s_idle) {
-  //   printf("\n\nfrom double page arbiter: cross page detected\n\n\n")
-  // }
+//   when (io.high_page_fault) {
+//     printf("\n\nfrom double page arbiter: high page fault occurred\n\n\n")
+//   }
+//   when (state === s_concat && next_state === s_idle) {
+//     printf("\n\nfrom double page arbiter: cross page detected\n\n\n")
+//   }
 
   // printf("STATE: %x, NEXT_STATE: %x, IOINST: %x, FULLINST: %x\n\n", state, next_state, io.inst, io.full_inst)
 }
