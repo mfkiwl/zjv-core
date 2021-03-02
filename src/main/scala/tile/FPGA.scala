@@ -256,19 +256,6 @@ class fpga_zjv extends Module with phvntomParams {
     FPGATile.io.mmio.b.bits.id := io.mmio_bid
     io.mmio_arid := FPGATile.io.mmio.ar.bits.id
     FPGATile.io.mmio.r.bits.id := io.mmio_rid
-
-//    def BoringUtilsConnect(sink: UInt, id: String) {
-//      val temp = WireInit(0.U(64.W))
-//      BoringUtils.addSink(temp, id)
-//      sink := temp
-//    }
-//
-//    BoringUtilsConnect(io.ila_bundle.pc      ,"ilaPC")
-//    BoringUtilsConnect(io.ila_bundle.inst   ,"ilaInst")
-//    BoringUtilsConnect(io.ila_bundle.wbvalid   ,"ilaValid")
-//    BoringUtilsConnect(io.ila_bundle.int  ,"ilaInt")
-//    BoringUtilsConnect(io.ila_bundle.alu  ,"ilaALU")
-//    BoringUtilsConnect(io.ila_bundle.mem  ,"ilaMem")
   }
 }
 
