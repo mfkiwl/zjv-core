@@ -23,7 +23,7 @@ class Clint(name: String = "clint")
   val clk = {
     if (!sim) 40 /* 40MHz / 1000000 */
     else if (diffTest) 100
-    else 10000
+    else 100
   }
 
   val freq = RegInit(clk.U(16.W))
