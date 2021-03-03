@@ -15,6 +15,8 @@ import tile.phvntomParams
 //         We first [CONCAT the instruction] and flush [IF1 to IF3], with [PC + 4] to be the new PC
 // Step 4: We carry all information along the pipeline
 class DoublePageArbiterIO extends Bundle with phvntomParams {
+  val flush = Input(Bool())
+  val next_stage_ready = Input(Bool())
   val vpc = Input(UInt(xlen.W))
   val inst = Input(UInt(xlen.W))
   val page_fault = Input(Bool())
@@ -46,19 +48,31 @@ class DoublePageArbiter extends Module with phvntomParams {
   state := next_state
 
   when (state === s_idle) {
-    when (io.use_immu && !io.is_compressed && cross_page(io.vpc) && !io.page_fault) {
-      next_state := s_wait
+    when (io.flush) {
+      next_state := s_idle
+    }.elsewhen (io.use_immu && !io.is_compressed && cross_page(io.vpc)) {
+      when (!io.page_fault) {
+        next_state := s_wait
+      }.otherwise {
+        next_state := s_idle
+      }
     }.otherwise {
       next_state := s_idle
     }
   }.elsewhen(state === s_wait) {
-    when (io.vpc === low_vpc_buf + 2.U) {
+    when (io.flush) {
+      next_state := s_idle
+    }.elsewhen (io.vpc === low_vpc_buf + 2.U) {
       next_state := s_concat
     }.otherwise {
       next_state := s_wait
     }
-  }.otherwise {
-    next_state := s_idle
+  }.otherwise { // state === s_concat
+    when (io.next_stage_ready) {
+      next_state := s_idle
+    }.otherwise {
+      next_state := s_concat
+    }
   }
 
   when (state === s_idle) {
@@ -68,7 +82,7 @@ class DoublePageArbiter extends Module with phvntomParams {
     }
   }
 
-  io.flush_req := state === s_idle && next_state === s_wait || state === s_concat
+  io.flush_req := (state === s_idle && next_state === s_wait) || (state === s_concat && next_state === s_idle)
   io.flush_target_vpc := Mux(state === s_concat, last_vpc, io.vpc) + 2.U
   io.insert_bubble_next := next_state === s_wait || next_state === s_concat
   io.full_inst := Cat(RegNext(io.inst(15, 0)), low_inst_buff(15, 0))
@@ -77,11 +91,11 @@ class DoublePageArbiter extends Module with phvntomParams {
   io.high_page_fault := state === s_concat && RegNext(io.page_fault)
 
 //   when (io.high_page_fault) {
-//     printf("\n\nfrom double page arbiter: high page fault occurred\n\n\n")
+//     printf("from double page arbiter: high page fault occurred\n")
 //   }
 //   when (state === s_concat && next_state === s_idle) {
-//     printf("\n\nfrom double page arbiter: cross page detected\n\n\n")
+//     printf("from double page arbiter: cross page detected\n")
 //   }
 
-  // printf("STATE: %x, NEXT_STATE: %x, IOINST: %x, FULLINST: %x\n\n", state, next_state, io.inst, io.full_inst)
+//   printf("STATE: %x, NEXT_STATE: %x, IOINST: %x, FULLINST: %x\n", state, next_state, io.inst, io.full_inst)
 }

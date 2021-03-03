@@ -297,6 +297,9 @@ class DataPath extends Module with phvntomParams with projectConfig {
     Mux(half_fetched, reg_if3_id.io.bsrio.pc_out, reg_if3_id.io.bsrio.pc_out + 2.U))
 
   // DP Arbiter
+  dp_arbiter.io.next_stage_ready := !stall_id_exe
+  dp_arbiter.io.flush := (br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush ||
+    i_fence_flush || s_fence_flush)
   dp_arbiter.io.vpc := reg_if3_id.io.bsrio.pc_out
   dp_arbiter.io.inst := reg_if3_id.io.instio.inst_out
   dp_arbiter.io.page_fault := reg_if3_id.io.ifio.inst_pf_out
@@ -307,7 +310,16 @@ class DataPath extends Module with phvntomParams with projectConfig {
   io.ctrl.inst := Mux(dp_arbiter.io.full_inst_ready, dp_arbiter.io.full_inst, reg_if3_id.io.instio.inst_out)
 
   // Reg ID EXE
-  reg_id_exe.io.bsrio.last_stage_atomic_stall_req := false.B
+  // when a stall signal comes to reg_id_exe, reg_if3_id must be stalled unless it is flushed
+  // if the flush signal is from later stages, then reg_id_exe will be flushed too, if the signal is from dp_arbiter, a bubble will be inserted
+  // because dp_arbiter.io.insert_bubble_next will be high (bucause stall, then state === concat and next_state === idle will be false, then if flush form dp_arbiter, next
+  // state must be s_wait
+  // Here we know the input from if3_id does not matter or does not change when dp_arbiter oor reg_id_exe is stalled
+  // Then we can say RegNext(if3_id) and if3_id will be the same
+
+  // next stage flush req is for difftest, the insn must be done so it can go to wb stage
+  // so, dp.io.flush_req will not be added to reg_if3_id.next_stage_flush_request
+  reg_id_exe.io.bsrio.last_stage_atomic_stall_req := false.B  // Both IF3ID and DPARBITER are not atomic against flush signal
   reg_id_exe.io.bsrio.next_stage_atomic_stall_req := stall_req_exe_atomic
   reg_id_exe.io.bsrio.stall := stall_id_exe
   reg_id_exe.io.bsrio.flush_one := (br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush ||
@@ -317,13 +329,16 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_id_exe.io.instio.inst_in := Mux(dp_arbiter.io.full_inst_ready, dp_arbiter.io.full_inst, reg_if3_id.io.instio.inst_out)
   reg_id_exe.io.bsrio.pc_in := Mux(dp_arbiter.io.full_inst_ready, dp_arbiter.io.full_inst_pc, reg_if3_id.io.bsrio.pc_out)
   reg_id_exe.io.iiio.inst_info_in := io.ctrl.inst_info_out
-  reg_id_exe.io.ifio.inst_af_in := reg_if3_id.io.ifio.inst_af_out
+  reg_id_exe.io.ifio.inst_af_in := Mux(dp_arbiter.io.full_inst_ready, false.B, reg_if3_id.io.ifio.inst_af_out)  // TODO no access fault now, temply use false.B
   reg_id_exe.io.bsrio.next_stage_flush_req := false.B
-  reg_id_exe.io.ifio.inst_pf_in := reg_if3_id.io.ifio.inst_pf_out
-  reg_id_exe.io.hpfio.high_pf_in := dp_arbiter.io.high_page_fault
-  reg_id_exe.io.bpio.predict_taken_in := reg_if3_id.io.bpio.predict_taken_out
-  reg_id_exe.io.bpio.target_in := reg_if3_id.io.bpio.target_out
-  reg_id_exe.io.bpio.xored_index_in := reg_if3_id.io.bpio.xored_index_out
+  reg_id_exe.io.ifio.inst_pf_in := Mux(dp_arbiter.io.full_inst_ready, false.B, reg_if3_id.io.ifio.inst_pf_out)
+  reg_id_exe.io.hpfio.high_pf_in := Mux(dp_arbiter.io.full_inst_ready, dp_arbiter.io.high_page_fault, false.B)
+  reg_id_exe.io.bpio.predict_taken_in := Mux(dp_arbiter.io.full_inst_ready,
+    RegNext(reg_if3_id.io.bpio.predict_taken_out), reg_if3_id.io.bpio.predict_taken_out)
+  reg_id_exe.io.bpio.target_in := Mux(dp_arbiter.io.full_inst_ready,
+    RegNext(reg_if3_id.io.bpio.target_out), reg_if3_id.io.bpio.target_out)
+  reg_id_exe.io.bpio.xored_index_in := Mux(dp_arbiter.io.full_inst_ready,
+    RegNext(reg_if3_id.io.bpio.xored_index_out), reg_if3_id.io.bpio.xored_index_out)
 
   // ALU, Multipier, Branch and Jump
   imm_ext.io.inst := reg_id_exe.io.instio.inst_out
@@ -760,6 +775,19 @@ class DataPath extends Module with phvntomParams with projectConfig {
     val dtest_alu = RegInit(UInt(xlen.W), "hdeadbeef".U)
     val dtest_mem = RegInit(false.B)
     val stall_req_counters = RegInit(VecInit(Seq.fill(10)(0.U(xlen.W))))
+    val starting = RegInit(false.B)
+    val counterr = RegInit(0.U(xlen.W))
+
+    when (dtest_pc(31, 0) === "h80239f80".U && dtest_pc(39, 32) === "hff".U) {
+      starting := true.B
+    }.elsewhen (dtest_pc(31, 0) === "h80239f8c".U || dtest_pc(31, 0) === "h80239f8a".U) {
+      starting := false.B
+    }
+    when (starting) {
+       counterr := counterr + 1.U
+    }.otherwise {
+      counterr := 0.U
+    }
 
     stall_req_counters(0) := stall_req_counters(0) + Mux(
       stall_req_if1_atomic,
@@ -927,116 +955,119 @@ class DataPath extends Module with phvntomParams with projectConfig {
           reg_mem3_wb.io.bsrio.bubble_out
         )
       } else {
-        printf("\t\tIF1\tIF2\tIF3\tID\tEXE\tDTLB\tMEM1\tMEM2\tMEM3\tWB\n")
-        printf(
-          "Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
-          stall_req_if1_atomic,
-          0.U,
-          stall_req_if3_atomic,
-          0.U,
-          stall_req_exe_atomic || stall_req_exe_interruptable,
-          stall_req_dtlb_atomic,
-          0.U,
-          0.U,
-          stall_req_mem3_atomic,
-          0.U
-        )
-        printf(
-          "Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
-          stall_pc,
-          stall_if1_if2,
-          stall_if2_if3,
-          stall_if3_id,
-          stall_id_exe,
-          stall_exe_dtlb,
-          stall_dtlb_mem1,
-          stall_mem1_mem2,
-          stall_mem2_mem3,
-          stall_mem3_wb
-        )
-        printf(
-          "PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
-          pc_gen.io.pc_out(15, 0),
-          reg_if1_if2.io.bsrio.pc_out(15, 0),
-          reg_if2_if3.io.bsrio.pc_out(15, 0),
-          reg_if3_id.io.bsrio.pc_out(15, 0),
-          reg_id_exe.io.bsrio.pc_out(15, 0),
-          reg_exe_dtlb.io.bsrio.pc_out(15, 0),
-          reg_dtlb_mem1.io.bsrio.pc_out(15, 0),
-          reg_mem1_mem2.io.bsrio.pc_out(15, 0),
-          reg_mem2_mem3.io.bsrio.pc_out(15, 0),
-          reg_mem3_wb.io.bsrio.pc_out(15, 0)
-        )
-        printf(
-          "Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
-          BUBBLE(15, 0),
-          BUBBLE(15, 0),
-          io.imem.resp.bits.data(15, 0),
-          reg_if3_id.io.instio.inst_out(15, 0),
-          reg_id_exe.io.instio.inst_out(15, 0),
-          reg_exe_dtlb.io.instio.inst_out(15, 0),
-          reg_dtlb_mem1.io.instio.inst_out(15, 0),
-          reg_mem1_mem2.io.instio.inst_out(15, 0),
-          reg_mem2_mem3.io.instio.inst_out(15, 0),
-          reg_mem3_wb.io.instio.inst_out(15, 0)
-        )
-        printf(
-          "AluO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
-          0.U,
-          0.U,
-          0.U,
-          0.U,
-          alu.io.out(15, 0),
-          reg_exe_dtlb.io.aluio.alu_val_out(15, 0),
-          reg_dtlb_mem1.io.aluio.alu_val_out(15, 0),
-          reg_mem1_mem2.io.aluio.alu_val_out(15, 0),
-          reg_mem2_mem3.io.aluio.alu_val_out(15, 0),
-          reg_mem3_wb.io.aluio.alu_val_out(15, 0)
-        )
-        printf(
-          "MemO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
-          0.U,
-          0.U,
-          0.U,
-          0.U,
-          0.U,
-          0.U,
-          0.U,
-          0.U,
-          io.dmem.resp.bits.data(15, 0),
-          reg_mem3_wb.io.memio.mem_val_out(15, 0)
-        )
-        printf(
-          "Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
-          0.U,
-          reg_if1_if2.io.bsrio.bubble_out,
-          reg_if2_if3.io.bsrio.bubble_out,
-          reg_if3_id.io.bsrio.bubble_out,
-          reg_id_exe.io.bsrio.bubble_out,
-          reg_exe_dtlb.io.bsrio.bubble_out,
-          reg_dtlb_mem1.io.bsrio.bubble_out,
-          reg_mem1_mem2.io.bsrio.bubble_out,
-          reg_mem2_mem3.io.bsrio.bubble_out,
-          reg_mem3_wb.io.bsrio.bubble_out
-        )
-        printf(
-          "VA To DMMU %x, VA valid %x, brj_flush %x, PA %x\n",
-          dmmu.io.front.va,
-          dmmu.io.front.valid,
-          br_jump_flush,
-          dmmu.io.front.pa
-        )
-        printf(
-          "PC to dmem %x, Valid to dmem %x, Wen to dmem %x, Wdata to dmem %x, PA to dmem %x, dmem PC out %x, dmem Data out %x\n",
-          reg_dtlb_mem1.io.bsrio.pc_out,
-          io.dmem.req.valid,
-          io.dmem.req.bits.wen,
-          io.dmem.req.bits.data,
-          io.dmem.req.bits.addr,
-          reg_mem2_mem3.io.bsrio.pc_out,
-          io.dmem.resp.bits.data
-        )
-        printf("\n")
+        when (starting === true.B && counterr < 20.U) {
+          printf("\t\tIF1\tIF2\tIF3\tID\tEXE\tDTLB\tMEM1\tMEM2\tMEM3\tWB\n")
+          printf(
+            "Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+            stall_req_if1_atomic,
+            0.U,
+            stall_req_if3_atomic,
+            0.U,
+            stall_req_exe_atomic || stall_req_exe_interruptable,
+            stall_req_dtlb_atomic,
+            0.U,
+            0.U,
+            stall_req_mem3_atomic,
+            0.U
+          )
+          printf(
+            "Stall\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+            stall_pc,
+            stall_if1_if2,
+            stall_if2_if3,
+            stall_if3_id,
+            stall_id_exe,
+            stall_exe_dtlb,
+            stall_dtlb_mem1,
+            stall_mem1_mem2,
+            stall_mem2_mem3,
+            stall_mem3_wb
+          )
+          printf(
+            "PC\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+            pc_gen.io.pc_out(15, 0),
+            reg_if1_if2.io.bsrio.pc_out(15, 0),
+            reg_if2_if3.io.bsrio.pc_out(15, 0),
+            reg_if3_id.io.bsrio.pc_out(15, 0),
+            reg_id_exe.io.bsrio.pc_out(15, 0),
+            reg_exe_dtlb.io.bsrio.pc_out(15, 0),
+            reg_dtlb_mem1.io.bsrio.pc_out(15, 0),
+            reg_mem1_mem2.io.bsrio.pc_out(15, 0),
+            reg_mem2_mem3.io.bsrio.pc_out(15, 0),
+            reg_mem3_wb.io.bsrio.pc_out(15, 0)
+          )
+          printf(
+            "Inst\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+            BUBBLE(15, 0),
+            BUBBLE(15, 0),
+            io.imem.resp.bits.data(15, 0),
+            reg_if3_id.io.instio.inst_out(15, 0),
+            reg_id_exe.io.instio.inst_out(15, 0),
+            reg_exe_dtlb.io.instio.inst_out(15, 0),
+            reg_dtlb_mem1.io.instio.inst_out(15, 0),
+            reg_mem1_mem2.io.instio.inst_out(15, 0),
+            reg_mem2_mem3.io.instio.inst_out(15, 0),
+            reg_mem3_wb.io.instio.inst_out(15, 0)
+          )
+          printf(
+            "AluO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+            0.U,
+            0.U,
+            0.U,
+            0.U,
+            alu.io.out(15, 0),
+            reg_exe_dtlb.io.aluio.alu_val_out(15, 0),
+            reg_dtlb_mem1.io.aluio.alu_val_out(15, 0),
+            reg_mem1_mem2.io.aluio.alu_val_out(15, 0),
+            reg_mem2_mem3.io.aluio.alu_val_out(15, 0),
+            reg_mem3_wb.io.aluio.alu_val_out(15, 0)
+          )
+          printf(
+            "MemO\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+            0.U,
+            0.U,
+            0.U,
+            0.U,
+            0.U,
+            0.U,
+            0.U,
+            0.U,
+            io.dmem.resp.bits.data(15, 0),
+            reg_mem3_wb.io.memio.mem_val_out(15, 0)
+          )
+          printf(
+            "Bubb\t\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+            0.U,
+            reg_if1_if2.io.bsrio.bubble_out,
+            reg_if2_if3.io.bsrio.bubble_out,
+            reg_if3_id.io.bsrio.bubble_out,
+            reg_id_exe.io.bsrio.bubble_out,
+            reg_exe_dtlb.io.bsrio.bubble_out,
+            reg_dtlb_mem1.io.bsrio.bubble_out,
+            reg_mem1_mem2.io.bsrio.bubble_out,
+            reg_mem2_mem3.io.bsrio.bubble_out,
+            reg_mem3_wb.io.bsrio.bubble_out
+          )
+          printf(
+            "VA To DMMU %x, VA valid %x, brj_flush %x, PA %x\n",
+            dmmu.io.front.va,
+            dmmu.io.front.valid,
+            br_jump_flush,
+            dmmu.io.front.pa
+          )
+          printf(
+            "PC to dmem %x, Valid to dmem %x, Wen to dmem %x, Wdata to dmem %x, PA to dmem %x, dmem PC out %x, dmem Data out %x\n",
+            reg_dtlb_mem1.io.bsrio.pc_out,
+            io.dmem.req.valid,
+            io.dmem.req.bits.wen,
+            io.dmem.req.bits.data,
+            io.dmem.req.bits.addr,
+            reg_mem2_mem3.io.bsrio.pc_out,
+            io.dmem.resp.bits.data
+          )
+          printf("half_fetched %x, dp_insert_bubb %x\n", half_fetched, dp_arbiter.io.insert_bubble_next)
+          printf("\n")
+        }
       }
 
       //      if(traceBPU) {
@@ -1091,7 +1122,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
     )
 
     if (pipeTrace || prtHotSpot) {
-      printf("\n")
+      when (starting === true.B && counterr < 20.U) {printf("\n")}
     }
 
     //    printf("------> compare %x, succeed %x, push %x\n", reservation.io.compare, reservation.io.succeed, reservation.io.push)
