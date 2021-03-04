@@ -402,7 +402,11 @@ class CSRFile extends Module with phvntomParams {
   val misar = if (only_M) {
     RegInit(UInt(xlen.W), "h8000000000001101".U)
   } else if (withCExt) {
-    RegInit(UInt(xlen.W), "h8000000000141105".U)
+    if (fpga) { // To make a fool of pk
+      RegInit(UInt(xlen.W), "h8000000000141125".U)
+    } else {
+      RegInit(UInt(xlen.W), "h8000000000141105".U)
+    }
   } else {
     RegInit(UInt(xlen.W), "h8000000000141101".U)
   }
