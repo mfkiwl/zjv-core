@@ -93,7 +93,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
   val inst_af = WireInit(Bool(), false.B)
   val inst_pf = WireInit(Bool(), false.B)
   val feedback_pc = WireInit(UInt(xlen.W), 0.U)
-  val feedback_xored_index = WireInit(UInt(bpuEntryBits.W), 0.U)
   val feedback_is_br = WireInit(Bool(), false.B)
   val feedback_target_pc = WireInit(UInt(xlen.W), 0.U)
   val feedback_br_taken = WireInit(Bool(), false.B)
@@ -134,6 +133,9 @@ class DataPath extends Module with phvntomParams with projectConfig {
   val mem_addr_misaligned = WireInit(Bool(), false.B)
   val amo_bubble_insert = WireInit(Bool(), false.B)
 
+  // Flush
+  val csr_flush = expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
+
   // TODO When AS is decided, this should be changed
   def is_legal_addr(addr: UInt): Bool = {
     //addr(addr.getWidth - 1, addr.getWidth / 2) === 0.U
@@ -172,7 +174,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
   // BPU
   bpu.io.pc_to_predict := pc_gen.io.pc_out
   bpu.io.feedback_pc := reg_exe_dtlb.io.bjio.feedback_pc_out
-  bpu.io.feedback_xored_index := reg_exe_dtlb.io.bjio.feedback_xored_index_out
   bpu.io.feedback_is_br := reg_exe_dtlb.io.bjio.feedback_is_br_out
   bpu.io.feedback_target_pc := reg_exe_dtlb.io.bjio.feedback_target_pc_out
   bpu.io.feedback_br_taken := reg_exe_dtlb.io.bjio.feedback_br_taken_out
@@ -212,8 +213,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   stall_req_if1_atomic := immu.io.front.stall_req || bpu.io.stall_req
 
   reg_if1_if2.io.bsrio.stall := stall_if1_if2
-  reg_if1_if2.io.bsrio.flush_one := (compr_flush || br_jump_flush || expt_int_flush || error_ret_flush ||
-    write_satp_flush || i_fence_flush || s_fence_flush)
+  reg_if1_if2.io.bsrio.flush_one := (compr_flush || br_jump_flush || csr_flush)
   reg_if1_if2.io.bsrio.bubble_in := stall_req_if1_atomic
   reg_if1_if2.io.bsrio.pc_in := pc_gen.io.pc_out
   reg_if1_if2.io.bsrio.last_stage_atomic_stall_req := stall_req_if1_atomic
@@ -223,7 +223,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_if1_if2.io.bsrio.next_stage_flush_req := false.B
   reg_if1_if2.io.bpio.predict_taken_in := bpu.io.branch_taken
   reg_if1_if2.io.bpio.target_in := bpu.io.pc_in_btb
-  reg_if1_if2.io.bpio.xored_index_in := bpu.io.xored_index_out
   reg_if1_if2.io.immuio.use_immu_in := immu.io.front.need_translate
 
   // TODO parallel visiting of RAM and TLB
@@ -254,8 +253,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
 
   // Reg IF2 IF3
   reg_if2_if3.io.bsrio.stall := stall_if2_if3
-  reg_if2_if3.io.bsrio.flush_one := (compr_flush || br_jump_flush || expt_int_flush || error_ret_flush ||
-    write_satp_flush || i_fence_flush || s_fence_flush)
+  reg_if2_if3.io.bsrio.flush_one := (compr_flush || br_jump_flush || csr_flush)
   reg_if2_if3.io.bsrio.bubble_in := reg_if1_if2.io.bsrio.bubble_out
   reg_if2_if3.io.bsrio.pc_in := reg_if1_if2.io.bsrio.pc_out
   reg_if2_if3.io.bsrio.last_stage_atomic_stall_req := false.B
@@ -265,15 +263,13 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_if2_if3.io.bsrio.next_stage_flush_req := false.B
   reg_if2_if3.io.bpio.predict_taken_in := reg_if1_if2.io.bpio.predict_taken_out
   reg_if2_if3.io.bpio.target_in := reg_if1_if2.io.bpio.target_out
-  reg_if2_if3.io.bpio.xored_index_in := reg_if1_if2.io.bpio.xored_index_out
   reg_if2_if3.io.immuio.use_immu_in := reg_if1_if2.io.immuio.use_immu_out
 
   // Reg IF3 ID
   reg_if3_id.io.bsrio.last_stage_atomic_stall_req := stall_req_if3_atomic
   reg_if3_id.io.bsrio.next_stage_atomic_stall_req := false.B
   reg_if3_id.io.bsrio.stall := stall_if3_id
-  reg_if3_id.io.bsrio.flush_one := (compr_flush || br_jump_flush || expt_int_flush || error_ret_flush ||
-    write_satp_flush || i_fence_flush || s_fence_flush)
+  reg_if3_id.io.bsrio.flush_one := (compr_flush || br_jump_flush || csr_flush)
   reg_if3_id.io.bsrio.bubble_in := stall_req_if3_atomic || reg_if2_if3.io.bsrio.bubble_out
   reg_if3_id.io.instio.inst_in := Mux(
     reg_if2_if3.io.ifio.inst_af_out || reg_if2_if3.io.ifio.inst_pf_out,
@@ -282,12 +278,10 @@ class DataPath extends Module with phvntomParams with projectConfig {
   )
   reg_if3_id.io.bsrio.pc_in := reg_if2_if3.io.bsrio.pc_out
   reg_if3_id.io.ifio.inst_af_in := reg_if2_if3.io.ifio.inst_af_out
-  reg_if3_id.io.bsrio.next_stage_flush_req := compr_flush && !(br_jump_flush || expt_int_flush || error_ret_flush ||
-    write_satp_flush || i_fence_flush || s_fence_flush)
+  reg_if3_id.io.bsrio.next_stage_flush_req := compr_flush && !(br_jump_flush || csr_flush)
   reg_if3_id.io.ifio.inst_pf_in := reg_if2_if3.io.ifio.inst_pf_out
   reg_if3_id.io.bpio.predict_taken_in := reg_if2_if3.io.bpio.predict_taken_out
   reg_if3_id.io.bpio.target_in := reg_if2_if3.io.bpio.target_out
-  reg_if3_id.io.bpio.xored_index_in := reg_if2_if3.io.bpio.xored_index_out
   reg_if3_id.io.immuio.use_immu_in := reg_if2_if3.io.immuio.use_immu_out
 
   // Some Special Michanism to Deal with C
@@ -298,8 +292,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
 
   // DP Arbiter
   dp_arbiter.io.next_stage_ready := !stall_id_exe
-  dp_arbiter.io.flush := (br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush ||
-    i_fence_flush || s_fence_flush)
+  dp_arbiter.io.flush := (br_jump_flush || csr_flush)
   dp_arbiter.io.vpc := reg_if3_id.io.bsrio.pc_out
   dp_arbiter.io.inst := reg_if3_id.io.instio.inst_out
   dp_arbiter.io.page_fault := reg_if3_id.io.ifio.inst_pf_out
@@ -322,8 +315,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_id_exe.io.bsrio.last_stage_atomic_stall_req := false.B  // Both IF3ID and DPARBITER are not atomic against flush signal
   reg_id_exe.io.bsrio.next_stage_atomic_stall_req := stall_req_exe_atomic
   reg_id_exe.io.bsrio.stall := stall_id_exe
-  reg_id_exe.io.bsrio.flush_one := (br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush ||
-    i_fence_flush || s_fence_flush)
+  reg_id_exe.io.bsrio.flush_one := (br_jump_flush || csr_flush)
   reg_id_exe.io.bsrio.bubble_in := Mux(dp_arbiter.io.full_inst_ready, false.B,
     reg_if3_id.io.bsrio.bubble_out || half_fetched || dp_arbiter.io.insert_bubble_next)
   reg_id_exe.io.instio.inst_in := Mux(dp_arbiter.io.full_inst_ready, dp_arbiter.io.full_inst, reg_if3_id.io.instio.inst_out)
@@ -337,8 +329,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
     RegNext(reg_if3_id.io.bpio.predict_taken_out), reg_if3_id.io.bpio.predict_taken_out)
   reg_id_exe.io.bpio.target_in := Mux(dp_arbiter.io.full_inst_ready,
     RegNext(reg_if3_id.io.bpio.target_out), reg_if3_id.io.bpio.target_out)
-  reg_id_exe.io.bpio.xored_index_in := Mux(dp_arbiter.io.full_inst_ready,
-    RegNext(reg_if3_id.io.bpio.xored_index_out), reg_if3_id.io.bpio.xored_index_out)
 
   // ALU, Multipier, Branch and Jump
   imm_ext.io.inst := reg_id_exe.io.instio.inst_out
@@ -360,7 +350,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
   branch_cond.io.brType := reg_id_exe.io.iiio.inst_info_out.brType
 
   feedback_pc := reg_id_exe.io.bsrio.pc_out
-  feedback_xored_index := reg_id_exe.io.bpio.xored_index_out
   feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump)
   feedback_target_pc := alu.io.out
   feedback_br_taken := branch_cond.io.branch || reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump
@@ -462,7 +451,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_exe_dtlb.io.bsrio.last_stage_atomic_stall_req := stall_req_exe_atomic
   reg_exe_dtlb.io.bsrio.next_stage_atomic_stall_req := stall_req_dtlb_atomic
   reg_exe_dtlb.io.bsrio.stall := stall_exe_dtlb
-  reg_exe_dtlb.io.bsrio.flush_one := br_jump_flush || expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
+  reg_exe_dtlb.io.bsrio.flush_one := br_jump_flush || csr_flush
   reg_exe_dtlb.io.bsrio.bubble_in := (reg_id_exe.io.bsrio.bubble_out || stall_req_exe_atomic ||
     stall_req_exe_interruptable)
   reg_exe_dtlb.io.instio.inst_in := reg_id_exe.io.instio.inst_out
@@ -472,8 +461,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_exe_dtlb.io.aluio.alu_val_in := alu.io.out
   reg_exe_dtlb.io.aluio.mem_wdata_in := rs2
   reg_exe_dtlb.io.ifio.inst_af_in := reg_id_exe.io.ifio.inst_af_out
-  reg_exe_dtlb.io.bsrio.next_stage_flush_req := (br_jump_flush && !(expt_int_flush || error_ret_flush ||
-    write_satp_flush || i_fence_flush || s_fence_flush))
+  reg_exe_dtlb.io.bsrio.next_stage_flush_req := (br_jump_flush && !csr_flush)
   reg_exe_dtlb.io.ifio.inst_pf_in := reg_id_exe.io.ifio.inst_pf_out
   reg_exe_dtlb.io.hpfio.high_pf_in := reg_id_exe.io.hpfio.high_pf_out
   reg_exe_dtlb.io.bjio.misprediction_in := misprediction
@@ -485,7 +473,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
     alu.io.out
   )
   reg_exe_dtlb.io.bjio.feedback_pc_in := feedback_pc
-  reg_exe_dtlb.io.bjio.feedback_xored_index_in := feedback_xored_index
   reg_exe_dtlb.io.bjio.feedback_is_br_in := feedback_is_br
   reg_exe_dtlb.io.bjio.feedback_target_pc_in := feedback_target_pc
   reg_exe_dtlb.io.bjio.feedback_br_taken_in := feedback_br_taken
@@ -493,7 +480,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_exe_dtlb.io.mdio.rs2_after_fwd_in := rs2
   reg_exe_dtlb.io.bpio.predict_taken_in := reg_id_exe.io.bpio.predict_taken_out
   reg_exe_dtlb.io.bpio.target_in := reg_id_exe.io.bpio.target_out
-  reg_exe_dtlb.io.bpio.xored_index_in := reg_id_exe.io.bpio.xored_index_out
 
   jump_flush := reg_exe_dtlb.io.iiio.inst_info_out.pcSelect === pcJump && (!reg_exe_dtlb.io.bpio.predict_taken_out ||
     reg_exe_dtlb.io.aluio.alu_val_out =/= reg_exe_dtlb.io.bpio.target_out)
@@ -550,7 +536,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_dtlb_mem1.io.bsrio.last_stage_atomic_stall_req := stall_req_dtlb_atomic
   reg_dtlb_mem1.io.bsrio.next_stage_atomic_stall_req := false.B
   reg_dtlb_mem1.io.bsrio.stall := stall_dtlb_mem1
-  reg_dtlb_mem1.io.bsrio.flush_one := expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
+  reg_dtlb_mem1.io.bsrio.flush_one := csr_flush
   reg_dtlb_mem1.io.bsrio.bubble_in := (reg_exe_dtlb.io.bsrio.bubble_out || stall_req_dtlb_atomic || amo_bubble_insert)
   reg_dtlb_mem1.io.instio.inst_in := reg_exe_dtlb.io.instio.inst_out
   reg_dtlb_mem1.io.bsrio.pc_in := reg_exe_dtlb.io.bsrio.pc_out
@@ -571,7 +557,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_dtlb_mem1.io.intio.external_int_in := io.int.meip
   reg_dtlb_mem1.io.intio.s_external_int_in := io.int.seip
   reg_dtlb_mem1.io.ifio.inst_af_in := reg_exe_dtlb.io.ifio.inst_af_out
-  reg_dtlb_mem1.io.bsrio.next_stage_flush_req := expt_int_flush || error_ret_flush || write_satp_flush || i_fence_flush || s_fence_flush
+  reg_dtlb_mem1.io.bsrio.next_stage_flush_req := csr_flush
   reg_dtlb_mem1.io.ifio.inst_pf_in := reg_exe_dtlb.io.ifio.inst_pf_out
   reg_dtlb_mem1.io.hpfio.high_pf_in := reg_exe_dtlb.io.hpfio.high_pf_out
   reg_dtlb_mem1.io.intio.mem_af_in := mem_af
