@@ -38,10 +38,8 @@ class InstFaultIO extends Bundle with phvntomParams {
 class BPUPredictIO extends Bundle with phvntomParams {
   val predict_taken_in = Input(Bool())
   val target_in = Input(UInt(xlen.W))
-  val xored_index_in = Input(UInt(bpuEntryBits.W))
   val predict_taken_out = Output(Bool())
   val target_out = Output(UInt(xlen.W))
-  val xored_index_out = Output(UInt(bpuEntryBits.W))
 }
 
 class InstIO extends Bundle with phvntomParams {
@@ -74,7 +72,6 @@ class BrJumpDelayIO extends Bundle with phvntomParams {
   val predict_taken_but_not_br_in = Input(Bool())
   val bjpc_in = Input(UInt(xlen.W))
   val feedback_pc_in = Input(UInt(xlen.W))
-  val feedback_xored_index_in = Input(UInt(bpuEntryBits.W))
   val feedback_is_br_in = Input(Bool())
   val feedback_target_pc_in = Input(UInt(xlen.W))
   val feedback_br_taken_in = Input(Bool())
@@ -83,7 +80,6 @@ class BrJumpDelayIO extends Bundle with phvntomParams {
   val predict_taken_but_not_br_out = Output(Bool())
   val bjpc_out = Output(UInt(xlen.W))
   val feedback_pc_out = Output(UInt(xlen.W))
-  val feedback_xored_index_out = Output(UInt(bpuEntryBits.W))
   val feedback_is_br_out = Output(Bool())
   val feedback_target_pc_out = Output(UInt(xlen.W))
   val feedback_br_taken_out = Output(Bool())
@@ -148,7 +144,6 @@ class RegIf1If2 extends Module with phvntomParams {
   val inst_pf = RegInit(Bool(), false.B)
   val predict_tk = RegInit(Bool(), false.B)
   val ptar = RegInit(UInt(xlen.W), 0.U)
-  val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
   val use_immu = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
@@ -172,7 +167,6 @@ class RegIf1If2 extends Module with phvntomParams {
       predict_tk := false.B
       ptar := 0.U
       use_immu := false.B
-      xored_index := 0.U
     }.otherwise {
       pc := io.bsrio.pc_in
       bubble := false.B
@@ -181,9 +175,8 @@ class RegIf1If2 extends Module with phvntomParams {
       predict_tk := io.bpio.predict_taken_in
       ptar := io.bpio.target_in
       use_immu := io.immuio.use_immu_in
-      xored_index := io.bpio.xored_index_in
     }
-  }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
+  }.elsewhen(/*!io.bsrio.next_stage_atomic_stall_req && */io.bsrio.flush_one/* && !io.bsrio.next_stage_flush_req */) {
     pc := 0.U
     bubble := true.B
     inst_af := false.B
@@ -191,7 +184,6 @@ class RegIf1If2 extends Module with phvntomParams {
     predict_tk := false.B
     ptar := 0.U
     use_immu := false.B
-    xored_index := 0.U
   }
 
   io.bsrio.bubble_out := bubble
@@ -201,7 +193,6 @@ class RegIf1If2 extends Module with phvntomParams {
   io.bpio.predict_taken_out := predict_tk
   io.bpio.target_out := ptar
   io.immuio.use_immu_out := use_immu
-  io.bpio.xored_index_out := xored_index
 }
 
 class RegIf3IdIO extends Bundle with phvntomParams {
@@ -224,7 +215,6 @@ class RegIf3Id extends Module with phvntomParams {
   val predict_tk = RegInit(Bool(), false.B)
   val ptar = RegInit(UInt(xlen.W), 0.U)
   val use_immu = RegInit(Bool(), false.B)
-  val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
@@ -252,7 +242,6 @@ class RegIf3Id extends Module with phvntomParams {
       predict_tk := false.B
       ptar := 0.U
       use_immu := false.B
-      xored_index := 0.U
     }.otherwise {
       pc := io.bsrio.pc_in
       bubble := false.B
@@ -263,9 +252,8 @@ class RegIf3Id extends Module with phvntomParams {
       predict_tk := io.bpio.predict_taken_in
       ptar := io.bpio.target_in
       use_immu := io.immuio.use_immu_in
-      xored_index := io.bpio.xored_index_in
     }
-  }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
+  }.elsewhen(/*!io.bsrio.next_stage_atomic_stall_req && */io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
     pc := 0.U
     bubble := true.B
     inst := BUBBLE
@@ -275,7 +263,6 @@ class RegIf3Id extends Module with phvntomParams {
     predict_tk := false.B
     ptar := 0.U
     use_immu := false.B
-    xored_index := 0.U
   }
 
   io.bsrio.bubble_out := bubble
@@ -286,7 +273,6 @@ class RegIf3Id extends Module with phvntomParams {
   io.bpio.predict_taken_out := predict_tk
   io.bpio.target_out := ptar
   io.immuio.use_immu_out := use_immu
-  io.bpio.xored_index_out := xored_index
   io.half_fetched_regif3id := half_fetched
 }
 
@@ -309,17 +295,18 @@ class RegIdExe extends Module with phvntomParams {
   val inst_pf = RegInit(Bool(), false.B)
   val predict_tk = RegInit(Bool(), false.B)
   val ptar = RegInit(UInt(xlen.W), 0.U)
-  val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
-  val inst_info = RegInit(UInt((instBits + pcSelectBits +
+  val minimal_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
+  val default_inst_info = if (enable_pec) Cat(minimal_inst_info, false.B) else minimal_inst_info
+  val inst_info_len = (instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth) + { if (enable_pec) 1 else 0 }
+  val inst_info = RegInit(UInt(inst_info_len.W),
     default_inst_info)
   val hpf = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
-  val this_stall = io.bsrio.stall || io.bsrio.last_stage_atomic_stall_req
+  val this_stall = io.bsrio.stall/* || io.bsrio.last_stage_atomic_stall_req*/
 
   last_delay := this_stall
 
@@ -338,7 +325,6 @@ class RegIdExe extends Module with phvntomParams {
       inst_pf := false.B
       predict_tk := false.B
       ptar := 0.U
-      xored_index := 0.U
       inst_info := default_inst_info
       hpf := false.B
     }.otherwise {
@@ -349,11 +335,10 @@ class RegIdExe extends Module with phvntomParams {
       inst_pf := io.ifio.inst_pf_in
       predict_tk := io.bpio.predict_taken_in
       ptar := io.bpio.target_in
-      xored_index := io.bpio.xored_index_in
       inst_info := io.iiio.inst_info_in.asUInt
       hpf := io.hpfio.high_pf_in
     }
-  }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
+  }.elsewhen(/*!io.bsrio.next_stage_atomic_stall_req && */io.bsrio.flush_one/* && !io.bsrio.next_stage_flush_req*/) {
     pc := 0.U
     bubble := true.B
     inst := BUBBLE
@@ -361,7 +346,6 @@ class RegIdExe extends Module with phvntomParams {
     inst_pf := false.B
     predict_tk := false.B
     ptar := 0.U
-    xored_index := 0.U
     inst_info := default_inst_info
     hpf := false.B
   }
@@ -374,7 +358,6 @@ class RegIdExe extends Module with phvntomParams {
   io.ifio.inst_pf_out := inst_pf
   io.bpio.predict_taken_out := predict_tk
   io.bpio.target_out := ptar
-  io.bpio.xored_index_out := xored_index
   io.hpfio.high_pf_out := hpf
 }
 
@@ -395,14 +378,16 @@ class RegExeDTLB extends Module with phvntomParams {
   val io = IO(new RegExeDTLBIO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), BUBBLE) 
+  val inst = RegInit(UInt(32.W), BUBBLE)
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
-  val inst_info = RegInit(UInt((instBits + pcSelectBits +
+  val minimal_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
+  val default_inst_info = if (enable_pec) Cat(minimal_inst_info, false.B) else minimal_inst_info
+  val inst_info_len = (instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth) + { if (enable_pec) 1 else 0 }
+  val inst_info = RegInit(UInt(inst_info_len.W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -412,7 +397,6 @@ class RegExeDTLB extends Module with phvntomParams {
   val predict_taken_but_not_br = RegInit(Bool(), false.B)
   val bjpc = RegInit(UInt(xlen.W), startAddr.asUInt)
   val feedback_pc = RegInit(UInt(xlen.W), startAddr.asUInt)
-  val feedback_xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
   val feedback_is_br = RegInit(Bool(), false.B)
   val feedback_target_pc = RegInit(UInt(xlen.W), startAddr.asUInt)
   val feedback_br_taken = RegInit(Bool(), false.B)
@@ -421,12 +405,11 @@ class RegExeDTLB extends Module with phvntomParams {
   val bpufb_stall_update = RegInit(Bool(), false.B)
   val predict_tk = RegInit(Bool(), false.B)
   val ptar = RegInit(UInt(xlen.W), 0.U)
-  val xored_index = RegInit(UInt(bpuEntryBits.W), 0.U)
   val hpf = RegInit(Bool(), false.B)
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
-  val this_stall = io.bsrio.stall || io.bsrio.last_stage_atomic_stall_req
+  val this_stall = io.bsrio.stall/* || io.bsrio.last_stage_atomic_stall_req*/
 
   last_delay := this_stall
 
@@ -452,7 +435,6 @@ class RegExeDTLB extends Module with phvntomParams {
       predict_taken_but_not_br := false.B
       bjpc := startAddr.asUInt
       feedback_pc := startAddr.asUInt
-      feedback_xored_index := 0.U
       feedback_is_br := false.B
       feedback_target_pc := startAddr.asUInt
       feedback_br_taken := false.B
@@ -461,7 +443,6 @@ class RegExeDTLB extends Module with phvntomParams {
       bpufb_stall_update := true.B
       predict_tk := false.B
       ptar := 0.U
-      xored_index := 0.U
       hpf := false.B
     }.otherwise {
       pc := io.bsrio.pc_in
@@ -478,7 +459,6 @@ class RegExeDTLB extends Module with phvntomParams {
       predict_taken_but_not_br := io.bjio.predict_taken_but_not_br_in
       bjpc := io.bjio.bjpc_in
       feedback_pc := io.bjio.feedback_pc_in
-      feedback_xored_index := io.bjio.feedback_xored_index_in
       feedback_is_br := io.bjio.feedback_is_br_in
       feedback_target_pc := io.bjio.feedback_target_pc_in
       feedback_br_taken := io.bjio.feedback_br_taken_in
@@ -487,7 +467,6 @@ class RegExeDTLB extends Module with phvntomParams {
       bpufb_stall_update := false.B
       predict_tk := io.bpio.predict_taken_in
       ptar := io.bpio.target_in
-      xored_index := io.bpio.xored_index_in
       hpf := io.hpfio.high_pf_in
     }
   }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
@@ -505,7 +484,6 @@ class RegExeDTLB extends Module with phvntomParams {
     predict_taken_but_not_br := false.B
     bjpc := startAddr.asUInt
     feedback_pc := startAddr.asUInt
-    feedback_xored_index := 0.U
     feedback_is_br := false.B
     feedback_target_pc := startAddr.asUInt
     feedback_br_taken := false.B
@@ -514,7 +492,6 @@ class RegExeDTLB extends Module with phvntomParams {
     bpufb_stall_update := true.B
     predict_tk := false.B
     ptar := 0.U
-    xored_index := 0.U
     hpf := false.B
   }.elsewhen(io.bsrio.flush_one) {
     bpufb_stall_update := true.B
@@ -538,7 +515,6 @@ class RegExeDTLB extends Module with phvntomParams {
   io.bjio.predict_taken_but_not_br_out := predict_taken_but_not_br
   io.bjio.bjpc_out := bjpc
   io.bjio.feedback_pc_out := feedback_pc
-  io.bjio.feedback_xored_index_out := feedback_xored_index
   io.bjio.feedback_is_br_out := feedback_is_br
   io.bjio.feedback_target_pc_out := feedback_target_pc
   io.bjio.feedback_br_taken_out := feedback_br_taken
@@ -547,7 +523,6 @@ class RegExeDTLB extends Module with phvntomParams {
   io.bpufb_stall_update := bpufb_stall_update
   io.bpio.predict_taken_out := predict_tk
   io.bpio.target_out := ptar
-  io.bpio.xored_index_out := xored_index
   io.hpfio.high_pf_out := hpf
 }
 
@@ -565,16 +540,18 @@ class RegDTLBMem1 extends Module with phvntomParams {
   val io = IO(new RegDTLBMem1IO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), BUBBLE) 
+  val inst = RegInit(UInt(32.W), BUBBLE)
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
   val mem_af = RegInit(Bool(), false.B)
   val mem_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
-  val inst_info = RegInit(UInt((instBits + pcSelectBits +
+  val minimal_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
+  val default_inst_info = if (enable_pec) Cat(minimal_inst_info, false.B) else minimal_inst_info
+  val inst_info_len = (instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth) + { if (enable_pec) 1 else 0 }
+  val inst_info = RegInit(UInt(inst_info_len.W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -633,7 +610,7 @@ class RegDTLBMem1 extends Module with phvntomParams {
       s_extern_int := io.intio.s_external_int_in
       hpf := io.hpfio.high_pf_in
     }
-  }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
+  }.elsewhen(/*!io.bsrio.next_stage_atomic_stall_req && */io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
     pc := 0.U
     bubble := true.B
     inst := BUBBLE
@@ -687,12 +664,14 @@ class RegMem1Mem2 extends Module with phvntomParams {
   val io = IO(new RegMem1Mem2IO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), BUBBLE) 
+  val inst = RegInit(UInt(32.W), BUBBLE)
   val pc = RegInit(UInt(xlen.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
-  val inst_info = RegInit(UInt((instBits + pcSelectBits +
+  val minimal_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
+  val default_inst_info = if (enable_pec) Cat(minimal_inst_info, false.B) else minimal_inst_info
+  val inst_info_len = (instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth) + { if (enable_pec) 1 else 0 }
+  val inst_info = RegInit(UInt(inst_info_len.W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -706,7 +685,7 @@ class RegMem1Mem2 extends Module with phvntomParams {
 
   val delay_flush = RegInit(Bool(), false.B)
   val last_delay = RegInit(Bool(), false.B)
-  val this_stall = io.bsrio.stall || io.bsrio.last_stage_atomic_stall_req
+  val this_stall = io.bsrio.stall/* || io.bsrio.last_stage_atomic_stall_req*/
 
   last_delay := this_stall
 
@@ -746,20 +725,20 @@ class RegMem1Mem2 extends Module with phvntomParams {
       comp_res := io.csrio.comp_res_in
       af := io.csrio.af_in
     }
-  }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
-    pc := 0.U
-    bubble := true.B
-    inst := BUBBLE
-    inst_info := default_inst_info
-    alu_val := 0.U
-    inst_addr_misaligned := false.B
-    mem_wdata := 0.U
-    csr_val := 0.U
-    expt := false.B
-    interrupt := false.B
-    compare := false.B
-    comp_res := false.B
-    af := false.B
+//  }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
+//    pc := 0.U
+//    bubble := true.B
+//    inst := BUBBLE
+//    inst_info := default_inst_info
+//    alu_val := 0.U
+//    inst_addr_misaligned := false.B
+//    mem_wdata := 0.U
+//    csr_val := 0.U
+//    expt := false.B
+//    interrupt := false.B
+//    compare := false.B
+//    comp_res := false.B
+//    af := false.B
   }
 
   io.bsrio.bubble_out := bubble
@@ -790,12 +769,14 @@ class RegMem3Wb extends Module with phvntomParams {
   val io = IO(new RegMem3WbIO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), BUBBLE) 
+  val inst = RegInit(UInt(32.W), BUBBLE)
   val pc = RegInit(UInt(xlen.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
-  val inst_info = RegInit(UInt((instBits + pcSelectBits +
+  val minimal_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
+  val default_inst_info = if (enable_pec) Cat(minimal_inst_info, false.B) else minimal_inst_info
+  val inst_info_len = (instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth) + { if (enable_pec) 1 else 0 }
+  val inst_info = RegInit(UInt(inst_info_len.W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -852,21 +833,21 @@ class RegMem3Wb extends Module with phvntomParams {
       comp_res := io.csrio.comp_res_in
       af := io.csrio.af_in
     }
-  }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
-    pc := 0.U
-    bubble := true.B
-    inst := BUBBLE
-    inst_info := default_inst_info
-    alu_val := 0.U
-    inst_addr_misaligned := false.B
-    mem_wdata := 0.U
-    csr_val := 0.U
-    expt := false.B
-    interrupt := false.B
-    mem_val := 0.U
-    compare := false.B
-    comp_res := false.B
-    af := false.B
+//  }.elsewhen(!io.bsrio.next_stage_atomic_stall_req && io.bsrio.flush_one && !io.bsrio.next_stage_flush_req) {
+//    pc := 0.U
+//    bubble := true.B
+//    inst := BUBBLE
+//    inst_info := default_inst_info
+//    alu_val := 0.U
+//    inst_addr_misaligned := false.B
+//    mem_wdata := 0.U
+//    csr_val := 0.U
+//    expt := false.B
+//    interrupt := false.B
+//    mem_val := 0.U
+//    compare := false.B
+//    comp_res := false.B
+//    af := false.B
   }
 
   io.bsrio.bubble_out := bubble

@@ -186,22 +186,8 @@ class InterruptJudger extends Module with phvntomParams {
   }
 }
 
-
 class ExceptionJudgerIO extends Bundle with phvntomParams {
-  val breakpoint = Input(Bool())
-  val inst_pf = Input(Bool())
-  val inst_af = Input(Bool())
-  val illegal_inst = Input(Bool())
-  val inst_ma = Input(Bool())
-  val ecall_m = Input(Bool())
-  val ecall_s = Input(Bool())
-  val ecall_u = Input(Bool())
-  val store_ma = Input(Bool())
-  val load_ma = Input(Bool())
-  val store_pf = Input(Bool())
-  val load_pf = Input(Bool())
-  val store_af = Input(Bool())
-  val load_af = Input(Bool())
+  val expt_vec = Input(UInt(16.W))
   val has_except = Output(Bool())
   val except_out = Output(UInt(4.W))
 }
@@ -209,52 +195,17 @@ class ExceptionJudgerIO extends Bundle with phvntomParams {
 class ExceptionJudger extends Module with phvntomParams {
   val io = IO(new ExceptionJudgerIO)
 
-  when(io.breakpoint) {
-    io.has_except := true.B
-    io.except_out := Exception.Breakpoint
-  }.elsewhen(io.inst_pf) {
-    io.has_except := true.B
-    io.except_out := Exception.InstPageFault
-  }.elsewhen(io.inst_af) {
-    io.has_except := true.B
-    io.except_out := Exception.InstAccessFault
-  }.elsewhen(io.illegal_inst) {
-    io.has_except := true.B
-    io.except_out := Exception.IllegalInst
-  }.elsewhen(io.inst_ma) {
-    io.has_except := true.B
-    io.except_out := Exception.InstAddrMisaligned
-  }.elsewhen(io.ecall_m) {
-    io.has_except := true.B
-    io.except_out := Exception.EcallM
-  }.elsewhen(io.ecall_s) {
-    io.has_except := true.B
-    io.except_out := Exception.EcallS
-  }.elsewhen(io.ecall_u) {
-    io.has_except := true.B
-    io.except_out := Exception.EcallU
-  }.elsewhen(io.store_ma) {
-    io.has_except := true.B
-    io.except_out := Exception.StoreAddrMisaligned
-  }.elsewhen(io.load_ma) {
-    io.has_except := true.B
-    io.except_out := Exception.LoadAddrMisaligned
-  }.elsewhen(io.store_pf) {
-    io.has_except := true.B
-    io.except_out := Exception.StorePageFault
-  }.elsewhen(io.load_pf) {
-    io.has_except := true.B
-    io.except_out := Exception.LoadPageFault
-  }.elsewhen(io.store_af) {
-    io.has_except := true.B
-    io.except_out := Exception.StoreAccessFault
-  }.elsewhen(io.load_af) {
-    io.has_except := true.B
-    io.except_out := Exception.LoadAccessFault
-  }.otherwise {
-    io.has_except := false.B
-    io.except_out := Exception.IllegalInst
-  }
+  val expt_prio_seq = Seq(
+    Exception.Breakpoint, 
+    Exception.InstPageFault, Exception.InstAccessFault, Exception.IllegalInst, Exception.InstAddrMisaligned,
+    Exception.EcallM, Exception.EcallS, Exception.EcallU,
+    Exception.StoreAddrMisaligned, Exception.LoadAddrMisaligned, 
+    Exception.StorePageFault, Exception.LoadPageFault,
+    Exception.StoreAccessFault, Exception.LoadAccessFault
+  )
+
+  io.except_out := expt_prio_seq.foldRight(0.U)((i: UInt, sum: UInt) => Mux(io.expt_vec(i), i, sum))
+  io.has_except := io.expt_vec.orR
 }
 
 class CSRFileIO extends Bundle with phvntomParams {
@@ -461,23 +412,27 @@ class CSRFile extends Module with phvntomParams {
   //  [--------- User Mode Registers in CSR --------]
 
   // [--------- Debug Registers in CSR --------]
-  val tselectr = RegInit(0.U(xlen.W))
-  val tdata1r = RegInit(0.U(xlen.W))
-  val tdata2r = RegInit(0.U(xlen.W))
-  val tdata3r = RegInit(0.U(xlen.W))
+//  val tselectr = RegInit(0.U(xlen.W))
+//  val tdata1r = RegInit(0.U(xlen.W))
+//  val tdata2r = RegInit(0.U(xlen.W))
+//  val tdata3r = RegInit(0.U(xlen.W))
 
   // [--------- Floating Point Registers in CSR ---------]
   val fcsrr = Cat(0.U((24 + 32).W), fcsrr_frm, fcsrr_nv, fcsrr_dz, fcsrr_of, fcsrr_uf, fcsrr_nx)
 
   // [--------- Pointer Encryption Registers in CSR ---------]
-  val scrtkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val scrtkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val scrakeylr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val scrakeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val scrbkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val scrbkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val mcrmkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val mcrmkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else null
+  val scrtkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val scrtkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val scrakeylr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val scrakeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val scrbkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val scrbkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val mcrmkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val mcrmkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+
+  val access_csr = io.wen || io.cen || io.sen
+  val valid = !io.stall && !io.bubble
+  val new_key = WireDefault(UInt(64.W), scrtkeylr)
 
   // Interrupt Pending For Read Signals
   val seip_for_read = io.int_pend.seip || mipr_seip
@@ -522,7 +477,7 @@ class CSRFile extends Module with phvntomParams {
   expt_vec(Exception.EcallU) := current_p === CSR.PRV_U && io.is_ecall
   expt_vec(Exception.IllegalInst) := (io.illegal_inst || tw_wfi_illegal || tvm_sfence_illegal || tsr_sret_illegal ||
     ((csr_not_exists || bad_csr_access) &&
-      (io.wen || io.cen || io.sen)))
+      access_csr))
   expt_vec(Exception.InstAccessFault) := io.inst_af
   expt_vec(Exception.InstAddrMisaligned) := io.inst_ma
   expt_vec(Exception.InstPageFault) := io.inst_pf || io.high_pf
@@ -532,20 +487,7 @@ class CSRFile extends Module with phvntomParams {
   expt_vec(Exception.StoreAccessFault) := io.mem_af && io.is_store
   expt_vec(Exception.StoreAddrMisaligned) := io.mem_ma && io.is_store
   expt_vec(Exception.StorePageFault) := io.mem_pf && io.is_store
-  expt_judger.io.breakpoint := expt_vec(Exception.Breakpoint)
-  expt_judger.io.inst_pf := expt_vec(Exception.InstPageFault)
-  expt_judger.io.inst_af := expt_vec(Exception.InstAccessFault)
-  expt_judger.io.illegal_inst := expt_vec(Exception.IllegalInst)
-  expt_judger.io.inst_ma := expt_vec(Exception.InstAddrMisaligned)
-  expt_judger.io.ecall_m := expt_vec(Exception.EcallM)
-  expt_judger.io.ecall_s := expt_vec(Exception.EcallS)
-  expt_judger.io.ecall_u := expt_vec(Exception.EcallU)
-  expt_judger.io.store_ma := expt_vec(Exception.StoreAddrMisaligned)
-  expt_judger.io.load_ma := expt_vec(Exception.LoadAddrMisaligned)
-  expt_judger.io.store_pf := expt_vec(Exception.StorePageFault)
-  expt_judger.io.load_pf := expt_vec(Exception.LoadPageFault)
-  expt_judger.io.store_af := expt_vec(Exception.StoreAccessFault)
-  expt_judger.io.load_af := expt_vec(Exception.LoadAccessFault)
+  expt_judger.io.expt_vec := expt_vec.asUInt
   val has_expt_comb = expt_judger.io.has_except
   val expt_num_comb = expt_judger.io.except_out
 
@@ -562,9 +504,9 @@ class CSRFile extends Module with phvntomParams {
   // Output Comb Logic
   io.tvec_out := Mux(check_bit && has_int_comb, trap_addr + (int_num_comb << 2.U), trap_addr)
   io.epc_out := eret_addr
-  io.expt_or_int_out := !io.stall && !io.bubble && (has_expt_comb || has_int_comb)
-  io.interrupt_out := !io.stall && !io.bubble && has_int_comb
-  io.is_ret_out := !io.stall && !io.bubble && eret
+  io.expt_or_int_out := valid && (has_expt_comb || has_int_comb)
+  io.interrupt_out := valid && has_int_comb
+  io.is_ret_out := valid && eret
 
   // Write Signal for MTVAL or STVAL
   val write_tval = io.mem_af || io.mem_pf || io.mem_ma || io.inst_af || io.inst_pf || io.inst_ma || io.high_pf
@@ -602,7 +544,7 @@ class CSRFile extends Module with phvntomParams {
     }.elsewhen(io.cen) {
       minstretr := minstretr & (~io.wdata)
     }
-  }.elsewhen(!io.stall && !io.bubble) {
+  }.elsewhen(valid) {
     minstretr := minstretr + 1.U(1.W)
   }
 
@@ -710,18 +652,18 @@ class CSRFile extends Module with phvntomParams {
   }.elsewhen(io.which_reg === CSR.satp) {
     io.rdata := satpr
     bad_csr_access := bad_csr_s
-  }.elsewhen(io.which_reg === CSR.tselect) {
-    io.rdata := tselectr
-    bad_csr_access := false.B
-  }.elsewhen(io.which_reg === CSR.tdata1) {
-    io.rdata := tdata1r
-    bad_csr_access := false.B
-  }.elsewhen(io.which_reg === CSR.tdata2) {
-    io.rdata := tdata2r
-    bad_csr_access := false.B
-  }.elsewhen(io.which_reg === CSR.tdata3) {
-    io.rdata := tdata3r
-    bad_csr_access := false.B
+//  }.elsewhen(io.which_reg === CSR.tselect) {
+//    io.rdata := tselectr
+//    bad_csr_access := false.B
+//  }.elsewhen(io.which_reg === CSR.tdata1) {
+//    io.rdata := tdata1r
+//    bad_csr_access := false.B
+//  }.elsewhen(io.which_reg === CSR.tdata2) {
+//    io.rdata := tdata2r
+//    bad_csr_access := false.B
+//  }.elsewhen(io.which_reg === CSR.tdata3) {
+//    io.rdata := tdata3r
+//    bad_csr_access := false.B
   }.elsewhen(io.which_reg === CSR.mcycle) {
     io.rdata := mcycler + 4.U(3.W)
     bad_csr_access := bad_csr_m
@@ -774,7 +716,7 @@ class CSRFile extends Module with phvntomParams {
   // [========== CSR Read End ==========]
 
   // Write CSR File
-  when(!io.stall && !io.bubble) {
+  when(valid) {
     when(has_int_comb || has_expt_comb) {
       when(deleg_2_s) {
         when(has_int_comb) {
@@ -1108,38 +1050,38 @@ class CSRFile extends Module with phvntomParams {
         }.elsewhen(io.cen) {
           scounterenr := scounterenr & (~io.wdata(31, 0))
         }
-      }.elsewhen(io.which_reg === CSR.tselect) {
-        when(io.wen) {
-          tselectr := io.wdata
-        }.elsewhen(io.sen) {
-          tselectr := tselectr | io.wdata
-        }.elsewhen(io.cen) {
-          tselectr := tselectr & (~io.wdata)
-        }
-      }.elsewhen(io.which_reg === CSR.tdata1) {
-        when(io.wen) {
-          tdata1r := io.wdata
-        }.elsewhen(io.sen) {
-          tdata1r := tdata1r | io.wdata
-        }.elsewhen(io.cen) {
-          tdata1r := tdata1r & (~io.wdata)
-        }
-      }.elsewhen(io.which_reg === CSR.tdata2) {
-        when(io.wen) {
-          tdata2r := io.wdata
-        }.elsewhen(io.sen) {
-          tdata2r := tdata2r | io.wdata
-        }.elsewhen(io.cen) {
-          tdata2r := tdata2r & (~io.wdata)
-        }
-      }.elsewhen(io.which_reg === CSR.tdata3) {
-        when(io.wen) {
-          tdata3r := io.wdata
-        }.elsewhen(io.sen) {
-          tdata3r := tdata3r | io.wdata
-        }.elsewhen(io.cen) {
-          tdata3r := tdata3r & (~io.wdata)
-        }
+//      }.elsewhen(io.which_reg === CSR.tselect) {
+//        when(io.wen) {
+//          tselectr := io.wdata
+//        }.elsewhen(io.sen) {
+//          tselectr := tselectr | io.wdata
+//        }.elsewhen(io.cen) {
+//          tselectr := tselectr & (~io.wdata)
+//        }
+//      }.elsewhen(io.which_reg === CSR.tdata1) {
+//        when(io.wen) {
+//          tdata1r := io.wdata
+//        }.elsewhen(io.sen) {
+//          tdata1r := tdata1r | io.wdata
+//        }.elsewhen(io.cen) {
+//          tdata1r := tdata1r & (~io.wdata)
+//        }
+//      }.elsewhen(io.which_reg === CSR.tdata2) {
+//        when(io.wen) {
+//          tdata2r := io.wdata
+//        }.elsewhen(io.sen) {
+//          tdata2r := tdata2r | io.wdata
+//        }.elsewhen(io.cen) {
+//          tdata2r := tdata2r & (~io.wdata)
+//        }
+//      }.elsewhen(io.which_reg === CSR.tdata3) {
+//        when(io.wen) {
+//          tdata3r := io.wdata
+//        }.elsewhen(io.sen) {
+//          tdata3r := tdata3r | io.wdata
+//        }.elsewhen(io.cen) {
+//          tdata3r := tdata3r & (~io.wdata)
+//        }
       }.elsewhen(io.which_reg === CSR.pmpaddr0) {
         when(io.wen) {
           pmpaddr0r := Cat(Fill(10, 0.U), io.wdata(53, 0))
@@ -1206,93 +1148,101 @@ class CSRFile extends Module with phvntomParams {
       }.elsewhen(io.which_reg === CSR.scrtkeyl) {
         if (enable_pec) {
           when(io.wen) {
-            scrtkeylr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrtkeylr := scrtkeylr | io.wdata
+            new_key := scrtkeylr | io.wdata
           }.elsewhen(io.cen) {
-            scrtkeylr := scrtkeylr & (~io.wdata)
+            new_key := scrtkeylr & (~io.wdata)
           }
+          scrtkeylr := new_key
         }
       }.elsewhen(io.which_reg === CSR.scrtkeyh) {
         if (enable_pec) {
           when(io.wen) {
-            scrtkeyhr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrtkeyhr := scrtkeyhr | io.wdata
+            new_key := scrtkeyhr | io.wdata
           }.elsewhen(io.cen) {
-            scrtkeyhr := scrtkeyhr & (~io.wdata)
+            new_key := scrtkeyhr & (~io.wdata)
           }
+          scrtkeyhr := new_key
         }
       }.elsewhen(io.which_reg === CSR.scrakeyl) {
         if (enable_pec) {
           when(io.wen) {
-            scrakeylr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrakeylr := scrakeylr | io.wdata
+            new_key := scrakeylr | io.wdata
           }.elsewhen(io.cen) {
-            scrakeylr := scrakeylr & (~io.wdata)
+            new_key := scrakeylr & (~io.wdata)
           }
+          scrakeylr := new_key
         }
       }.elsewhen(io.which_reg === CSR.scrakeyh) {
         if (enable_pec) {
           when(io.wen) {
-            scrakeyhr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrakeyhr := scrakeyhr | io.wdata
+            new_key := scrakeyhr | io.wdata
           }.elsewhen(io.cen) {
-            scrakeyhr := scrakeyhr & (~io.wdata)
+            new_key := scrakeyhr & (~io.wdata)
           }
+          scrakeyhr := new_key
         }
       }.elsewhen(io.which_reg === CSR.scrbkeyl) {
         if (enable_pec) {
           when(io.wen) {
-            scrbkeylr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrbkeylr := scrbkeylr | io.wdata
+            new_key := scrbkeylr | io.wdata
           }.elsewhen(io.cen) {
-            scrbkeylr := scrbkeylr & (~io.wdata)
+            new_key := scrbkeylr & (~io.wdata)
           }
+          scrbkeylr := new_key
         }
       }.elsewhen(io.which_reg === CSR.scrbkeyh) {
         if (enable_pec) {
           when(io.wen) {
-            scrbkeyhr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrbkeyhr := scrbkeyhr | io.wdata
+            new_key := scrbkeyhr | io.wdata
           }.elsewhen(io.cen) {
-            scrbkeyhr := scrbkeyhr & (~io.wdata)
+            new_key := scrbkeyhr & (~io.wdata)
           }
+          scrbkeyhr := new_key
         }
       }.elsewhen(io.which_reg === CSR.mcrmkeyl) {
         if (enable_pec) {
           when(io.wen) {
-            mcrmkeylr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            mcrmkeylr := mcrmkeylr | io.wdata
+            new_key := mcrmkeylr | io.wdata
           }.elsewhen(io.cen) {
-            mcrmkeylr := mcrmkeylr & (~io.wdata)
+            new_key := mcrmkeylr & (~io.wdata)
           }
+          mcrmkeylr := new_key
         }
       }.elsewhen(io.which_reg === CSR.mcrmkeyh) {
         if (enable_pec) {
           when(io.wen) {
-            mcrmkeyhr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            mcrmkeyhr := mcrmkeyhr | io.wdata
+            new_key := mcrmkeyhr | io.wdata
           }.elsewhen(io.cen) {
-            mcrmkeyhr := mcrmkeyhr & (~io.wdata)
+            new_key := mcrmkeyhr & (~io.wdata)
           }
+          mcrmkeyhr := new_key
         }
       }
     }
   }
 
   io.write_satp := ((io.which_reg === CSR.satp &&
-    (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
+    access_csr) && valid)
   io.write_status := (((io.which_reg === CSR.mstatus || io.which_reg === CSR.sstatus) &&
-    (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
+    access_csr) && valid)
   io.write_misa := ((io.which_reg === CSR.misa &&
-    (io.wen || io.cen || io.sen)) && !io.stall && !io.bubble)
+    access_csr) && valid)
   io.satp_val := satpr
   io.current_p := current_p
   io.force_s_mode_mem := mstatusr_mprv && mstatusr_mpp =/= CSR.PRV_M
@@ -1320,6 +1270,17 @@ class CSRFile extends Module with phvntomParams {
     BoringUtils.addSource(mtvecr, "difftestmtvecr")
     BoringUtils.addSource(midelegr, "difftestmidelegr")
     BoringUtils.addSource(medelegr, "difftestmedelegr")
+  }
+
+  if (enable_pec) {
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrakeyh , new_key, scrakeyhr), "pec_kah")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrakeyl , new_key, scrakeylr), "pec_kal")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrbkeyh , new_key, scrbkeyhr), "pec_kbh")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrbkeyl , new_key, scrbkeylr), "pec_kbl")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrtkeyh , new_key, scrtkeyhr), "pec_kth")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrtkeyl , new_key, scrtkeylr), "pec_ktl")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.mcrmkeyh , new_key, mcrmkeyhr), "pec_kmh")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.mcrmkeyl , new_key, mcrmkeylr), "pec_kml")
   }
 }
 
