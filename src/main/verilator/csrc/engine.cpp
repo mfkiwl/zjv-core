@@ -29,10 +29,13 @@ void dtengine_t::sim_init(std::string elfpath) {
     bool dtb_enabled = true;
     const char* dtb_file = NULL;
     bool diffTest = true;
+    std::function<extension_t*()> extension = find_extension("pec");
+
 
     spike = new sim_t(isa, priv, varch, nprocs, halted, real_time_clint, initrd_start, initrd_end, bootargs, start_pc, 
                     mems, plugin_devices, htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file,
                     diffTest, file_fifo_path);
+    spike->get_core(0)->register_extension(extension());
 
     #ifdef ZJV_DEBUG
 //           spike->set_procs_debug(true);

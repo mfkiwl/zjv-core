@@ -22,7 +22,9 @@ libfdt 			:= $(SPIKE_DEST_DIR)/libfdt.a
 libfesvr 		:= $(SPIKE_DEST_DIR)/libfesvr.a
 libriscv 		:= $(SPIKE_DEST_DIR)/libriscv.a
 libsoftfloat 	:= $(SPIKE_DEST_DIR)/libsoftfloat.a
-libspike        := $(libfdt) $(libfesvr) $(libriscv) $(libsoftfloat)
+libpec			:= $(SPIKE_DEST_DIR)/libpec.so
+LD_LIBRARY_PATH := $(SPIKE_DEST_DIR)
+libspike        := $(libfdt) $(libfesvr) $(libriscv) $(libsoftfloat) 
 
 # Verilator
 VERILATOR_SRC_DIR   :=  $(SRC_DIR)/main/verilator
@@ -30,7 +32,7 @@ VERILATOR_VSRC_DIR	:=	$(VERILATOR_SRC_DIR)/vsrc
 VERILATOR_CSRC_DIR	:=	$(VERILATOR_SRC_DIR)/csrc
 VERILATOR_DEST_DIR	:=	$(WORK_DIR)/verilator
 VERILATOR_CXXFLAGS	:=	-O3 -std=c++11 -g -I$(VERILATOR_CSRC_DIR) -I$(VERILATOR_DEST_DIR)/build -I$(SPIKE_SRC_DIR) -I$(SPIKE_SRC_DIR)/softfloat -I$(SPIKE_DEST_DIR)
-VERILATOR_LDFLAGS 	:=	-lpthread -ldl -L$(SPIKE_DEST_DIR) -lfesvr -lriscv -lfdt -lsoftfloat
+VERILATOR_LDFLAGS 	:=	-Wl,--export-dynamic -lpthread -ldl -L$(SPIKE_DEST_DIR) -lfesvr -lriscv -lfdt -lsoftfloat $(libpec)
 VERILATOR_SOURCE 	:= $(sort $(wildcard $(VERILATOR_CSRC_DIR)/*.cpp)) $(sort $(wildcard $(VERILATOR_VSRC_DIR)/*.v))
 
 VERILATOR_FLAGS := --cc --exe --top-module Top 	\
@@ -69,7 +71,7 @@ $(SPIKE_DEST_DIR)/Makefile: $(SPIKE_SRC_DIR)/configure
 	cd $(SPIKE_DEST_DIR) && $< --enable-commitlog --enable-zjv-device
 
 $(libspike): $(SPIKE_DEST_DIR)/Makefile
-	$(MAKE) -C $(SPIKE_DEST_DIR) $(notdir $(libfesvr)) $(notdir $(libriscv)) $(notdir $(libsoftfloat)) $(notdir $(libfdt)) 
+	$(MAKE) -C $(SPIKE_DEST_DIR)
 
 
 $(VERILATOR_DEST_DIR)/emulator: $(VSRC_DIR)/Top.v $(libspike) $(VERILATOR_SOURCE)

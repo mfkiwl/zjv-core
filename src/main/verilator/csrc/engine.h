@@ -13,6 +13,7 @@
 /*    spike    */
 #include "riscv/sim.h"
 #include "riscv/disasm.h"
+#include "riscv/extension.h"
 
 /*     libc     */ 
 #include <iostream>
