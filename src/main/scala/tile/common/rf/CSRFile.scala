@@ -421,14 +421,14 @@ class CSRFile extends Module with phvntomParams {
   val fcsrr = Cat(0.U((24 + 32).W), fcsrr_frm, fcsrr_nv, fcsrr_dz, fcsrr_of, fcsrr_uf, fcsrr_nx)
 
   // [--------- Pointer Encryption Registers in CSR ---------]
-  val scrtkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val scrtkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val scrakeylr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val scrakeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val scrbkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val scrbkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val mcrmkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else null
-  val mcrmkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else null
+  val scrtkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val scrtkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val scrakeylr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val scrakeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val scrbkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val scrbkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val mcrmkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
+  val mcrmkeyhr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
 
   val access_csr = io.wen || io.cen || io.sen
   val valid = !io.stall && !io.bubble
