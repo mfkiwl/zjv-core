@@ -38,8 +38,6 @@ vivado
 
 ## Address Space
 
-现在zjv-fpga-acc里面有一个Top.v，这个暂时不要改，因为后面加指令集，都要与RV64 IMA这一版本进行时序对比，而且Nexys A7本身资源也不多，没有必要添加Rinux操作系统不需要的指令集。此外，IMA可以认为是基础指令集，之后添加FDC，最好是真的可以配置（不只是illegal inst，要能够保证支持FDC指令的硬件也相应可以增减）。
-
 **For FPGA**
 
  // (0x10000000L, 0x30000000L)  // MMIO Out of Tile : SPI UART BRAM
