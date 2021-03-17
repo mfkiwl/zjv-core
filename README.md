@@ -59,3 +59,9 @@ vivado
  // (0x80000000L, 128M )  // SDRAM
 
 For **Difftest**
+
+
+### TODO
+
+- CSR Flush dealt in EXE2 stage
+- The af signal after MEM1 is only useful for difftest
