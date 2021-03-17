@@ -432,6 +432,7 @@ class CSRFile extends Module with phvntomParams {
 
   val access_csr = io.wen || io.cen || io.sen
   val valid = !io.stall && !io.bubble
+  val new_key = WireDefault(UInt(64.W), scrtkeylr)
 
   // Interrupt Pending For Read Signals
   val seip_for_read = io.int_pend.seip || mipr_seip
@@ -1147,82 +1148,90 @@ class CSRFile extends Module with phvntomParams {
       }.elsewhen(io.which_reg === CSR.scrtkeyl) {
         if (enable_pec) {
           when(io.wen) {
-            scrtkeylr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrtkeylr := scrtkeylr | io.wdata
+            new_key := scrtkeylr | io.wdata
           }.elsewhen(io.cen) {
-            scrtkeylr := scrtkeylr & (~io.wdata)
+            new_key := scrtkeylr & (~io.wdata)
           }
+          scrtkeylr := new_key
         }
       }.elsewhen(io.which_reg === CSR.scrtkeyh) {
         if (enable_pec) {
           when(io.wen) {
-            scrtkeyhr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrtkeyhr := scrtkeyhr | io.wdata
+            new_key := scrtkeyhr | io.wdata
           }.elsewhen(io.cen) {
-            scrtkeyhr := scrtkeyhr & (~io.wdata)
+            new_key := scrtkeyhr & (~io.wdata)
           }
+          scrtkeyhr := new_key
         }
       }.elsewhen(io.which_reg === CSR.scrakeyl) {
         if (enable_pec) {
           when(io.wen) {
-            scrakeylr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrakeylr := scrakeylr | io.wdata
+            new_key := scrakeylr | io.wdata
           }.elsewhen(io.cen) {
-            scrakeylr := scrakeylr & (~io.wdata)
+            new_key := scrakeylr & (~io.wdata)
           }
+          scrakeylr := new_key
         }
       }.elsewhen(io.which_reg === CSR.scrakeyh) {
         if (enable_pec) {
           when(io.wen) {
-            scrakeyhr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrakeyhr := scrakeyhr | io.wdata
+            new_key := scrakeyhr | io.wdata
           }.elsewhen(io.cen) {
-            scrakeyhr := scrakeyhr & (~io.wdata)
+            new_key := scrakeyhr & (~io.wdata)
           }
+          scrakeyhr := new_key
         }
       }.elsewhen(io.which_reg === CSR.scrbkeyl) {
         if (enable_pec) {
           when(io.wen) {
-            scrbkeylr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrbkeylr := scrbkeylr | io.wdata
+            new_key := scrbkeylr | io.wdata
           }.elsewhen(io.cen) {
-            scrbkeylr := scrbkeylr & (~io.wdata)
+            new_key := scrbkeylr & (~io.wdata)
           }
+          scrbkeylr := new_key
         }
       }.elsewhen(io.which_reg === CSR.scrbkeyh) {
         if (enable_pec) {
           when(io.wen) {
-            scrbkeyhr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            scrbkeyhr := scrbkeyhr | io.wdata
+            new_key := scrbkeyhr | io.wdata
           }.elsewhen(io.cen) {
-            scrbkeyhr := scrbkeyhr & (~io.wdata)
+            new_key := scrbkeyhr & (~io.wdata)
           }
+          scrbkeyhr := new_key
         }
       }.elsewhen(io.which_reg === CSR.mcrmkeyl) {
         if (enable_pec) {
           when(io.wen) {
-            mcrmkeylr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            mcrmkeylr := mcrmkeylr | io.wdata
+            new_key := mcrmkeylr | io.wdata
           }.elsewhen(io.cen) {
-            mcrmkeylr := mcrmkeylr & (~io.wdata)
+            new_key := mcrmkeylr & (~io.wdata)
           }
+          mcrmkeylr := new_key
         }
       }.elsewhen(io.which_reg === CSR.mcrmkeyh) {
         if (enable_pec) {
           when(io.wen) {
-            mcrmkeyhr := io.wdata
+            new_key := io.wdata
           }.elsewhen(io.sen) {
-            mcrmkeyhr := mcrmkeyhr | io.wdata
+            new_key := mcrmkeyhr | io.wdata
           }.elsewhen(io.cen) {
-            mcrmkeyhr := mcrmkeyhr & (~io.wdata)
+            new_key := mcrmkeyhr & (~io.wdata)
           }
+          mcrmkeyhr := new_key
         }
       }
     }
@@ -1261,6 +1270,17 @@ class CSRFile extends Module with phvntomParams {
     BoringUtils.addSource(mtvecr, "difftestmtvecr")
     BoringUtils.addSource(midelegr, "difftestmidelegr")
     BoringUtils.addSource(medelegr, "difftestmedelegr")
+  }
+
+  if (enable_pec) {
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrakeyh , new_key, scrakeyhr), "pec_kah")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrakeyl , new_key, scrakeylr), "pec_kal")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrbkeyh , new_key, scrbkeyhr), "pec_kbh")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrbkeyl , new_key, scrbkeylr), "pec_kbl")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrtkeyh , new_key, scrtkeyhr), "pec_kth")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.scrtkeyl , new_key, scrtkeylr), "pec_ktl")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.mcrmkeyh , new_key, mcrmkeyhr), "pec_kmh")
+    BoringUtils.addSink(Mux(io.which_reg === CSR.mcrmkeyl , new_key, mcrmkeylr), "pec_kml")
   }
 }
 

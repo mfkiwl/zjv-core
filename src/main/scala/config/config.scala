@@ -9,9 +9,11 @@ trait RISCVConfig {
 
 trait projectConfig {
   // TODO hot values can be modified in makefile
-  var fpga: Boolean = true
+  var fpga: Boolean = false
   // Pointer Encryption Config
   var enable_pec: Boolean = true
+  var pec_enable_ppl: Boolean = false
+  var pec_round: Int = 7
   // Cold Values
   var chiplink: Boolean = false
   var ila: Boolean = fpga

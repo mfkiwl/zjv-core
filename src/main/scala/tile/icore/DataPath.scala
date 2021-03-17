@@ -13,6 +13,7 @@ import tile.common.mmu._
 import tile.icore.rf._
 import tile.icore.control._
 import device.MemIO
+import qarma64.QarmaEngine
 
 class DataPathIO extends Bundle with phvntomParams {
   val ctrl = Flipped(new ControlPathIO)
@@ -59,6 +60,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   val scheduler = Module(new ALUScheduler)
   val amo_arbiter = Module(new AMOArbiter)
   val reservation = Module(new Reservation)
+  val pec_engine = if (enable_pec) Module(new QarmaEngine(pec_enable_ppl, pec_round)) else null
 
   // Stall Request Signals
   val stall_req_if1_atomic = WireInit(Bool(), false.B)
@@ -494,6 +496,46 @@ class DataPath extends Module with phvntomParams with projectConfig {
   multiplier.io.b := reg_exe_dtlb.io.mdio.rs2_after_fwd_out
   multiplier.io.op := reg_exe_dtlb.io.iiio.inst_info_out.aluType
 
+  // PEC
+  if (enable_pec) {
+    val kah = WireInit(0.U(64.W))
+    val kal = WireInit(0.U(64.W))
+    val kbh = WireInit(0.U(64.W))
+    val kbl = WireInit(0.U(64.W))
+    val kth = WireInit(0.U(64.W))
+    val ktl = WireInit(0.U(64.W))
+    val kmh = WireInit(0.U(64.W))
+    val kml = WireInit(0.U(64.W))
+    BoringUtils.addSink(kah, "pec_kah")
+    BoringUtils.addSink(kal, "pec_kal")
+    BoringUtils.addSink(kbh, "pec_kbh")
+    BoringUtils.addSink(kbl, "pec_kbl")
+    BoringUtils.addSink(kth, "pec_kth")
+    BoringUtils.addSink(ktl, "pec_ktl")
+    BoringUtils.addSink(kmh, "pec_kmh")
+    BoringUtils.addSink(kml, "pec_kml")
+    val key_sel = reg_exe_dtlb.io.instio.inst_out(14, 12)
+    pec_engine.input.valid := reg_exe_dtlb.io.iiio.inst_info_out.pec
+    // TODO ignore input.ready when using single-stage engine
+    pec_engine.input.bits.encrypt := ~(reg_exe_dtlb.io.instio.inst_out(25))
+    pec_engine.input.bits.keyh := MuxLookup(key_sel, kth, Seq(
+      "b000".U -> kth,
+      "b001".U -> kmh,
+      "b010".U -> kah,
+      "b011".U -> kbh
+    ))
+    pec_engine.input.bits.keyl := MuxLookup(key_sel, ktl, Seq(
+      "b000".U -> ktl,
+      "b001".U -> kml,
+      "b010".U -> kal,
+      "b011".U -> kbl
+    ))
+    pec_engine.input.bits.tweak := reg_exe_dtlb.io.mdio.rs2_after_fwd_out
+    pec_engine.input.bits.text := reg_exe_dtlb.io.mdio.rs1_after_fwd_out
+    pec_engine.input.bits.actual_round := 5.U(3.W)
+    pec_engine.output.ready := true.B
+  }
+
   // DMMU
   mem_af := dmmu.io.front.af || (!is_legal_addr(
     reg_exe_dtlb.io.aluio.alu_val_out
@@ -542,7 +584,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_dtlb_mem1.io.bsrio.pc_in := reg_exe_dtlb.io.bsrio.pc_out
   reg_dtlb_mem1.io.iiio.inst_info_in := reg_exe_dtlb.io.iiio.inst_info_out
   reg_dtlb_mem1.io.aluio.inst_addr_misaligned_in := reg_exe_dtlb.io.aluio.inst_addr_misaligned_out
-  reg_dtlb_mem1.io.aluio.alu_val_in := Mux(
+  val reg_dtlb_mem1_alu_val = Mux(
     reg_exe_dtlb.io.iiio.inst_info_out.mult,
     multiplier.io.mult_out,
     Mux(
@@ -551,6 +593,11 @@ class DataPath extends Module with phvntomParams with projectConfig {
       reg_exe_dtlb.io.aluio.alu_val_out
     )
   )
+  if (enable_pec) {
+    reg_dtlb_mem1.io.aluio.alu_val_in := Mux(reg_exe_dtlb.io.iiio.inst_info_out.pec, pec_engine.output.bits.result, reg_dtlb_mem1_alu_val)
+  } else {
+    reg_dtlb_mem1.io.aluio.alu_val_in := reg_dtlb_mem1_alu_val
+  }
   reg_dtlb_mem1.io.aluio.mem_wdata_in := reg_exe_dtlb.io.aluio.mem_wdata_out
   reg_dtlb_mem1.io.intio.timer_int_in := io.int.mtip
   reg_dtlb_mem1.io.intio.software_int_in := io.int.msip

@@ -295,10 +295,12 @@ class RegIdExe extends Module with phvntomParams {
   val inst_pf = RegInit(Bool(), false.B)
   val predict_tk = RegInit(Bool(), false.B)
   val ptar = RegInit(UInt(xlen.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
-  val inst_info = RegInit(UInt((instBits + pcSelectBits +
+  val minimal_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
+  val default_inst_info = if (enable_pec) Cat(minimal_inst_info, false.B) else minimal_inst_info
+  val inst_info_len = (instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth) + { if (enable_pec) 1 else 0 }
+  val inst_info = RegInit(UInt(inst_info_len.W),
     default_inst_info)
   val hpf = RegInit(Bool(), false.B)
 
@@ -376,14 +378,16 @@ class RegExeDTLB extends Module with phvntomParams {
   val io = IO(new RegExeDTLBIO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), BUBBLE) 
+  val inst = RegInit(UInt(32.W), BUBBLE)
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
-  val inst_info = RegInit(UInt((instBits + pcSelectBits +
+  val minimal_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
+  val default_inst_info = if (enable_pec) Cat(minimal_inst_info, false.B) else minimal_inst_info
+  val inst_info_len = (instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth) + { if (enable_pec) 1 else 0 }
+  val inst_info = RegInit(UInt(inst_info_len.W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -536,16 +540,18 @@ class RegDTLBMem1 extends Module with phvntomParams {
   val io = IO(new RegDTLBMem1IO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), BUBBLE) 
+  val inst = RegInit(UInt(32.W), BUBBLE)
   val pc = RegInit(UInt(xlen.W), 0.U)
   val inst_af = RegInit(Bool(), false.B)
   val inst_pf = RegInit(Bool(), false.B)
   val mem_af = RegInit(Bool(), false.B)
   val mem_pf = RegInit(Bool(), false.B)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
-  val inst_info = RegInit(UInt((instBits + pcSelectBits +
+  val minimal_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
+  val default_inst_info = if (enable_pec) Cat(minimal_inst_info, false.B) else minimal_inst_info
+  val inst_info_len = (instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth) + { if (enable_pec) 1 else 0 }
+  val inst_info = RegInit(UInt(inst_info_len.W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -658,12 +664,14 @@ class RegMem1Mem2 extends Module with phvntomParams {
   val io = IO(new RegMem1Mem2IO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), BUBBLE) 
+  val inst = RegInit(UInt(32.W), BUBBLE)
   val pc = RegInit(UInt(xlen.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
-  val inst_info = RegInit(UInt((instBits + pcSelectBits +
+  val minimal_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
+  val default_inst_info = if (enable_pec) Cat(minimal_inst_info, false.B) else minimal_inst_info
+  val inst_info_len = (instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth) + { if (enable_pec) 1 else 0 }
+  val inst_info = RegInit(UInt(inst_info_len.W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
@@ -761,12 +769,14 @@ class RegMem3Wb extends Module with phvntomParams {
   val io = IO(new RegMem3WbIO)
 
   val bubble = RegInit(Bool(), true.B)
-  val inst = RegInit(UInt(32.W), BUBBLE) 
+  val inst = RegInit(UInt(32.W), BUBBLE)
   val pc = RegInit(UInt(xlen.W), 0.U)
-  val default_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
-  val inst_info = RegInit(UInt((instBits + pcSelectBits +
+  val minimal_inst_info = Cat(instXXX, pcPlus4, false.B, brXXX, AXXX, BXXX, aluXXX, memXXX, wbXXX, wenXXX, amoXXX, fwdXXX, flushXXX, false.B, 0.U(regWidth.W), 0.U(regWidth.W), 0.U(regWidth.W))
+  val default_inst_info = if (enable_pec) Cat(minimal_inst_info, false.B) else minimal_inst_info
+  val inst_info_len = (instBits + pcSelectBits +
     1 + brBits + ASelectBits + BSelectBits +
-    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth).W),
+    aluBits + memBits + wbBits + wenBits + amoBits + fwdBits + flushBits + 1 + 3 * regWidth) + { if (enable_pec) 1 else 0 }
+  val inst_info = RegInit(UInt(inst_info_len.W),
     default_inst_info)
   val alu_val = RegInit(UInt(xlen.W), 0.U)
   val inst_addr_misaligned = RegInit(Bool(), false.B)
