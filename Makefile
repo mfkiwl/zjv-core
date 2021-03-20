@@ -18,12 +18,12 @@ TEST_ELF_LIST := $(sort $(wildcard $(TEST_DST_DIR)/*))
 # DiffTest
 SPIKE_SRC_DIR 	:= $(CURDIR)/riscv-isa-sim
 SPIKE_DEST_DIR 	:= $(WORK_DIR)/spike
+export LD_LIBRARY_PATH=$(SPIKE_DEST_DIR)
 libfdt 			:= $(SPIKE_DEST_DIR)/libfdt.a
 libfesvr 		:= $(SPIKE_DEST_DIR)/libfesvr.a
 libriscv 		:= $(SPIKE_DEST_DIR)/libriscv.a
 libsoftfloat 	:= $(SPIKE_DEST_DIR)/libsoftfloat.a
 libpec			:= $(SPIKE_DEST_DIR)/libpec.so
-LD_LIBRARY_PATH := $(SPIKE_DEST_DIR)
 libspike        := $(libfdt) $(libfesvr) $(libriscv) $(libsoftfloat) 
 
 # Verilator
