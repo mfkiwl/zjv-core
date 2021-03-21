@@ -673,6 +673,15 @@ class CSRFile extends Module with phvntomParams {
   }.elsewhen(io.which_reg === CSR.fcsr) {
     io.rdata := fcsrr
     bad_csr_access := false.B
+  }.elsewhen(io.which_reg === CSR.cycle) {
+    io.rdata := mcycler
+    bad_csr_access := Mux(mcounterenr(0), bad_csr_s, bad_csr_m)
+  }.elsewhen(io.which_reg === CSR.time) {
+    io.rdata := mcycler
+    bad_csr_access := Mux(mcounterenr(1), bad_csr_s, bad_csr_m)
+  }.elsewhen(io.which_reg === CSR.instret) {
+    io.rdata := minstretr
+    bad_csr_access := Mux(mcounterenr(2), bad_csr_s, bad_csr_m)
   }.otherwise {
     io.rdata := "hdeadbeef".U
     csr_not_exists := true.B
