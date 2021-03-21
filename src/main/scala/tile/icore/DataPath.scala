@@ -532,7 +532,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
     ))
     pec_engine.input.bits.tweak := reg_exe_dtlb.io.mdio.rs2_after_fwd_out
     pec_engine.input.bits.text := reg_exe_dtlb.io.mdio.rs1_after_fwd_out
-    pec_engine.input.bits.actual_round := 5.U(3.W)
+    pec_engine.input.bits.actual_round := 7.U(3.W)
     pec_engine.output.ready := true.B
   }
 
