@@ -15,8 +15,6 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
   val io = IO(new L2CacheIO(n_sources))
 
   // Module Used
-  val metaArray = List.fill(nWays)(SyncReadMem(nSets, new MetaData))
-  val dataArray = List.fill(nWays)(SyncReadMem(nSets, new CacheLineData))
   val stall = Wire(Bool())
 
   val arbiter = Module(new L2CacheXbar(n_sources))
@@ -55,10 +53,7 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
     s2_data := s1_data
     s2_wen := s1_wen
   }
-  for (i <- 0 until nWays) {
-    s2_meta(i) := metaArray(i).read(s1_index, true.B)
-    s2_cacheline(i) := dataArray(i).read(s1_index, true.B)
-  }
+
   s2_tag := s2_addr(xlen - 1, xlen - tagLength)
 
   val s2_hitVec = VecInit(s2_meta.map(m => m.valid && m.tag === s2_tag)).asUInt
@@ -231,16 +226,46 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
     flush_counter.inc()
   }
 
-  when(state === s_flush || (s3_valid && request_satisfied)) {
-    for (i <- 0 until nWays) {
-      metaArray(i).write(meta_index, write_meta(i))
-    }
-  }
+  if (fpga) {
+    val metaArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new MetaData).getWidth, 1)))
+    val dataArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new CacheLineData).getWidth, 1)))
 
-  when(s3_valid && request_satisfied) {
     for (i <- 0 until nWays) {
-      when(s3_access_index === i.U) {
-        dataArray(i).write(s3_index, new_data)
+      metaArray(i).io.addra := s1_index
+      metaArray(i).io.addrb := meta_index
+      metaArray(i).io.wea := false.B
+      metaArray(i).io.web := state === s_flush || (s3_valid && request_satisfied)
+      metaArray(i).io.dina := DontCare
+      metaArray(i).io.dinb := write_meta(i).asUInt
+      s2_meta(i) := metaArray(i).io.douta.asTypeOf(new MetaData)
+      dataArray(i).io.addra := s1_index
+      dataArray(i).io.addrb := s3_index
+      dataArray(i).io.wea := false.B
+      dataArray(i).io.web := s3_valid && request_satisfied && s3_access_index === i.U
+      dataArray(i).io.dina := DontCare
+      dataArray(i).io.dinb := new_data.asUInt
+      s2_cacheline(i) := dataArray(i).io.douta.asTypeOf(new CacheLineData)
+    }
+  } else {
+    val metaArray = List.fill(nWays)(SyncReadMem(nSets, new MetaData))
+    val dataArray = List.fill(nWays)(SyncReadMem(nSets, new CacheLineData))
+
+    when(state === s_flush || (s3_valid && request_satisfied)) {
+      for (i <- 0 until nWays) {
+        metaArray(i).write(meta_index, write_meta(i))
+      }
+    }
+
+    for (i <- 0 until nWays) {
+      s2_meta(i) := metaArray(i).read(s1_index, true.B)
+      s2_cacheline(i) := dataArray(i).read(s1_index, true.B)
+    }
+
+    when(s3_valid && request_satisfied) {
+      for (i <- 0 until nWays) {
+        when(s3_access_index === i.U) {
+          dataArray(i).write(s3_index, new_data)
+        }
       }
     }
   }

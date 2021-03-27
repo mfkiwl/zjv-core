@@ -16,8 +16,17 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
   val io = IO(new CacheIO)
 
   // Module Used
-  val metaArray = List.fill(nWays)(SyncReadMem(nSets, new MetaData))
-  val dataArray = List.fill(nWays)(SyncReadMem(nSets, new CacheLineData))
+//  val metaArray = if (fpga) {
+//    List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new MetaData).getWidth, 1)))
+//  } else {
+//    List.fill(nWays)(SyncReadMem(nSets, new MetaData))
+//  }
+//  val dataArray = if (fpga) {
+//    List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new CacheLineData()).getWidth, 1)))
+//  } else {
+//    List.fill(nWays)(SyncReadMem(nSets, new CacheLineData))
+//  }
+
   val stall = Wire(Bool())
   val s2_need_forward = Wire(Bool())
   val write_meta = Wire(Vec(nWays, new MetaData))
@@ -71,10 +80,6 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
     s2_data := s1_data
     s2_wen := s1_wen
     s2_memtype := s1_memtype
-  }
-  for (i <- 0 until nWays) {
-    array_meta(i) := metaArray(i).read(read_index, !(read_index === s3_index && need_write))
-    array_cacheline(i) := dataArray(i).read(read_index, !(read_index === s3_index && need_write))
   }
   forward_meta := Mux(s2_hazard_low_prio, last_s3_write_meta, array_meta)
   forward_cacheline := Mux(s2_hazard_low_prio, last_s3_write_line, array_cacheline)
@@ -362,19 +367,50 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
     flush_counter.inc()
   }
 
-  when(
-    state === s_flush || (s3_valid && ((s3_wen && ((s3_hit && state === s_idle) || (!s3_hit && mem_read_valid))) || (!s3_wen && !s3_ismmio && (s3_hit || mem_read_valid))))
-  ) {
-    for (i <- 0 until nWays) {
-      metaArray(i).write(meta_index, write_meta(i))
-    }
-  }
-
   need_write := s3_valid && ((s3_wen && ((s3_hit && state === s_idle) || (!s3_hit && mem_read_valid))) || (!s3_wen && !s3_ismmio && mem_read_valid))
-  when(need_write) {
+
+  if (fpga) {
+    val metaArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new MetaData).getWidth, 1)))
+    val dataArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new CacheLineData).getWidth, 1)))
+
     for (i <- 0 until nWays) {
-      when(s3_access_index === i.U) {
-        dataArray(i).write(s3_index, new_data)
+      metaArray(i).io.addra := read_index
+      metaArray(i).io.addrb := meta_index
+      metaArray(i).io.wea := false.B
+      metaArray(i).io.web := state === s_flush || (s3_valid && ((s3_wen && ((s3_hit && state === s_idle) || (!s3_hit && mem_read_valid))) || (!s3_wen && !s3_ismmio && (s3_hit || mem_read_valid))))
+      metaArray(i).io.dina := DontCare
+      metaArray(i).io.dinb := write_meta(i).asUInt
+      array_meta(i) := metaArray(i).io.douta.asTypeOf(new MetaData)
+      dataArray(i).io.addra := read_index
+      dataArray(i).io.addrb := s3_index
+      dataArray(i).io.wea := false.B
+      dataArray(i).io.web := need_write && s3_access_index === i.U
+      dataArray(i).io.dina := DontCare
+      dataArray(i).io.dinb := new_data.asUInt
+      array_cacheline(i) := dataArray(i).io.douta.asTypeOf(new CacheLineData)
+    }
+  } else {
+    val metaArray = List.fill(nWays)(SyncReadMem(nSets, new MetaData))
+    val dataArray = List.fill(nWays)(SyncReadMem(nSets, new CacheLineData))
+
+    for (i <- 0 until nWays) {
+      array_meta(i) := metaArray(i).read(read_index, !(read_index === s3_index && need_write))
+      array_cacheline(i) := dataArray(i).read(read_index, !(read_index === s3_index && need_write))
+    }
+
+    when(
+      state === s_flush || (s3_valid && ((s3_wen && ((s3_hit && state === s_idle) || (!s3_hit && mem_read_valid))) || (!s3_wen && !s3_ismmio && (s3_hit || mem_read_valid))))
+    ) {
+      for (i <- 0 until nWays) {
+        metaArray(i).write(meta_index, write_meta(i))
+      }
+    }
+
+    when(need_write) {
+      for (i <- 0 until nWays) {
+        when(s3_access_index === i.U) {
+          dataArray(i).write(s3_index, new_data)
+        }
       }
     }
   }
