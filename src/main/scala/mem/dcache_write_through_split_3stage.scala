@@ -369,7 +369,7 @@ class DCacheWriteThroughSplit3Stage(implicit val cacheConfig: CacheConfig)
 
   need_write := s3_valid && ((s3_wen && ((s3_hit && state === s_idle) || (!s3_hit && mem_read_valid))) || (!s3_wen && !s3_ismmio && mem_read_valid))
 
-  if (fpga) {
+  if (fpga && enable_blockram) {
     val metaArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new MetaData).getWidth, 1)))
     val dataArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new CacheLineData).getWidth, 1)))
 

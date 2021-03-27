@@ -226,7 +226,7 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
     flush_counter.inc()
   }
 
-  if (fpga) {
+  if (fpga && enable_blockram) {
     val metaArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new MetaData).getWidth, 1)))
     val dataArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new CacheLineData).getWidth, 1)))
 

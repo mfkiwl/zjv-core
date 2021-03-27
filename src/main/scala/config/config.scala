@@ -16,6 +16,7 @@ trait projectConfig {
   val startAddr = if (fpga || ila) 0x10010000L else 0x80000000L
   var board: String = "None"
   val enable_dsp_mult = fpga && true
+  val enable_blockram = fpga && true
   var hasICache: Boolean = false
   var hasDCache: Boolean = false
   // TODO Delete redundant options

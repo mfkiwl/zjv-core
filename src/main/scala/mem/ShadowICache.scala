@@ -301,7 +301,7 @@ class ShadowICache(implicit val cacheConfig: CacheConfig)
 //  }
   BoringUtils.addSource(half_fetched, "half_fetched_if3")
 
-  if (fpga) {
+  if (fpga && enable_blockram) {
     val metaArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new MetaData).getWidth, 1)))
     val dataArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new CacheLineData).getWidth, 1)))
 
