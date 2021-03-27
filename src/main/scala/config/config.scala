@@ -9,12 +9,13 @@ trait RISCVConfig {
 
 trait projectConfig {
   // TODO hot values can be modified in makefile
-  var fpga: Boolean = false
+  var fpga: Boolean = true
   // Cold Values
   var chiplink: Boolean = false
   var ila: Boolean = fpga
   val startAddr = if (fpga || ila) 0x10010000L else 0x80000000L
   var board: String = "None"
+  val enable_dsp_mult = fpga && true
   var hasICache: Boolean = false
   var hasDCache: Boolean = false
   // TODO Delete redundant options

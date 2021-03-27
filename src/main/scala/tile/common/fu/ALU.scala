@@ -114,6 +114,12 @@ class WallaceMultiplier extends Module with phvntomParams {
 //  printf("END\n")
 }
 
+class DSPMultiplier extends Module with phvntomParams {
+  val io = IO(new WallaceMultiplierIO)
+
+  io.data_o := RegNext(RegNext(io.abs_a_i * io.abs_b_i))
+}
+
 class MultiplierIO extends Bundle with phvntomParams {
   val start = Input(Bool())
   val a = Input(UInt(xlen.W))
@@ -212,7 +218,7 @@ class Multiplier extends Module with phvntomParams {
   /* ------ Try My New Multiplier ------ */
   val abs_a_reg = RegNext(abs_a)
   val abs_b_reg = RegNext(abs_b)
-  val adv_multiplier = Module(new WallaceMultiplier)
+  val adv_multiplier = if (fpga && enable_dsp_mult) Module(new DSPMultiplier) else Module(new WallaceMultiplier)
   adv_multiplier.io.abs_a_i := abs_a_reg
   adv_multiplier.io.abs_b_i := abs_b_reg
   /* ------------ Done ------------ */
