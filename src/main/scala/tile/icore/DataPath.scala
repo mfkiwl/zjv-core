@@ -92,7 +92,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
   // If1 Signals
   val inst_af = WireInit(Bool(), false.B)
   val inst_pf = WireInit(Bool(), false.B)
-  val feedback_pc = WireInit(UInt(xlen.W), 0.U)
   val feedback_xored_index = WireInit(UInt(bpuEntryBits.W), 0.U)
   val feedback_is_br = WireInit(Bool(), false.B)
   val feedback_target_pc = WireInit(UInt(xlen.W), 0.U)
@@ -171,7 +170,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
 
   // BPU
   bpu.io.pc_to_predict := pc_gen.io.pc_out
-  bpu.io.feedback_pc := reg_exe_dtlb.io.bjio.feedback_pc_out
+  bpu.io.feedback_pc := reg_exe_dtlb.io.bsrio.pc_out
   bpu.io.feedback_xored_index := reg_exe_dtlb.io.bjio.feedback_xored_index_out
   bpu.io.feedback_is_br := reg_exe_dtlb.io.bjio.feedback_is_br_out
   bpu.io.feedback_target_pc := reg_exe_dtlb.io.bjio.feedback_target_pc_out
@@ -359,7 +358,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
   branch_cond.io.rs2 := rs2
   branch_cond.io.brType := reg_id_exe.io.iiio.inst_info_out.brType
 
-  feedback_pc := reg_id_exe.io.bsrio.pc_out
   feedback_xored_index := reg_id_exe.io.bpio.xored_index_out
   feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump)
   feedback_target_pc := alu.io.out
@@ -484,7 +482,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
     reg_id_exe.io.bsrio.pc_out + Mux(reg_id_exe.io.instio.inst_out(1, 0).andR, 4.U, 2.U),
     alu.io.out
   )
-  reg_exe_dtlb.io.bjio.feedback_pc_in := feedback_pc
   reg_exe_dtlb.io.bjio.feedback_xored_index_in := feedback_xored_index
   reg_exe_dtlb.io.bjio.feedback_is_br_in := feedback_is_br
   reg_exe_dtlb.io.bjio.feedback_target_pc_in := feedback_target_pc
