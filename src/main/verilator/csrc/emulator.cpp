@@ -105,7 +105,7 @@ int main(int argc, char** argv)
          engine.sim_check_interrupt();
          int_total_cnt++;
 
-         if (int_total_cnt > 250) {
+         if (int_total_cnt > 250000) {
             fprintf(stderr, "\n\t\t \x1b[32m========== [ %s PASS with IPC %f ] ==========\x1b[0m\n", argv[1], 1.0 * sim_cnt / engine.trace_count);
             fprintf(stderr, "\t\t \x1b[32msr_itlb %ld, sr_i$ %ld, sr_exe %ld, sr_dtlb %ld, sr_d$ %ld, bj_flush %lf\x1b[0m\n",
                 engine.get_emu_state()->streqs[0],
@@ -165,6 +165,7 @@ int main(int argc, char** argv)
             difftest_check_point(sstatus);   difftest_check_point(sepc, "\n");
             difftest_check_point(stval);     difftest_check_point(scause);          difftest_check_point(stvec, "\n");
             difftest_check_point(mip);       difftest_check_point(sip, "\n");
+            difftest_check_point(mcycle, "\n");
             fprintf(stderr, "emu: pa 0x%016lX, sim: pa 0x%016lX\n", engine.emu_get_pa(), physic_addr);
             fprintf(stderr, "emu: uart %d plic0 %d plic1 %d prio %x ie %x ip %x thrs %x claim %x\n", 
                              engine.get_emu_state()->uartirq, engine.get_emu_state()->plicmeip, engine.get_emu_state()->plicseip,

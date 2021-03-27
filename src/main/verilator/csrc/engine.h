@@ -123,6 +123,7 @@ public:
     difftest_get(sim, npc);
     difftest_get(sim, pc);
     difftest_get(sim, inst);
+    difftest_get(sim, mcycle);
     difftest_get(sim, mstatus);
     difftest_get(sim, priv);
     difftest_get(sim, mepc);

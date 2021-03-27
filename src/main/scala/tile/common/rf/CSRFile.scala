@@ -266,12 +266,12 @@ class CSRFile extends Module with phvntomParams {
 
   // Special CSR Register Bit
   // FCSR
-  val fcsrr_frm = RegInit(0.U(3.W))
-  val fcsrr_nv = RegInit(0.U(1.W))
-  val fcsrr_dz = RegInit(0.U(1.W))
-  val fcsrr_of = RegInit(0.U(1.W))
-  val fcsrr_uf = RegInit(0.U(1.W))
-  val fcsrr_nx = RegInit(0.U(1.W))
+  // val fcsrr_frm = RegInit(0.U(3.W))
+  // val fcsrr_nv = RegInit(0.U(1.W))
+  // val fcsrr_dz = RegInit(0.U(1.W))
+  // val fcsrr_of = RegInit(0.U(1.W))
+  // val fcsrr_uf = RegInit(0.U(1.W))
+  // val fcsrr_nx = RegInit(0.U(1.W))
   // MCAUSE and SCAUSE
   val mcauser_int = RegInit(0.U(1.W))
   val mcauser_cause = RegInit(0.U(4.W))
@@ -378,7 +378,7 @@ class CSRFile extends Module with phvntomParams {
   val mtvalr = RegInit(0.U(xlen.W))
   val mimpidr = RegInit(0.U(xlen.W))
   val mcycler = RegInit(UInt(64.W), 0.U)
-  val minstretr = RegInit(0.U(64.W))
+  val minstretr = if (diffTest) RegInit(666.U(64.W)) else RegInit(0.U(64.W))
   val mcounterenr = RegInit(0.U(32.W))
 
   // [--------- Physical Memory Protection Registers in CSR --------]
@@ -418,7 +418,7 @@ class CSRFile extends Module with phvntomParams {
 //  val tdata3r = RegInit(0.U(xlen.W))
 
   // [--------- Floating Point Registers in CSR ---------]
-  val fcsrr = Cat(0.U((24 + 32).W), fcsrr_frm, fcsrr_nv, fcsrr_dz, fcsrr_of, fcsrr_uf, fcsrr_nx)
+  // val fcsrr = Cat(0.U((24 + 32).W), fcsrr_frm, fcsrr_nv, fcsrr_dz, fcsrr_of, fcsrr_uf, fcsrr_nx)
 
   // [--------- Pointer Encryption Registers in CSR ---------]
   val scrtkeylr = if (enable_pec) RegInit(0.U(xlen.W)) else WireInit(0.U(xlen.W))
@@ -432,7 +432,7 @@ class CSRFile extends Module with phvntomParams {
 
   val access_csr = io.wen || io.cen || io.sen
   val valid = !io.stall && !io.bubble
-  val new_key = WireDefault(UInt(64.W), scrtkeylr)
+  val new_key = WireDefault(UInt(64.W), 0.U)
 
   // Interrupt Pending For Read Signals
   val seip_for_read = io.int_pend.seip || mipr_seip
@@ -544,8 +544,12 @@ class CSRFile extends Module with phvntomParams {
     }.elsewhen(io.cen) {
       minstretr := minstretr & (~io.wdata)
     }
-  }.elsewhen(valid) {
-    minstretr := minstretr + 1.U(1.W)
+  }.elsewhen(valid && !has_expt_comb) {
+    if (diffTest) {
+      minstretr := 0.U
+    } else {
+      minstretr := minstretr + 1.U(1.W)
+    }
   }
 
   // [========== CSR Read Begin ==========]
@@ -670,18 +674,18 @@ class CSRFile extends Module with phvntomParams {
   }.elsewhen(io.which_reg === CSR.minstret) {
     io.rdata := minstretr
     bad_csr_access := bad_csr_m
-  }.elsewhen(io.which_reg === CSR.fcsr) {
-    io.rdata := fcsrr
-    bad_csr_access := false.B
+  // }.elsewhen(io.which_reg === CSR.fcsr) {
+  //   io.rdata := fcsrr
+  //   bad_csr_access := false.B
   }.elsewhen(io.which_reg === CSR.cycle) {
-    io.rdata := mcycler
-    bad_csr_access := Mux(mcounterenr(0), bad_csr_s, bad_csr_m)
-  }.elsewhen(io.which_reg === CSR.time) {
-    io.rdata := mcycler
-    bad_csr_access := Mux(mcounterenr(1), bad_csr_s, bad_csr_m)
-  }.elsewhen(io.which_reg === CSR.instret) {
     io.rdata := minstretr
-    bad_csr_access := Mux(mcounterenr(2), bad_csr_s, bad_csr_m)
+    bad_csr_access := Mux(mcounterenr(0), bad_csr_s, bad_csr_m)
+  // }.elsewhen(io.which_reg === CSR.time) {
+  //   io.rdata := mcycler
+  //   bad_csr_access := Mux(mcounterenr(1), bad_csr_s, bad_csr_m)
+  // }.elsewhen(io.which_reg === CSR.instret) {
+  //   io.rdata := minstretr
+  //   bad_csr_access := Mux(mcounterenr(2), bad_csr_s, bad_csr_m)
   }.otherwise {
     io.rdata := "hdeadbeef".U
     csr_not_exists := true.B
@@ -1131,31 +1135,32 @@ class CSRFile extends Module with phvntomParams {
         }.elsewhen(io.cen) {
           pmpcfg0r := pmpcfg0r & (~io.wdata)
         }
-      }.elsewhen(io.which_reg === CSR.fcsr) {
-        when(io.wen) {
-          fcsrr_frm := io.wdata(7, 5)
-          fcsrr_nv := io.wdata(4)
-          fcsrr_dz := io.wdata(3)
-          fcsrr_of := io.wdata(2)
-          fcsrr_uf := io.wdata(1)
-          fcsrr_nx := io.wdata(0)
-        }.elsewhen(io.sen) {
-          fcsrr_frm := fcsrr_frm | io.wdata(7, 5)
-          fcsrr_nv := fcsrr_nv | io.wdata(4)
-          fcsrr_dz := fcsrr_dz | io.wdata(3)
-          fcsrr_of := fcsrr_of | io.wdata(2)
-          fcsrr_uf := fcsrr_uf | io.wdata(1)
-          fcsrr_nx := fcsrr_nx | io.wdata(0)
-        }.elsewhen(io.cen) {
-          fcsrr_frm := fcsrr_frm & (~io.wdata(7, 5))
-          fcsrr_nv := fcsrr_nv & (~io.wdata(4))
-          fcsrr_dz := fcsrr_dz & (~io.wdata(3))
-          fcsrr_of := fcsrr_of & (~io.wdata(2))
-          fcsrr_uf := fcsrr_uf & (~io.wdata(1))
-          fcsrr_nx := fcsrr_nx & (~io.wdata(0))
-        }
+      // }.elsewhen(io.which_reg === CSR.fcsr) {
+      //   when(io.wen) {
+      //     fcsrr_frm := io.wdata(7, 5)
+      //     fcsrr_nv := io.wdata(4)
+      //     fcsrr_dz := io.wdata(3)
+      //     fcsrr_of := io.wdata(2)
+      //     fcsrr_uf := io.wdata(1)
+      //     fcsrr_nx := io.wdata(0)
+      //   }.elsewhen(io.sen) {
+      //     fcsrr_frm := fcsrr_frm | io.wdata(7, 5)
+      //     fcsrr_nv := fcsrr_nv | io.wdata(4)
+      //     fcsrr_dz := fcsrr_dz | io.wdata(3)
+      //     fcsrr_of := fcsrr_of | io.wdata(2)
+      //     fcsrr_uf := fcsrr_uf | io.wdata(1)
+      //     fcsrr_nx := fcsrr_nx | io.wdata(0)
+      //   }.elsewhen(io.cen) {
+      //     fcsrr_frm := fcsrr_frm & (~io.wdata(7, 5))
+      //     fcsrr_nv := fcsrr_nv & (~io.wdata(4))
+      //     fcsrr_dz := fcsrr_dz & (~io.wdata(3))
+      //     fcsrr_of := fcsrr_of & (~io.wdata(2))
+      //     fcsrr_uf := fcsrr_uf & (~io.wdata(1))
+      //     fcsrr_nx := fcsrr_nx & (~io.wdata(0))
+      //   }
       }.elsewhen(io.which_reg === CSR.scrtkeyl) {
         if (enable_pec) {
+          new_key := scrtkeylr
           when(io.wen) {
             new_key := io.wdata
           }.elsewhen(io.sen) {
@@ -1167,6 +1172,7 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.scrtkeyh) {
         if (enable_pec) {
+          new_key := scrtkeyhr
           when(io.wen) {
             new_key := io.wdata
           }.elsewhen(io.sen) {
@@ -1178,6 +1184,7 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.scrakeyl) {
         if (enable_pec) {
+          new_key := scrakeylr
           when(io.wen) {
             new_key := io.wdata
           }.elsewhen(io.sen) {
@@ -1189,6 +1196,7 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.scrakeyh) {
         if (enable_pec) {
+          new_key := scrakeyhr
           when(io.wen) {
             new_key := io.wdata
           }.elsewhen(io.sen) {
@@ -1200,6 +1208,7 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.scrbkeyl) {
         if (enable_pec) {
+          new_key := scrbkeylr
           when(io.wen) {
             new_key := io.wdata
           }.elsewhen(io.sen) {
@@ -1211,6 +1220,7 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.scrbkeyh) {
         if (enable_pec) {
+          new_key := scrbkeyhr
           when(io.wen) {
             new_key := io.wdata
           }.elsewhen(io.sen) {
@@ -1222,6 +1232,7 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.mcrmkeyl) {
         if (enable_pec) {
+          new_key := mcrmkeylr
           when(io.wen) {
             new_key := io.wdata
           }.elsewhen(io.sen) {
@@ -1233,6 +1244,7 @@ class CSRFile extends Module with phvntomParams {
         }
       }.elsewhen(io.which_reg === CSR.mcrmkeyh) {
         if (enable_pec) {
+          new_key := mcrmkeyhr
           when(io.wen) {
             new_key := io.wdata
           }.elsewhen(io.sen) {
@@ -1282,14 +1294,14 @@ class CSRFile extends Module with phvntomParams {
   }
 
   if (enable_pec) {
-    BoringUtils.addSink(Mux(io.which_reg === CSR.scrakeyh , new_key, scrakeyhr), "pec_kah")
-    BoringUtils.addSink(Mux(io.which_reg === CSR.scrakeyl , new_key, scrakeylr), "pec_kal")
-    BoringUtils.addSink(Mux(io.which_reg === CSR.scrbkeyh , new_key, scrbkeyhr), "pec_kbh")
-    BoringUtils.addSink(Mux(io.which_reg === CSR.scrbkeyl , new_key, scrbkeylr), "pec_kbl")
-    BoringUtils.addSink(Mux(io.which_reg === CSR.scrtkeyh , new_key, scrtkeyhr), "pec_kth")
-    BoringUtils.addSink(Mux(io.which_reg === CSR.scrtkeyl , new_key, scrtkeylr), "pec_ktl")
-    BoringUtils.addSink(Mux(io.which_reg === CSR.mcrmkeyh , new_key, mcrmkeyhr), "pec_kmh")
-    BoringUtils.addSink(Mux(io.which_reg === CSR.mcrmkeyl , new_key, mcrmkeylr), "pec_kml")
+    BoringUtils.addSource(Mux(io.which_reg === CSR.scrakeyh && valid && access_csr, new_key, scrakeyhr), "pec_kah")
+    BoringUtils.addSource(Mux(io.which_reg === CSR.scrakeyl && valid && access_csr, new_key, scrakeylr), "pec_kal")
+    BoringUtils.addSource(Mux(io.which_reg === CSR.scrbkeyh && valid && access_csr, new_key, scrbkeyhr), "pec_kbh")
+    BoringUtils.addSource(Mux(io.which_reg === CSR.scrbkeyl && valid && access_csr, new_key, scrbkeylr), "pec_kbl")
+    BoringUtils.addSource(Mux(io.which_reg === CSR.scrtkeyh && valid && access_csr, new_key, scrtkeyhr), "pec_kth")
+    BoringUtils.addSource(Mux(io.which_reg === CSR.scrtkeyl && valid && access_csr, new_key, scrtkeylr), "pec_ktl")
+    BoringUtils.addSource(Mux(io.which_reg === CSR.mcrmkeyh && valid && access_csr, new_key, mcrmkeyhr), "pec_kmh")
+    BoringUtils.addSource(Mux(io.which_reg === CSR.mcrmkeyl && valid && access_csr, new_key, mcrmkeylr), "pec_kml")
   }
 }
 

@@ -29,7 +29,7 @@ trait projectConfig {
   val regNum        = 64
   val regWidth      = log2Ceil(regNum)
   val diffTest      = !fpga
-  val pipeTrace     = false
+  val pipeTrace     = true
   val prtHotSpot    = false
   val vscode        = false
   // Mode and VA

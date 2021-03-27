@@ -534,6 +534,12 @@ class DataPath extends Module with phvntomParams with projectConfig {
     pec_engine.input.bits.text := reg_exe_dtlb.io.mdio.rs1_after_fwd_out
     pec_engine.input.bits.actual_round := 7.U(3.W)
     pec_engine.output.ready := true.B
+
+    // when(pec_engine.input.valid) {
+    //   printf("keysel %x, keyhigh %x, keylow %x, kth %x, ktl %x, text %x, tweak %x\n", key_sel, pec_engine.input.bits.keyh,
+    //   pec_engine.input.bits.keyl, kth, ktl,
+    //   pec_engine.input.bits.text, pec_engine.input.bits.tweak)
+    // }
   }
 
   // DMMU
@@ -811,16 +817,16 @@ class DataPath extends Module with phvntomParams with projectConfig {
     val starting = RegInit(false.B)
     val counterr = RegInit(0.U(xlen.W))
 
-    when (dtest_pc(31, 0) === "h80239f80".U && dtest_pc(39, 32) === "hff".U) {
-      starting := true.B
-    }.elsewhen (dtest_pc(31, 0) === "h80239f8c".U || dtest_pc(31, 0) === "h80239f8a".U) {
-      starting := false.B
-    }
-    when (starting) {
-       counterr := counterr + 1.U
-    }.otherwise {
-      counterr := 0.U
-    }
+    // when (dtest_pc(31, 0).asUInt > "h006033e0".U && dtest_pc(39, 32) === "he0".U && dtest_pc(31, 0).asUInt < "h006033e8".U) {
+    //   starting := true.B
+    // }.elsewhen (dtest_pc(31, 0) === "h00603408".U || counterr >= 800.U) {
+    //   // starting := false.B
+    // }
+    // when (starting && counterr < 800.U) {
+    //    counterr := counterr + 1.U
+    // }.otherwise {
+    //   counterr := 0.U
+    // }
 
     stall_req_counters(0) := stall_req_counters(0) + Mux(
       stall_req_if1_atomic,
@@ -899,7 +905,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
 //      wrong_target, branch_cond.io.branch, reg_id_exe.io.bpio.predict_taken_out, alu.io.out, reg_id_exe.io.bpio.target_out)
 
     if (pipeTrace) {
-      if (vscode) {
+        if (vscode) {
         printf(
           "\t\tIF1\t\tIF2\t\tIF3\t\tID\t\tEXE\t\tDTLB\t\tMEM1\t\tMEM2\t\tWB\n"
         )
@@ -988,7 +994,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
           reg_mem3_wb.io.bsrio.bubble_out
         )
       } else {
-        when (starting === true.B && counterr < 20.U) {
+        when (starting === true.B /*&& counterr < 800.U*/) {
           printf("\t\tIF1\tIF2\tIF3\tID\tEXE\tDTLB\tMEM1\tMEM2\tMEM3\tWB\n")
           printf(
             "Stall Req\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\t%x\n",
@@ -1102,6 +1108,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
           printf("\n")
         }
       }
+      
 
       //      if(traceBPU) {
       //        printf(

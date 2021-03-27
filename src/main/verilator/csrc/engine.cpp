@@ -177,7 +177,7 @@ void dtengine_t::emu_update_state() {
     emu_state->sepc      = zjv->io_difftest_sepc;
     emu_state->stval     = zjv->io_difftest_stval;
     emu_state->scause    = zjv->io_difftest_scause;
-    emu_state->mcycle    = zjv->io_difftest_mcycle;
+    emu_state->mcycle    = zjv->io_difftest_mcycle + 1;
     emu_state->mip       = zjv->io_difftest_mip;
     emu_state->sip       = zjv->io_difftest_sip;
     emu_state->mie       = zjv->io_difftest_mie;
@@ -226,6 +226,7 @@ void dtengine_t::sim_update_state() {
     sim_state->mie     = s->mie;
     sim_state->sip     = s->mip & ~(MIP_MSIP | MIP_MTIP | MIP_MEIP);
     sim_state->sie     = s->mie & ~(MIP_MSIP | MIP_MTIP | MIP_MEIP);
+    sim_state->mcycle  = s->mcycle;
 
     // sim_state->is_mem  = false;     // DontCare
     // sim_state->pa      = spike->get_mmu()
