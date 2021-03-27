@@ -2,6 +2,7 @@ package tile.common.fu
 
 import chisel3._
 import chisel3.util._
+import chisel3.util.experimental.BoringUtils
 import config.projectConfig
 import tile._
 
@@ -18,6 +19,19 @@ class BTBSRAMWrapperIO extends Bundle with phvntomParams {
 
 class S011HD1P_X128Y2D39 extends BlackBox {
   val io = IO(new BTBSRAMWrapperIO)
+}
+
+class BTBBRAMWrapperIO extends Bundle with phvntomParams {
+  val clk = Input(Clock())
+  val rst = Input(Reset())
+  val we = Input(Bool())
+  val addr = Input(UInt(bpuEntryBits.W))
+  val din = Input(UInt(39.W))
+  val dout = Input(UInt(39.W))
+}
+
+class single_port_ram_bpu extends BlackBox {
+  val io = IO(new BTBBRAMWrapperIO)
 }
 
 /* --------- BTB WRAPPER ends here --------- */
@@ -111,18 +125,6 @@ class BTB extends Module with phvntomParams with projectConfig {
   if (chiplink) {
     /* ------ Use Generated RAM to Replace SyncReadMem ------ */
     val btb_entries = Module(new S011HD1P_X128Y2D39)
-    val nwenr = RegInit(Bool(), true.B)
-    nwenr := !io.update_valid
-    val ar = RegInit(UInt(bpuEntryBits.W), 0.U)
-    ar := Mux(io.update_valid, io.update_index, io.index_in)
-    val dr = RegInit(UInt(39.W), 0.U)
-    dr := io.update_target(38, 0)
-
-//    btb_entries.io.CLK := (~(clock.asBool)).asClock
-//    btb_entries.io.CEN := false.B
-//    btb_entries.io.WEN := nwenr
-//    btb_entries.io.A := ar
-//    btb_entries.io.D := dr
 
     btb_entries.io.CLK := clock
     btb_entries.io.CEN := false.B
@@ -131,6 +133,16 @@ class BTB extends Module with phvntomParams with projectConfig {
     btb_entries.io.D := io.update_target(38, 0)
 
     io.target_out := Cat(Fill(xlen - 39, btb_entries.io.Q(38)), btb_entries.io.Q)
+  } else if (fpga) {
+    val btb_entries = Module(new single_port_ram_bpu)
+
+    btb_entries.io.clk := clock
+    btb_entries.io.rst := reset
+    btb_entries.io.we := io.update_valid
+    btb_entries.io.addr := Mux(io.update_valid, io.update_index, io.index_in)
+    btb_entries.io.din := io.update_target(38, 0)
+
+    io.target_out := Cat(Fill(xlen - 39, btb_entries.io.dout(38)), btb_entries.io.dout)
   } else {
     val btb_entries = SyncReadMem(1 << bpuEntryBits, UInt(39.W))
     val read_data = btb_entries.read(io.index_in, !io.update_valid)

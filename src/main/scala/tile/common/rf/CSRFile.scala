@@ -450,14 +450,14 @@ class CSRFile extends Module with phvntomParams {
 
   //  [--------- User Mode Registers in CSR --------]
 
-  // [--------- Debug Registers in CSR --------]
-  val tselectr = RegInit(0.U(xlen.W))
-  val tdata1r = RegInit(0.U(xlen.W))
-  val tdata2r = RegInit(0.U(xlen.W))
-  val tdata3r = RegInit(0.U(xlen.W))
-
-  // [--------- Floating Point Registers in CSR ---------]
-  val fcsrr = Cat(0.U((24 + 32).W), fcsrr_frm, fcsrr_nv, fcsrr_dz, fcsrr_of, fcsrr_uf, fcsrr_nx)
+//  // [--------- Debug Registers in CSR --------]
+//  val tselectr = RegInit(0.U(xlen.W))
+//  val tdata1r = RegInit(0.U(xlen.W))
+//  val tdata2r = RegInit(0.U(xlen.W))
+//  val tdata3r = RegInit(0.U(xlen.W))
+//
+//  // [--------- Floating Point Registers in CSR ---------]
+//  val fcsrr = Cat(0.U((24 + 32).W), fcsrr_frm, fcsrr_nv, fcsrr_dz, fcsrr_of, fcsrr_uf, fcsrr_nx)
 
   // Interrupt Pending For Read Signals
   val seip_for_read = io.int_pend.seip || mipr_seip
@@ -723,22 +723,22 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := satpr
     csr_not_exists := false.B
     bad_csr_access := bad_csr_s
-  }.elsewhen(io.which_reg === CSR.tselect) {
-    io.rdata := tselectr
-    csr_not_exists := false.B
-    bad_csr_access := false.B
-  }.elsewhen(io.which_reg === CSR.tdata1) {
-    io.rdata := tdata1r
-    csr_not_exists := false.B
-    bad_csr_access := false.B
-  }.elsewhen(io.which_reg === CSR.tdata2) {
-    io.rdata := tdata2r
-    csr_not_exists := false.B
-    bad_csr_access := false.B
-  }.elsewhen(io.which_reg === CSR.tdata3) {
-    io.rdata := tdata3r
-    csr_not_exists := false.B
-    bad_csr_access := false.B
+//  }.elsewhen(io.which_reg === CSR.tselect) {
+//    io.rdata := tselectr
+//    csr_not_exists := false.B
+//    bad_csr_access := false.B
+//  }.elsewhen(io.which_reg === CSR.tdata1) {
+//    io.rdata := tdata1r
+//    csr_not_exists := false.B
+//    bad_csr_access := false.B
+//  }.elsewhen(io.which_reg === CSR.tdata2) {
+//    io.rdata := tdata2r
+//    csr_not_exists := false.B
+//    bad_csr_access := false.B
+//  }.elsewhen(io.which_reg === CSR.tdata3) {
+//    io.rdata := tdata3r
+//    csr_not_exists := false.B
+//    bad_csr_access := false.B
   }.elsewhen(io.which_reg === CSR.mcycle) {
     io.rdata := mcycler + 4.U(3.W)
     csr_not_exists := false.B
@@ -747,10 +747,10 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := minstretr
     csr_not_exists := false.B
     bad_csr_access := bad_csr_m
-  }.elsewhen(io.which_reg === CSR.fcsr) {
-    io.rdata := fcsrr
-    csr_not_exists := false.B
-    bad_csr_access := false.B
+//  }.elsewhen(io.which_reg === CSR.fcsr) {
+//    io.rdata := fcsrr
+//    csr_not_exists := false.B
+//    bad_csr_access := false.B
   }.otherwise {
     io.rdata := "hdeadbeef".U
     csr_not_exists := true.B
@@ -1097,38 +1097,38 @@ class CSRFile extends Module with phvntomParams {
         }.elsewhen(io.cen) {
           scounterenr := scounterenr & (~io.wdata(31, 0))
         }
-      }.elsewhen(io.which_reg === CSR.tselect) {
-        when(io.wen) {
-          tselectr := io.wdata
-        }.elsewhen(io.sen) {
-          tselectr := tselectr | io.wdata
-        }.elsewhen(io.cen) {
-          tselectr := tselectr & (~io.wdata)
-        }
-      }.elsewhen(io.which_reg === CSR.tdata1) {
-        when(io.wen) {
-          tdata1r := io.wdata
-        }.elsewhen(io.sen) {
-          tdata1r := tdata1r | io.wdata
-        }.elsewhen(io.cen) {
-          tdata1r := tdata1r & (~io.wdata)
-        }
-      }.elsewhen(io.which_reg === CSR.tdata2) {
-        when(io.wen) {
-          tdata2r := io.wdata
-        }.elsewhen(io.sen) {
-          tdata2r := tdata2r | io.wdata
-        }.elsewhen(io.cen) {
-          tdata2r := tdata2r & (~io.wdata)
-        }
-      }.elsewhen(io.which_reg === CSR.tdata3) {
-        when(io.wen) {
-          tdata3r := io.wdata
-        }.elsewhen(io.sen) {
-          tdata3r := tdata3r | io.wdata
-        }.elsewhen(io.cen) {
-          tdata3r := tdata3r & (~io.wdata)
-        }
+//      }.elsewhen(io.which_reg === CSR.tselect) {
+//        when(io.wen) {
+//          tselectr := io.wdata
+//        }.elsewhen(io.sen) {
+//          tselectr := tselectr | io.wdata
+//        }.elsewhen(io.cen) {
+//          tselectr := tselectr & (~io.wdata)
+//        }
+//      }.elsewhen(io.which_reg === CSR.tdata1) {
+//        when(io.wen) {
+//          tdata1r := io.wdata
+//        }.elsewhen(io.sen) {
+//          tdata1r := tdata1r | io.wdata
+//        }.elsewhen(io.cen) {
+//          tdata1r := tdata1r & (~io.wdata)
+//        }
+//      }.elsewhen(io.which_reg === CSR.tdata2) {
+//        when(io.wen) {
+//          tdata2r := io.wdata
+//        }.elsewhen(io.sen) {
+//          tdata2r := tdata2r | io.wdata
+//        }.elsewhen(io.cen) {
+//          tdata2r := tdata2r & (~io.wdata)
+//        }
+//      }.elsewhen(io.which_reg === CSR.tdata3) {
+//        when(io.wen) {
+//          tdata3r := io.wdata
+//        }.elsewhen(io.sen) {
+//          tdata3r := tdata3r | io.wdata
+//        }.elsewhen(io.cen) {
+//          tdata3r := tdata3r & (~io.wdata)
+//        }
       }.elsewhen(io.which_reg === CSR.pmpaddr0) {
         when(io.wen) {
           pmpaddr0r := Cat(Fill(10, 0.U), io.wdata(53, 0))
@@ -1169,29 +1169,29 @@ class CSRFile extends Module with phvntomParams {
         }.elsewhen(io.cen) {
           pmpcfg0r := pmpcfg0r & (~io.wdata)
         }
-      }.elsewhen(io.which_reg === CSR.fcsr) {
-        when(io.wen) {
-          fcsrr_frm := io.wdata(7, 5)
-          fcsrr_nv := io.wdata(4)
-          fcsrr_dz := io.wdata(3)
-          fcsrr_of := io.wdata(2)
-          fcsrr_uf := io.wdata(1)
-          fcsrr_nx := io.wdata(0)
-        }.elsewhen(io.sen) {
-          fcsrr_frm := fcsrr_frm | io.wdata(7, 5)
-          fcsrr_nv := fcsrr_nv | io.wdata(4)
-          fcsrr_dz := fcsrr_dz | io.wdata(3)
-          fcsrr_of := fcsrr_of | io.wdata(2)
-          fcsrr_uf := fcsrr_uf | io.wdata(1)
-          fcsrr_nx := fcsrr_nx | io.wdata(0)
-        }.elsewhen(io.cen) {
-          fcsrr_frm := fcsrr_frm & (~io.wdata(7, 5))
-          fcsrr_nv := fcsrr_nv & (~io.wdata(4))
-          fcsrr_dz := fcsrr_dz & (~io.wdata(3))
-          fcsrr_of := fcsrr_of & (~io.wdata(2))
-          fcsrr_uf := fcsrr_uf & (~io.wdata(1))
-          fcsrr_nx := fcsrr_nx & (~io.wdata(0))
-        }
+//      }.elsewhen(io.which_reg === CSR.fcsr) {
+//        when(io.wen) {
+//          fcsrr_frm := io.wdata(7, 5)
+//          fcsrr_nv := io.wdata(4)
+//          fcsrr_dz := io.wdata(3)
+//          fcsrr_of := io.wdata(2)
+//          fcsrr_uf := io.wdata(1)
+//          fcsrr_nx := io.wdata(0)
+//        }.elsewhen(io.sen) {
+//          fcsrr_frm := fcsrr_frm | io.wdata(7, 5)
+//          fcsrr_nv := fcsrr_nv | io.wdata(4)
+//          fcsrr_dz := fcsrr_dz | io.wdata(3)
+//          fcsrr_of := fcsrr_of | io.wdata(2)
+//          fcsrr_uf := fcsrr_uf | io.wdata(1)
+//          fcsrr_nx := fcsrr_nx | io.wdata(0)
+//        }.elsewhen(io.cen) {
+//          fcsrr_frm := fcsrr_frm & (~io.wdata(7, 5))
+//          fcsrr_nv := fcsrr_nv & (~io.wdata(4))
+//          fcsrr_dz := fcsrr_dz & (~io.wdata(3))
+//          fcsrr_of := fcsrr_of & (~io.wdata(2))
+//          fcsrr_uf := fcsrr_uf & (~io.wdata(1))
+//          fcsrr_nx := fcsrr_nx & (~io.wdata(0))
+//        }
       }
     }
   }
