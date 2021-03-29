@@ -9,16 +9,14 @@ trait RISCVConfig {
 
 trait projectConfig {
   // TODO hot values can be modified in makefile
-  var fpga: Boolean = false
-  // Pointer Encryption Config
-  var enable_pec: Boolean = true
-  var pec_enable_ppl: Boolean = false
-  var pec_round: Int = 7
+  var fpga: Boolean = true
   // Cold Values
   var chiplink: Boolean = false
   var ila: Boolean = fpga
   val startAddr = if (fpga || ila) 0x10010000L else 0x80000000L
   var board: String = "None"
+  val enable_dsp_mult = fpga && true
+  val enable_blockram = fpga && true
   var hasICache: Boolean = false
   var hasDCache: Boolean = false
   // TODO Delete redundant options
@@ -29,7 +27,7 @@ trait projectConfig {
   val regNum        = 64
   val regWidth      = log2Ceil(regNum)
   val diffTest      = !fpga
-  val pipeTrace     = true
+  val pipeTrace     = false
   val prtHotSpot    = false
   val vscode        = false
   // Mode and VA

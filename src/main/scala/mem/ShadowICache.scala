@@ -16,8 +16,6 @@ class ShadowICache(implicit val cacheConfig: CacheConfig)
   val io = IO(new CacheIO)
 
   // Module Used
-  val metaArray = List.fill(nWays)(SyncReadMem(nSets, new MetaData))
-  val dataArray = List.fill(nWays)(SyncReadMem(nSets, new CacheLineData))
   val stall = Wire(Bool())
   val s2_need_forward = Wire(Bool())
   val write_meta = Wire(Vec(nWays, new MetaData))
@@ -73,10 +71,7 @@ class ShadowICache(implicit val cacheConfig: CacheConfig)
     s2_wen := s1_wen
     s2_memtype := s1_memtype
   }
-  for (i <- 0 until nWays) {
-    array_meta(i) := metaArray(i).read(read_index, !(read_index === s3_index && need_write))
-    array_cacheline(i) := dataArray(i).read(read_index, !(read_index === s3_index && need_write))
-  }
+
   forward_meta := Mux(s2_hazard_low_prio, last_s3_write_meta, array_meta)
   forward_cacheline := Mux(s2_hazard_low_prio, last_s3_write_line, array_cacheline)
   s2_meta := Mux(s2_need_forward, write_meta, forward_meta)
@@ -272,9 +267,8 @@ class ShadowICache(implicit val cacheConfig: CacheConfig)
       when(!s3_ismmio) {
         when(!s3_hit) {
           for (i <- 0 until nWays) {
-            when(s3_access_index === i.U && !s3_hit) { // TODO UPDATE SHADOW DATA
+            when(s3_access_index === i.U) { // TODO UPDATE SHADOW DATA
               write_data_tmp(i) := target_data
-              dataArray(i).write(s3_index, target_data)
               need_write := true.B
             }.otherwise {
               write_data_tmp(i) := s3_cacheline(i)
@@ -299,12 +293,6 @@ class ShadowICache(implicit val cacheConfig: CacheConfig)
     flush_counter.inc()
   }
 
-  when(state === s_flush || (s3_valid && mem_request_satisfied)) {
-    for (i <- 0 until nWays) {
-      metaArray(i).write(meta_index, write_meta_tmp(i))
-    }
-  }
-
   // FixMe !!!!!!!! need to detect next page and may raise page fault
   val half_fetched = !s3_shadow_hit && !s3_hit
 //  when (half_fetched && io.in.resp.valid) {
@@ -312,4 +300,48 @@ class ShadowICache(implicit val cacheConfig: CacheConfig)
 //    printf("cache\n")
 //  }
   BoringUtils.addSource(half_fetched, "half_fetched_if3")
+
+  if (fpga && enable_blockram) {
+    val metaArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new MetaData).getWidth, 1)))
+    val dataArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new CacheLineData).getWidth, 1)))
+
+    for (i <- 0 until nWays) {
+      metaArray(i).io.addra := read_index
+      metaArray(i).io.addrb := meta_index
+      metaArray(i).io.wea := false.B
+      metaArray(i).io.web := state === s_flush || (s3_valid && mem_request_satisfied)
+      metaArray(i).io.dina := DontCare
+      metaArray(i).io.dinb := write_meta_tmp(i).asUInt
+      array_meta(i) := metaArray(i).io.douta.asTypeOf(new MetaData)
+      dataArray(i).io.addra := read_index
+      dataArray(i).io.addrb := s3_index
+      dataArray(i).io.wea := false.B
+      dataArray(i).io.web := s3_valid && request_satisfied && !s3_ismmio && !s3_hit && s3_access_index === i.U
+      dataArray(i).io.dina := DontCare
+      dataArray(i).io.dinb := target_data.asUInt
+      array_cacheline(i) := dataArray(i).io.douta.asTypeOf(new CacheLineData)
+    }
+  } else {
+    val metaArray = List.fill(nWays)(SyncReadMem(nSets, new MetaData))
+    val dataArray = List.fill(nWays)(SyncReadMem(nSets, new CacheLineData))
+
+    for (i <- 0 until nWays) {
+      array_meta(i) := metaArray(i).read(read_index, !(read_index === s3_index && need_write))
+      array_cacheline(i) := dataArray(i).read(read_index, !(read_index === s3_index && need_write))
+    }
+
+    when (s3_valid && request_satisfied && !s3_ismmio && !s3_hit) {
+      for (i <- 0 until nWays) {
+        when(s3_access_index === i.U) {
+          dataArray(i).write(s3_index, target_data)
+        }
+      }
+    }
+
+    when(state === s_flush || (s3_valid && mem_request_satisfied)) {
+      for (i <- 0 until nWays) {
+        metaArray(i).write(meta_index, write_meta_tmp(i))
+      }
+    }
+  }
 }
