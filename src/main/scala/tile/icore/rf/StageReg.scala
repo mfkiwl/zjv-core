@@ -71,7 +71,6 @@ class BrJumpDelayIO extends Bundle with phvntomParams {
   val wrong_target_in = Input(Bool())
   val predict_taken_but_not_br_in = Input(Bool())
   val bjpc_in = Input(UInt(xlen.W))
-  val feedback_pc_in = Input(UInt(xlen.W))
   val feedback_is_br_in = Input(Bool())
   val feedback_target_pc_in = Input(UInt(xlen.W))
   val feedback_br_taken_in = Input(Bool())
@@ -79,7 +78,6 @@ class BrJumpDelayIO extends Bundle with phvntomParams {
   val wrong_target_out = Output(Bool())
   val predict_taken_but_not_br_out = Output(Bool())
   val bjpc_out = Output(UInt(xlen.W))
-  val feedback_pc_out = Output(UInt(xlen.W))
   val feedback_is_br_out = Output(Bool())
   val feedback_target_pc_out = Output(UInt(xlen.W))
   val feedback_br_taken_out = Output(Bool())
@@ -396,7 +394,6 @@ class RegExeDTLB extends Module with phvntomParams {
   val wrong_target = RegInit(Bool(), false.B)
   val predict_taken_but_not_br = RegInit(Bool(), false.B)
   val bjpc = RegInit(UInt(xlen.W), startAddr.asUInt)
-  val feedback_pc = RegInit(UInt(xlen.W), startAddr.asUInt)
   val feedback_is_br = RegInit(Bool(), false.B)
   val feedback_target_pc = RegInit(UInt(xlen.W), startAddr.asUInt)
   val feedback_br_taken = RegInit(Bool(), false.B)
@@ -434,7 +431,6 @@ class RegExeDTLB extends Module with phvntomParams {
       wrong_target := false.B
       predict_taken_but_not_br := false.B
       bjpc := startAddr.asUInt
-      feedback_pc := startAddr.asUInt
       feedback_is_br := false.B
       feedback_target_pc := startAddr.asUInt
       feedback_br_taken := false.B
@@ -458,7 +454,6 @@ class RegExeDTLB extends Module with phvntomParams {
       wrong_target := io.bjio.wrong_target_in
       predict_taken_but_not_br := io.bjio.predict_taken_but_not_br_in
       bjpc := io.bjio.bjpc_in
-      feedback_pc := io.bjio.feedback_pc_in
       feedback_is_br := io.bjio.feedback_is_br_in
       feedback_target_pc := io.bjio.feedback_target_pc_in
       feedback_br_taken := io.bjio.feedback_br_taken_in
@@ -483,7 +478,6 @@ class RegExeDTLB extends Module with phvntomParams {
     wrong_target := false.B
     predict_taken_but_not_br := false.B
     bjpc := startAddr.asUInt
-    feedback_pc := startAddr.asUInt
     feedback_is_br := false.B
     feedback_target_pc := startAddr.asUInt
     feedback_br_taken := false.B
@@ -514,7 +508,6 @@ class RegExeDTLB extends Module with phvntomParams {
   io.bjio.wrong_target_out := wrong_target
   io.bjio.predict_taken_but_not_br_out := predict_taken_but_not_br
   io.bjio.bjpc_out := bjpc
-  io.bjio.feedback_pc_out := feedback_pc
   io.bjio.feedback_is_br_out := feedback_is_br
   io.bjio.feedback_target_pc_out := feedback_target_pc
   io.bjio.feedback_br_taken_out := feedback_br_taken

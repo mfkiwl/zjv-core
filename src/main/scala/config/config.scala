@@ -9,7 +9,7 @@ trait RISCVConfig {
 
 trait projectConfig {
   // TODO hot values can be modified in makefile
-  var fpga: Boolean = true
+  var fpga: Boolean = false
   // Cold Values
   var chiplink: Boolean = false
   var ila: Boolean = fpga
@@ -17,6 +17,10 @@ trait projectConfig {
   var board: String = "None"
   val enable_dsp_mult = fpga && true
   val enable_blockram = fpga && true
+  val enable_pec = true
+  val pec_enable_ppl = false
+  val static_round = true
+  val pec_round = 7
   var hasICache: Boolean = false
   var hasDCache: Boolean = false
   // TODO Delete redundant options

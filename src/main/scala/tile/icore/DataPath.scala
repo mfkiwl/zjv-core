@@ -60,7 +60,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   val scheduler = Module(new ALUScheduler)
   val amo_arbiter = Module(new AMOArbiter)
   val reservation = Module(new Reservation)
-  val pec_engine = if (enable_pec) Module(new QarmaEngine(pec_enable_ppl, pec_round)) else null
+  val pec_engine = if (enable_pec) Module(new QarmaEngine(pec_enable_ppl, static_round, pec_round)) else null
 
   // Stall Request Signals
   val stall_req_if1_atomic = WireInit(Bool(), false.B)
@@ -175,7 +175,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
 
   // BPU
   bpu.io.pc_to_predict := pc_gen.io.pc_out
-  bpu.io.feedback_pc := reg_exe_dtlb.io.bjio.feedback_pc_out
+  bpu.io.feedback_pc := reg_exe_dtlb.io.bsrio.pc_out
   bpu.io.feedback_is_br := reg_exe_dtlb.io.bjio.feedback_is_br_out
   bpu.io.feedback_target_pc := reg_exe_dtlb.io.bjio.feedback_target_pc_out
   bpu.io.feedback_br_taken := reg_exe_dtlb.io.bjio.feedback_br_taken_out
@@ -351,7 +351,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
   branch_cond.io.rs2 := rs2
   branch_cond.io.brType := reg_id_exe.io.iiio.inst_info_out.brType
 
-  feedback_pc := reg_id_exe.io.bsrio.pc_out
   feedback_is_br := (reg_id_exe.io.iiio.inst_info_out.brType.orR || reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump)
   feedback_target_pc := alu.io.out
   feedback_br_taken := branch_cond.io.branch || reg_id_exe.io.iiio.inst_info_out.pcSelect === pcJump
@@ -474,7 +473,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
     reg_id_exe.io.bsrio.pc_out + Mux(reg_id_exe.io.instio.inst_out(1, 0).andR, 4.U, 2.U),
     alu.io.out
   )
-  reg_exe_dtlb.io.bjio.feedback_pc_in := feedback_pc
+
   reg_exe_dtlb.io.bjio.feedback_is_br_in := feedback_is_br
   reg_exe_dtlb.io.bjio.feedback_target_pc_in := feedback_target_pc
   reg_exe_dtlb.io.bjio.feedback_br_taken_in := feedback_br_taken
