@@ -496,6 +496,10 @@ class DataPath extends Module with phvntomParams with projectConfig {
   multiplier.io.op := reg_exe_dtlb.io.iiio.inst_info_out.aluType
 
   // PEC
+  // input.ready is stall_req signal
+  // input.valid is start signal
+  // output.valid is result_valid, which can be replaced by input.ready
+  // output.ready is the next stage pipeline is free
   if (enable_pec) {
     val kah = WireInit(0.U(64.W))
     val kal = WireInit(0.U(64.W))
@@ -515,7 +519,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
     BoringUtils.addSink(kml, "pec_kml")
     val key_sel = reg_exe_dtlb.io.instio.inst_out(14, 12)
     pec_engine.input.valid := reg_exe_dtlb.io.iiio.inst_info_out.pec
-    // TODO ignore input.ready when using single-stage engine
     pec_engine.input.bits.encrypt := ~(reg_exe_dtlb.io.instio.inst_out(25))
     pec_engine.input.bits.keyh := MuxLookup(key_sel, kth, Seq(
       "b000".U -> kth,
@@ -532,7 +535,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
     pec_engine.input.bits.tweak := reg_exe_dtlb.io.mdio.rs2_after_fwd_out
     pec_engine.input.bits.text := reg_exe_dtlb.io.mdio.rs1_after_fwd_out
     pec_engine.input.bits.actual_round := 7.U(3.W)
-    pec_engine.output.ready := true.B
+    pec_engine.output.ready := !stall_dtlb_mem1
 
     // when(pec_engine.input.valid) {
     //   printf("keysel %x, keyhigh %x, keylow %x, kth %x, ktl %x, text %x, tweak %x\n", key_sel, pec_engine.input.bits.keyh,
@@ -577,7 +580,8 @@ class DataPath extends Module with phvntomParams with projectConfig {
     dmmu_delay_flush_signal := true.B
   }
 
-  stall_req_dtlb_atomic := dmmu.io.front.stall_req || multiplier.io.stall_req
+  val stall_req_qarma_atomic = if (enable_pec) (!pec_engine.input.ready) else false.B
+  stall_req_dtlb_atomic := dmmu.io.front.stall_req || multiplier.io.stall_req || stall_req_qarma_atomic
 
   // Reg DTLB MEM1
   reg_dtlb_mem1.io.bsrio.last_stage_atomic_stall_req := stall_req_dtlb_atomic
