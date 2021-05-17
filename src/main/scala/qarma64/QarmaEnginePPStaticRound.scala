@@ -119,13 +119,20 @@ class QarmaEnginePPStaticRound(fixed_round: Int = 7) extends QarmaParamsIO {
     input.ready := Mux(input.valid, false.B, true.B)
     output.valid := false.B
   }.elsewhen(state === s_busy) {
-    input.ready := false.B
-    output.valid := false.B
-    when(counter(1)) {
+    when(kill.valid) {
       counter := 0.U
-      next_state := s_wait
+      input.ready := Mux(output.ready, true.B, false.B)
+      output.valid := false.B
+      next_state := s_idle
+    }.elsewhen(counter(1)) {
+      counter := 0.U
+      input.ready := Mux(output.ready, true.B, false.B)
+      output.valid := true.B
+      next_state := Mux(output.ready, s_idle, s_wait)
     }.otherwise {
       counter := counter + 1.U
+      input.ready := false.B
+      output.valid := false.B
       next_state := s_busy
     }
   }.otherwise {
@@ -139,5 +146,10 @@ class QarmaEnginePPStaticRound(fixed_round: Int = 7) extends QarmaParamsIO {
       internal_regs(1)(64 * 6 - 1, 64 * 5), internal_regs(2)(64 * 6 - 1, 64 * 5), internal_regs(3)(64 * 6 - 1, 64 * 5))
   }
 
-  output.bits.result := internal_regs(3)(64 * 6 - 1, 64 * 5) ^ internal_regs(3)(64 * 2 - 1, 64 * 1)
+  val wire_result = WireInit(UInt((64 * 6).W), Cat(is_vec(temp_index(2)), tk_vec(temp_index(2)),
+    internal_regs(2)(64 * 4 - 1, 0)))
+  output.bits.result := Mux(state === s_wait,
+    internal_regs(3)(64 * 6 - 1, 64 * 5) ^ internal_regs(3)(64 * 2 - 1, 64 * 1),
+    wire_result(64 * 6 - 1, 64 * 5).asUInt ^ wire_result(64 * 2 - 1, 64 * 1).asUInt
+  )
 }

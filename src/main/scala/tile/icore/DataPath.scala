@@ -518,6 +518,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
     BoringUtils.addSink(kmh, "pec_kmh")
     BoringUtils.addSink(kml, "pec_kml")
     val key_sel = reg_exe_dtlb.io.instio.inst_out(14, 12)
+    pec_engine.kill.valid := false.B
     pec_engine.input.valid := reg_exe_dtlb.io.iiio.inst_info_out.pec
     pec_engine.input.bits.encrypt := ~(reg_exe_dtlb.io.instio.inst_out(25))
     pec_engine.input.bits.keyh := MuxLookup(key_sel, kth, Seq(

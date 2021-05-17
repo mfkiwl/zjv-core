@@ -69,6 +69,9 @@ trait QarmaParams {
 }
 
 trait QarmaParamsIO extends MultiIOModule with QarmaParams {
+  val kill = IO(new Bundle {
+    val valid = Input(Bool())
+  })
   val input = IO(Flipped(Decoupled(new Bundle {
     val encrypt = Bool()
     val keyh = UInt(64.W)
