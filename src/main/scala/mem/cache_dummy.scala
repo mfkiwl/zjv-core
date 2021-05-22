@@ -85,6 +85,7 @@ class CacheDummy(implicit
   io.in.resp.bits.data := HoldCond(result, hold_assert, state === s_finish)
   io.in.req.ready := !stall
   io.in.flush_ready := true.B
+  io.in.half_fetched := false.B
 
   io.mem.stall := false.B
   io.mem.flush := false.B

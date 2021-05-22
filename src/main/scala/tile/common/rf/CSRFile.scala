@@ -2,7 +2,6 @@ package tile.common.rf
 
 import chisel3._
 import chisel3.util._
-import chisel3.util.experimental.BoringUtils
 import tile.common.control._
 import tile._
 
@@ -209,6 +208,33 @@ class ExceptionJudger extends Module with phvntomParams {
 }
 
 class CSRFileIO extends Bundle with phvntomParams {
+  // Difftest
+  val mstatusr = Output(UInt(xlen.W))
+  val mipr = Output(UInt(xlen.W))
+  val mier = Output(UInt(xlen.W))
+  val mcycler = Output(UInt(xlen.W))
+  val mepcr = Output(UInt(xlen.W))
+  val mtvalr = Output(UInt(xlen.W))
+  val mcauser = Output(UInt(xlen.W))
+  val sstatusr = Output(UInt(xlen.W))
+  val sipr = Output(UInt(xlen.W))
+  val sier = Output(UInt(xlen.W))
+  val sepcr = Output(UInt(xlen.W))
+  val stvalr = Output(UInt(xlen.W))
+  val scauser = Output(UInt(xlen.W))
+  val stvecr = Output(UInt(xlen.W))
+  val mtvecr = Output(UInt(xlen.W))
+  val midelegr = Output(UInt(xlen.W))
+  val medelegr = Output(UInt(xlen.W))
+  // PEC
+  val pec_kah = Output(UInt(xlen.W))
+  val pec_kal = Output(UInt(xlen.W))
+  val pec_kbh = Output(UInt(xlen.W))
+  val pec_kbl = Output(UInt(xlen.W))
+  val pec_kth = Output(UInt(xlen.W))
+  val pec_ktl = Output(UInt(xlen.W))
+  val pec_kmh = Output(UInt(xlen.W))
+  val pec_kml = Output(UInt(xlen.W))
   // CSRRX
   val which_reg = Input(UInt(12.W))
   val wen = Input(Bool())
@@ -1273,39 +1299,94 @@ class CSRFile extends Module with phvntomParams {
   io.with_c := misar(2)
 
   if (diffTest) {
-    BoringUtils.addSource(mstatusr, "difftestmstatusr")
-    BoringUtils.addSource(mipr, "difftestmipr")
-    BoringUtils.addSource(mier, "difftestmier")
-    BoringUtils.addSource(mcycler, "difftestmcycler")
-    BoringUtils.addSource(current_p, "difftestprivilege")
-    BoringUtils.addSource(mepcr, "difftestmepcr")
-    BoringUtils.addSource(mtvalr, "difftestmtvalr")
-    BoringUtils.addSource(mcauser, "difftestmcauser")
-    BoringUtils.addSource(sstatusr, "difftestsstatusr")
-    BoringUtils.addSource(sipr, "difftestsipr")
-    BoringUtils.addSource(sier, "difftestsier")
-    BoringUtils.addSource(sepcr, "difftestsepcr")
-    BoringUtils.addSource(stvalr, "diffteststvalr")
-    BoringUtils.addSource(scauser, "difftestscauser")
-    BoringUtils.addSource(stvecr, "diffteststvecr")
-    BoringUtils.addSource(mtvecr, "difftestmtvecr")
-    BoringUtils.addSource(midelegr, "difftestmidelegr")
-    BoringUtils.addSource(medelegr, "difftestmedelegr")
+    io.mstatusr := mstatusr_mbe
+    io.mipr := mipr
+    io.mier := mier
+    io.mcycler := mcycler
+    io.current_p := current_p
+    io.mepcr := mepcr
+    io.mtvalr := mtvalr
+    io.mcauser := mcauser
+    io.sstatusr := sstatusr
+    io.sipr := sipr
+    io.sier := sier
+    io.sepcr := sepcr
+    io.stvalr := stvalr
+    io.scauser := scauser
+    io.stvecr := stvecr
+    io.mtvecr := mtvecr
+    io.midelegr := midelegr
+    io.medelegr := medelegr
+  } else {
+    io.mstatusr := 0.U
+    io.mipr := 0.U
+    io.mier := 0.U
+    io.mcycler := 0.U
+    io.current_p := 0.U
+    io.mepcr := 0.U
+    io.mtvalr := 0.U
+    io.mcauser := 0.U
+    io.sstatusr := 0.U
+    io.sipr := 0.U
+    io.sier := 0.U
+    io.sepcr := 0.U
+    io.stvalr := 0.U
+    io.scauser := 0.U
+    io.stvecr := 0.U
+    io.mtvecr := 0.U
+    io.midelegr := 0.U
+    io.medelegr := 0.U
   }
 
   if (enable_pec) {
-    BoringUtils.addSource(Mux(io.which_reg === CSR.scrakeyh && valid && access_csr, new_key, scrakeyhr), "pec_kah")
-    BoringUtils.addSource(Mux(io.which_reg === CSR.scrakeyl && valid && access_csr, new_key, scrakeylr), "pec_kal")
-    BoringUtils.addSource(Mux(io.which_reg === CSR.scrbkeyh && valid && access_csr, new_key, scrbkeyhr), "pec_kbh")
-    BoringUtils.addSource(Mux(io.which_reg === CSR.scrbkeyl && valid && access_csr, new_key, scrbkeylr), "pec_kbl")
-    BoringUtils.addSource(Mux(io.which_reg === CSR.scrtkeyh && valid && access_csr, new_key, scrtkeyhr), "pec_kth")
-    BoringUtils.addSource(Mux(io.which_reg === CSR.scrtkeyl && valid && access_csr, new_key, scrtkeylr), "pec_ktl")
-    BoringUtils.addSource(Mux(io.which_reg === CSR.mcrmkeyh && valid && access_csr, new_key, mcrmkeyhr), "pec_kmh")
-    BoringUtils.addSource(Mux(io.which_reg === CSR.mcrmkeyl && valid && access_csr, new_key, mcrmkeylr), "pec_kml")
+    io.pec_kah := Mux(io.which_reg === CSR.scrakeyh && valid && access_csr, new_key, scrakeyhr)
+    io.pec_kal := Mux(io.which_reg === CSR.scrakeyl && valid && access_csr, new_key, scrakeylr)
+    io.pec_kbh := Mux(io.which_reg === CSR.scrbkeyh && valid && access_csr, new_key, scrbkeyhr)
+    io.pec_kbl := Mux(io.which_reg === CSR.scrbkeyl && valid && access_csr, new_key, scrbkeylr)
+    io.pec_kth := Mux(io.which_reg === CSR.scrtkeyh && valid && access_csr, new_key, scrtkeyhr)
+    io.pec_ktl := Mux(io.which_reg === CSR.scrtkeyl && valid && access_csr, new_key, scrtkeylr)
+    io.pec_kmh := Mux(io.which_reg === CSR.mcrmkeyh && valid && access_csr, new_key, mcrmkeyhr)
+    io.pec_kml := Mux(io.which_reg === CSR.mcrmkeyl && valid && access_csr, new_key, mcrmkeylr)
+  } else {
+    io.pec_kah := 0.U
+    io.pec_kal := 0.U
+    io.pec_kbh := 0.U
+    io.pec_kbl := 0.U
+    io.pec_kth := 0.U
+    io.pec_ktl := 0.U
+    io.pec_kmh := 0.U
+    io.pec_kml := 0.U
   }
 }
 
 class CSRIO extends Bundle with phvntomParams {
+  // Difftest
+  val mstatusr = Output(UInt(xlen.W))
+  val mipr = Output(UInt(xlen.W))
+  val mier = Output(UInt(xlen.W))
+  val mcycler = Output(UInt(xlen.W))
+  val mepcr = Output(UInt(xlen.W))
+  val mtvalr = Output(UInt(xlen.W))
+  val mcauser = Output(UInt(xlen.W))
+  val sstatusr = Output(UInt(xlen.W))
+  val sipr = Output(UInt(xlen.W))
+  val sier = Output(UInt(xlen.W))
+  val sepcr = Output(UInt(xlen.W))
+  val stvalr = Output(UInt(xlen.W))
+  val scauser = Output(UInt(xlen.W))
+  val stvecr = Output(UInt(xlen.W))
+  val mtvecr = Output(UInt(xlen.W))
+  val midelegr = Output(UInt(xlen.W))
+  val medelegr = Output(UInt(xlen.W))
+  // PEC
+  val pec_kah = Output(UInt(xlen.W))
+  val pec_kal = Output(UInt(xlen.W))
+  val pec_kbh = Output(UInt(xlen.W))
+  val pec_kbl = Output(UInt(xlen.W))
+  val pec_kth = Output(UInt(xlen.W))
+  val pec_ktl = Output(UInt(xlen.W))
+  val pec_kmh = Output(UInt(xlen.W))
+  val pec_kml = Output(UInt(xlen.W))
   // CSRXX
   val stall = Input(Bool())
   val bubble = Input(Bool())
@@ -1354,6 +1435,15 @@ class CSRIO extends Bundle with phvntomParams {
 class CSR extends Module with phvntomParams {
   val io = IO(new CSRIO)
   val csr_regfile = Module(new CSRFile)
+
+  io.pec_kah := csr_regfile.io.pec_kah
+  io.pec_kal := csr_regfile.io.pec_kal
+  io.pec_kbh := csr_regfile.io.pec_kbh
+  io.pec_kbl := csr_regfile.io.pec_kbl
+  io.pec_kth := csr_regfile.io.pec_kth
+  io.pec_ktl := csr_regfile.io.pec_ktl
+  io.pec_kmh := csr_regfile.io.pec_kmh
+  io.pec_kml := csr_regfile.io.pec_kml
 
   val csr_addr = io.inst(31, 20)
   val read_only_csr = csr_addr(11) & csr_addr(10)
@@ -1407,4 +1497,45 @@ class CSR extends Module with phvntomParams {
   io.mstatus_mxr := csr_regfile.io.mstatus_mxr
   io.is_mpp_s_mode := csr_regfile.io.is_mpp_s_mode
   io.with_c := csr_regfile.io.with_c
+
+  if (diffTest) {
+  // Difftest
+    io.mstatusr := csr_regfile.io.mstatusr
+    io.mipr := csr_regfile.io.mipr
+    io.mier := csr_regfile.io.mier
+    io.mcycler := csr_regfile.io.mcycler
+    io.current_p := csr_regfile.io.current_p
+    io.mepcr := csr_regfile.io.mepcr
+    io.mtvalr := csr_regfile.io.mtvalr
+    io.mcauser := csr_regfile.io.mcauser
+    io.sstatusr := csr_regfile.io.sstatusr
+    io.sipr := csr_regfile.io.sipr
+    io.sier := csr_regfile.io.sier
+    io.sepcr := csr_regfile.io.sepcr
+    io.stvalr := csr_regfile.io.stvalr
+    io.scauser := csr_regfile.io.scauser
+    io.stvecr := csr_regfile.io.stvecr
+    io.mtvecr := csr_regfile.io.mtvecr
+    io.midelegr := csr_regfile.io.midelegr
+    io.medelegr := csr_regfile.io.medelegr
+  } else {
+    io.mstatusr := 0.U
+    io.mipr := 0.U
+    io.mier := 0.U
+    io.mcycler := 0.U
+    io.current_p := 0.U
+    io.mepcr := 0.U
+    io.mtvalr := 0.U
+    io.mcauser := 0.U
+    io.sstatusr := 0.U
+    io.sipr := 0.U
+    io.sier := 0.U
+    io.sepcr := 0.U
+    io.stvalr := 0.U
+    io.scauser := 0.U
+    io.stvecr := 0.U
+    io.mtvecr := 0.U
+    io.midelegr := 0.U
+    io.medelegr := 0.U    
+  }
 }

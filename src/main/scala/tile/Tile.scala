@@ -2,12 +2,51 @@ package tile
 
 import bus._
 import chisel3._
-import chisel3.util.experimental.BoringUtils
 import device._
 import mem._
 
 class TileIO extends Bundle with phvntomParams {
-  // TODO
+  // DIFFTEST PLIC
+  val plicip   = Output(Vec(32, Bool()))
+  val plicie   = Output(UInt(32.W))
+  val plicprio = Output(UInt(32.W))
+  val plicthrs = Output(UInt(32.W))
+  val plicclaim = Output(UInt(32.W))
+  // CSR DIFF
+  val mstatusr = Output(UInt(xlen.W))
+  val mipr = Output(UInt(xlen.W))
+  val mier = Output(UInt(xlen.W))
+  val mcycler = Output(UInt(xlen.W))
+  val current_p = Output(UInt(xlen.W))
+  val mepcr = Output(UInt(xlen.W))
+  val mtvalr = Output(UInt(xlen.W))
+  val mcauser = Output(UInt(xlen.W))
+  val sstatusr = Output(UInt(xlen.W))
+  val sipr = Output(UInt(xlen.W))
+  val sier = Output(UInt(xlen.W))
+  val sepcr = Output(UInt(xlen.W))
+  val stvalr = Output(UInt(xlen.W))
+  val scauser = Output(UInt(xlen.W))
+  val stvecr = Output(UInt(xlen.W))
+  val mtvecr = Output(UInt(xlen.W))
+  val midelegr = Output(UInt(xlen.W))
+  val medelegr = Output(UInt(xlen.W))
+  // REGS
+  val regs     = Output(Vec(regNum/2, UInt(xlen.W)))
+  // HALT
+  val poweroff = Output(UInt(xlen.W))
+  // INT
+  val irq = Output(Bool())
+  val meip = Output(Bool())
+  val seip = Output(Bool())
+  // Stalls
+  val streqs   = Output(Vec(10, UInt(xlen.W)))
+  val dtest_pc = Output(UInt(xlen.W))
+  val dtest_inst = Output(UInt(xlen.W))
+  val dtest_wbvalid = Output(Bool())
+  val dtest_int = Output(Bool())
+  val dtest_alu = Output(UInt(xlen.W))
+  val dtest_mem = Output(UInt(xlen.W))
 }
 
 class Tile extends Module with phvntomParams {
@@ -112,7 +151,9 @@ class Tile extends Module with phvntomParams {
   val poweroff = Module(new AXI4PowerOff)
   val poweroffSync = poweroff.io.extra.get.poweroff
   if (diffTest) {
-    BoringUtils.addSource(poweroffSync(31, 0), "difftestpoweroff")
+    io.poweroff := poweroffSync(31, 0)
+  } else {
+    io.poweroff := 0.U
   }
 
   // clint
@@ -131,9 +172,13 @@ class Tile extends Module with phvntomParams {
   core.io.int.meip := hart0_meipSync
   core.io.int.seip := hart0_seipSync
   if (diffTest) {
-    BoringUtils.addSource(uart_irqSync, "difftestuartirq")
-    BoringUtils.addSource(hart0_meipSync, "difftestplicmeip")
-    BoringUtils.addSource(hart0_seipSync, "difftestplicseip")
+    io.irq := uart_irqSync
+    io.meip := hart0_meipSync
+    io.seip := hart0_seipSync
+  } else {
+    io.irq := false.B 
+    io.meip := false.B 
+    io.seip := false.B
   }
 
   // xbar
@@ -150,5 +195,83 @@ class Tile extends Module with phvntomParams {
   mmioxbar_internal.io.out <> mmioxbar_external.io.in
   for (i <- 0 until mmio_device.length) {
     mmio_device(i).io.in <> mmioxbar_external.io.out(i)
+  }
+
+  if (diffTest) {
+  // Difftest
+    io.mstatusr := core.io.mstatusr
+    io.mipr := core.io.mipr
+    io.mier := core.io.mier
+    io.mcycler := core.io.mcycler
+    io.current_p := core.io.current_p
+    io.mepcr := core.io.mepcr
+    io.mtvalr := core.io.mtvalr
+    io.mcauser := core.io.mcauser
+    io.sstatusr := core.io.sstatusr
+    io.sipr := core.io.sipr
+    io.sier := core.io.sier
+    io.sepcr := core.io.sepcr
+    io.stvalr := core.io.stvalr
+    io.scauser := core.io.scauser
+    io.stvecr := core.io.stvecr
+    io.mtvecr := core.io.mtvecr
+    io.midelegr := core.io.midelegr
+    io.medelegr := core.io.medelegr
+  } else {
+    io.mstatusr := 0.U
+    io.mipr := 0.U
+    io.mier := 0.U
+    io.mcycler := 0.U
+    io.current_p := 0.U
+    io.mepcr := 0.U
+    io.mtvalr := 0.U
+    io.mcauser := 0.U
+    io.sstatusr := 0.U
+    io.sipr := 0.U
+    io.sier := 0.U
+    io.sepcr := 0.U
+    io.stvalr := 0.U
+    io.scauser := 0.U
+    io.stvecr := 0.U
+    io.mtvecr := 0.U
+    io.midelegr := 0.U
+    io.medelegr := 0.U    
+  }
+  if (diffTest) {
+    io.regs := VecInit((0 to regNum/2-1).map(i => core.io.regs(i)))
+  } else {
+    io.regs := VecInit((0 to regNum/2-1).map(i => 0.U))
+  }
+
+  if (diffTest) {
+    io.streqs := core.io.streqs
+    io.dtest_pc := core.io.dtest_pc
+    io.dtest_inst := core.io.dtest_inst
+    io.dtest_wbvalid := core.io.dtest_wbvalid
+    io.dtest_int := core.io.dtest_int
+    io.dtest_alu := core.io.dtest_alu
+    io.dtest_mem := core.io.dtest_mem
+  } else {
+    io.streqs := VecInit((0 to 9).map(i => 0.U))
+    io.dtest_pc := 0.U
+    io.dtest_inst := 0.U
+    io.dtest_wbvalid := 0.U
+    io.dtest_int := 0.U
+    io.dtest_alu := 0.U
+    io.dtest_mem := 0.U
+  }
+
+  if (diffTest) {
+    io.plicip := plic.io.extra.get.plicip
+    io.plicie := plic.io.extra.get.plicie
+    io.plicprio := plic.io.extra.get.plicprio
+    io.plicthrs := plic.io.extra.get.plicthrs
+    io.plicclaim := plic.io.extra.get.plicclaim
+  } else {
+    io.plicip := 0.U
+    io.plicie := 0.U
+    io.plicprio := 0.U
+    io.plicthrs := 0.U
+    io.plicclaim := 0.U
   }
 }

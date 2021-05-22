@@ -80,6 +80,7 @@ class WriteBuffer(implicit val wbConfig: WBConfig)
     io.readChannel.resp.bits.data
   )
   io.in.flush_ready := (req_state =/= r_idle && req_state =/= r_flush) || (req_state === r_idle && !io.in.flush) || (req_state === r_flush && write_state === w_idle)
+  io.in.half_fetched := false.B
 
   io.readChannel.stall := false.B
   io.readChannel.flush := false.B

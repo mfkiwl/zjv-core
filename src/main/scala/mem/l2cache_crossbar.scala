@@ -37,6 +37,7 @@ class L2CacheXbar(val n_sources: Int = 1)(implicit val cacheConfig: CacheConfig)
   io.in.map(_.resp.bits := DontCare)
   io.in.map(_.resp.valid := false.B)
   io.in.map(_.flush_ready := true.B)
+  io.in.map(_.half_fetched := false.B)
   (io.in(inflightSrc).resp, io.out.resp) match {
     case (l, r) => {
       l.valid := r.valid

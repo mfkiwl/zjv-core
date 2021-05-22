@@ -2,7 +2,6 @@ package tile.icore
 
 import chisel3._
 import chisel3.util._
-import chisel3.util.experimental.BoringUtils
 import config.projectConfig
 import tile.phvntomParams
 import tile.common.control.ControlConst._
@@ -16,6 +15,36 @@ import device.MemIO
 import qarma64.QarmaEngine
 
 class DataPathIO extends Bundle with phvntomParams {
+  // CSR DIFF
+  val mstatusr = Output(UInt(xlen.W))
+  val mipr = Output(UInt(xlen.W))
+  val mier = Output(UInt(xlen.W))
+  val mcycler = Output(UInt(xlen.W))
+  val current_p = Output(UInt(xlen.W))
+  val mepcr = Output(UInt(xlen.W))
+  val mtvalr = Output(UInt(xlen.W))
+  val mcauser = Output(UInt(xlen.W))
+  val sstatusr = Output(UInt(xlen.W))
+  val sipr = Output(UInt(xlen.W))
+  val sier = Output(UInt(xlen.W))
+  val sepcr = Output(UInt(xlen.W))
+  val stvalr = Output(UInt(xlen.W))
+  val scauser = Output(UInt(xlen.W))
+  val stvecr = Output(UInt(xlen.W))
+  val mtvecr = Output(UInt(xlen.W))
+  val midelegr = Output(UInt(xlen.W))
+  val medelegr = Output(UInt(xlen.W))
+  // REG
+  val regs     = Output(Vec(regNum/2, UInt(xlen.W)))
+  // Stalls
+  val streqs   = Output(Vec(10, UInt(xlen.W)))
+  val dtest_pc = Output(UInt(xlen.W))
+  val dtest_inst = Output(UInt(xlen.W))
+  val dtest_wbvalid = Output(Bool())
+  val dtest_int = Output(Bool())
+  val dtest_alu = Output(UInt(xlen.W))
+  val dtest_mem = Output(UInt(xlen.W))
+  //
   val ctrl = Flipped(new ControlPathIO)
   val imem = Flipped(new MemIO)
   val dmem = Flipped(new MemIO)
@@ -285,6 +314,7 @@ class DataPath extends Module with phvntomParams with projectConfig {
   reg_if3_id.io.bpio.predict_taken_in := reg_if2_if3.io.bpio.predict_taken_out
   reg_if3_id.io.bpio.target_in := reg_if2_if3.io.bpio.target_out
   reg_if3_id.io.immuio.use_immu_in := reg_if2_if3.io.immuio.use_immu_out
+  reg_if3_id.io.half_fetched_in := io.imem.half_fetched
 
   // Some Special Michanism to Deal with C
   val half_fetched = reg_if3_id.io.half_fetched_regif3id
@@ -509,14 +539,14 @@ class DataPath extends Module with phvntomParams with projectConfig {
     val ktl = WireInit(0.U(64.W))
     val kmh = WireInit(0.U(64.W))
     val kml = WireInit(0.U(64.W))
-    BoringUtils.addSink(kah, "pec_kah")
-    BoringUtils.addSink(kal, "pec_kal")
-    BoringUtils.addSink(kbh, "pec_kbh")
-    BoringUtils.addSink(kbl, "pec_kbl")
-    BoringUtils.addSink(kth, "pec_kth")
-    BoringUtils.addSink(ktl, "pec_ktl")
-    BoringUtils.addSink(kmh, "pec_kmh")
-    BoringUtils.addSink(kml, "pec_kml")
+    kah := csr.io.pec_kah
+    kal := csr.io.pec_kal
+    kbh := csr.io.pec_kbh
+    kbl := csr.io.pec_kbl
+    kth := csr.io.pec_kth
+    ktl := csr.io.pec_ktl
+    kmh := csr.io.pec_kmh
+    kml := csr.io.pec_kml
     val key_sel = reg_exe_dtlb.io.instio.inst_out(14, 12)
     pec_engine.kill.valid := false.B
     pec_engine.input.valid := reg_exe_dtlb.io.iiio.inst_info_out.pec
@@ -810,6 +840,53 @@ class DataPath extends Module with phvntomParams with projectConfig {
   // TODO Difftest
   // TODO Don't care the low-end code style
   if (diffTest) {
+    io.regs := VecInit((0 to regNum/2-1).map(i => reg_file.io.regs(i)))
+  } else {
+    io.regs := VecInit((0 to regNum/2-1).map(i => 0.U))
+  }
+
+  if (diffTest) {
+  // Difftest
+    io.mstatusr := csr.io.mstatusr
+    io.mipr := csr.io.mipr
+    io.mier := csr.io.mier
+    io.mcycler := csr.io.mcycler
+    io.current_p := csr.io.current_p
+    io.mepcr := csr.io.mepcr
+    io.mtvalr := csr.io.mtvalr
+    io.mcauser := csr.io.mcauser
+    io.sstatusr := csr.io.sstatusr
+    io.sipr := csr.io.sipr
+    io.sier := csr.io.sier
+    io.sepcr := csr.io.sepcr
+    io.stvalr := csr.io.stvalr
+    io.scauser := csr.io.scauser
+    io.stvecr := csr.io.stvecr
+    io.mtvecr := csr.io.mtvecr
+    io.midelegr := csr.io.midelegr
+    io.medelegr := csr.io.medelegr
+  } else {
+    io.mstatusr := 0.U
+    io.mipr := 0.U
+    io.mier := 0.U
+    io.mcycler := 0.U
+    io.current_p := 0.U
+    io.mepcr := 0.U
+    io.mtvalr := 0.U
+    io.mcauser := 0.U
+    io.sstatusr := 0.U
+    io.sipr := 0.U
+    io.sier := 0.U
+    io.sepcr := 0.U
+    io.stvalr := 0.U
+    io.scauser := 0.U
+    io.stvecr := 0.U
+    io.mtvecr := 0.U
+    io.midelegr := 0.U
+    io.medelegr := 0.U    
+  }
+
+  if (diffTest) {
     val dtest_pc = RegInit(UInt(xlen.W), 0.U)
     val dtest_inst = RegInit(UInt(xlen.W), BUBBLE)
     val dtest_wbvalid = RegInit(Bool(), false.B)
@@ -887,22 +964,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
       reg_mem3_wb.io.iiio.inst_info_out.wbEnable =/= wenRes && reg_mem3_wb.io.iiio.inst_info_out.wbSelect =/= wbCond)
     }
     dtest_int := reg_mem3_wb.io.csrio.int_resp_out // dtest_expt & (io.int.msip | io.int.mtip)
-
-    if (diffTest) {
-      BoringUtils.addSource(dtest_pc, "difftestPC")
-      BoringUtils.addSource(dtest_inst, "difftestInst")
-      BoringUtils.addSource(dtest_wbvalid, "difftestValid")
-      BoringUtils.addSource(dtest_int, "difftestInt")
-      BoringUtils.addSource(dtest_alu, "difftestALU")
-      BoringUtils.addSource(dtest_mem, "difftestMem")
-    } else if (ila) {
-//      BoringUtils.addSource(dtest_pc, "ilaPC")
-//      BoringUtils.addSource(dtest_inst, "ilaInst")
-//      BoringUtils.addSource(dtest_wbvalid, "ilaValid")
-//      BoringUtils.addSource(dtest_int, "ilaInt")
-//      BoringUtils.addSource(dtest_alu, "ilaALU")
-//      BoringUtils.addSource(dtest_mem, "ilaMem")
-    }
 
 //    printf("REG IF1 IF2 pc %x, tar %x\n", reg_if1_if2.io.bsrio.pc_in, reg_if1_if2.io.bpio.target_in)
 //    printf("WT wrong target %x, is_br %x, predict_tk %x, alu %x, sup_tar %x\n",
@@ -1160,11 +1221,6 @@ class DataPath extends Module with phvntomParams with projectConfig {
       )
     }
 
-    BoringUtils.addSource(
-      VecInit((0 to 9).map(i => stall_req_counters(i))),
-      "difftestStreqs"
-    )
-
     if (pipeTrace || prtHotSpot) {
       when (starting === true.B && counterr < 20.U) {printf("\n")}
     }
@@ -1184,6 +1240,20 @@ class DataPath extends Module with phvntomParams with projectConfig {
       // printf("Interrupt mtvec: %x stall_req %x!\n", csrFile.io.evec, csrFile.io.stall_req);
     }
     //    printf("------->stall_req %x, imenreq_valid %x, imem_pc %x, csr_out %x, dmemaddr %x!\n", csrFile.io.stall_req, io.imem.req.valid, if_pc, csrFile.io.out, io.dmem.req.bits.addr)
-
+    io.streqs := VecInit((0 to 9).map(i => stall_req_counters(i)))
+    io.dtest_pc := dtest_pc
+    io.dtest_inst := dtest_inst
+    io.dtest_wbvalid := dtest_wbvalid
+    io.dtest_int := dtest_int
+    io.dtest_alu := dtest_alu
+    io.dtest_mem := dtest_mem
+  } else {
+    io.streqs := VecInit((0 to 9).map(i => 0.U))
+    io.dtest_pc := 0.U
+    io.dtest_inst := 0.U
+    io.dtest_wbvalid := 0.U
+    io.dtest_int := 0.U
+    io.dtest_alu := 0.U
+    io.dtest_mem := 0.U
   }
 }

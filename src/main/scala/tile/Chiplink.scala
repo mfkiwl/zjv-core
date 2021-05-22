@@ -3,7 +3,6 @@ package tile
 import bus._
 import chisel3._
 import chisel3.stage._
-import chisel3.util.experimental.BoringUtils
 import config.projectConfig
 import device._
 import firrtl.stage.RunFirrtlTransformAnnotation
@@ -408,18 +407,6 @@ class ysyx_zjv extends Module with phvntomParams with projectConfig {
     io.mmio_arid := chiplinkTile.io.mmio.ar.bits.id
     chiplinkTile.io.mmio.r.bits.id := io.mmio_rid
 
-//    def BoringUtilsConnect(sink: UInt, id: String) {
-//      val temp = WireInit(0.U(64.W))
-//      BoringUtils.addSink(temp, id)
-//      sink := temp
-//    }
-//
-//    BoringUtilsConnect(io.ila_bundle.pc      ,"ilaPC")
-//    BoringUtilsConnect(io.ila_bundle.inst   ,"ilaInst")
-//    BoringUtilsConnect(io.ila_bundle.wbvalid   ,"ilaValid")
-//    BoringUtilsConnect(io.ila_bundle.int  ,"ilaInt")
-//    BoringUtilsConnect(io.ila_bundle.alu  ,"ilaALU")
-//    BoringUtilsConnect(io.ila_bundle.mem  ,"ilaMem")
   }
 }
 

@@ -12,6 +12,8 @@ class RegFileIO extends Bundle with phvntomParams {
   val wen      = Input(Bool())
   val rd_addr  = Input(UInt(regWidth.W))
   val rd_data  = Input(UInt(xlen.W))
+  // DIFFTEST
+  val regs     = Output(Vec(regNum/2, UInt(xlen.W)))
 }
 
 class RegFile extends Module with phvntomParams {
@@ -25,6 +27,8 @@ class RegFile extends Module with phvntomParams {
   }
 
   if (diffTest) {
-    BoringUtils.addSource(VecInit((0 to regNum/2-1).map(i => regs(i))), "difftestRegs")
+    io.regs := VecInit((0 to regNum/2-1).map(i => regs(i)))
+  } else {
+    io.regs := VecInit((0 to regNum/2-1).map(i => 0.U))
   }
 }

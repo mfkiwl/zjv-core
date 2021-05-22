@@ -22,11 +22,15 @@ import chisel3._
 import chisel3.util._
 import utils._
 
-import chisel3.util.experimental.BoringUtils
-
 class PlicIO(val nrIntr: Int, val nrConxt: Int) extends Bundle {
   val intrVec = Input(UInt(nrIntr.W))
   val meip = Output(Vec(nrConxt, Bool()))
+  // DIFFTEST
+  val plicip   = Output(Vec(32, Bool()))
+  val plicie   = Output(UInt(32.W))
+  val plicprio = Output(UInt(32.W))
+  val plicthrs = Output(UInt(32.W))
+  val plicclaim = Output(UInt(32.W))
 }
 
 class AXI4PLIC(nrIntr: Int = 31, nrConxt: Int = 2)
@@ -135,10 +139,16 @@ class AXI4PLIC(nrIntr: Int = 31, nrConxt: Int = 2)
   }
 
   if (diffTest) {
-    BoringUtils.addSource(pending(0), "difftestplicpend")
-    BoringUtils.addSource(enable(0)(0), "difftestplicenable")
-    BoringUtils.addSource(priority(0), "difftestplicpriority")
-    BoringUtils.addSource(threshold(0), "difftestplicthreshold")
-    BoringUtils.addSource(claimCompletion(0), "difftestplicclaimed")
+    io.extra.get.plicip := pending(0)
+    io.extra.get.plicie := enable(0)(0)
+    io.extra.get.plicprio := priority(0)
+    io.extra.get.plicthrs := threshold(0)
+    io.extra.get.plicclaim := claimCompletion(0)
+  } else {
+    io.extra.get.plicip := VecInit((0 to 31).map(i => false.B))
+    io.extra.get.plicie := 0.U
+    io.extra.get.plicprio := 0.U
+    io.extra.get.plicthrs := 0.U
+    io.extra.get.plicclaim := 0.U
   }
 }
