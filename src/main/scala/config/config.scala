@@ -17,7 +17,7 @@ trait projectConfig {
   var board: String = "None"
   val enable_dsp_mult = fpga && true
   val enable_blockram = fpga && true
-  val enable_pec = true
+  val enable_pec = false
   val pec_enable_ppl = true
   val static_round = true
   val pec_round = 7
