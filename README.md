@@ -134,9 +134,9 @@ ZJV is slightly better than Nutshell () at both frequency and IPC in coremark, e
 
 Below are the results of coremark (mark/MHz), coremark (mark) and UnixBench on FPGA.
 
-<img src="pic/corem1.png" width="25% height="25%;" />
+<img src="pic/corem1.png" width="25%" height="25%" />
 
-<img src="pic/corem2.png" width="25% height="25%;" />
+<img src="pic/corem2.png" width="25%" height="25%" />
 
 <img src="pic/ub.png" style="zoom:50%;" />
 
