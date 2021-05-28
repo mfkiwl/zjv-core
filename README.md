@@ -5,7 +5,7 @@ ZJV SoC
 
 This document gives a quick overview on the design of ZJV , testing it with Spike (the RISC-V ISA Simulator), and booting Debian on FPGA with ZJV core. In fact, given the correct device tree, the latest version of Rocket example system is also compatible with the SoC.
 
-<img src="pic/ovw.png" width="15%" height="15%" />
+<img src="pic/ovw.png" width="50%" height="50%" />
 
 
 
