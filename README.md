@@ -5,7 +5,7 @@ ZJV SoC
 
 This document gives a quick overview on the design of ZJV , testing it with Spike (the RISC-V ISA Simulator), and booting Debian on FPGA with ZJV core. In fact, given the correct device tree, the latest version of Rocket example system is also compatible with the SoC.
 
-<img src="pic/ovw.png" style="zoom: 4%;" />
+<img src="pic/ovw.png" width="15%" height="15%" />
 
 
 
@@ -134,9 +134,9 @@ ZJV is slightly better than Nutshell () at both frequency and IPC in coremark, e
 
 Below are the results of coremark (mark/MHz), coremark (mark) and UnixBench on FPGA.
 
-<img src="pic/corem1.png" width="25%" height="25%" />
+<img src="pic/corem1.png" width="35%" height="35%" />
 
-<img src="pic/corem2.png" width="25%" height="25%" />
+<img src="pic/corem2.png" width="35%" height="35%" />
 
 <img src="pic/ub.png" style="zoom:50%;" />
 
