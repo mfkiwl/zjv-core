@@ -1472,7 +1472,7 @@ class CSR extends Module with phvntomParams {
   csr_regfile.io.is_store := io.is_store
   csr_regfile.io.is_ecall :=  io.inst === "b00000000000000000000000001110011".U  // ecall
   csr_regfile.io.is_bpoint := (io.inst === "b00000000000100000000000001110011".U ||
-    io.inst(31, 0) === "b100_1_00_000_00_000_10".U) // breakpoint and c.ebreak
+    io.inst(15, 0) === "b100_1_00_000_00_000_10".U) // breakpoint and c.ebreak
   csr_regfile.io.is_wfi :=    io.inst === "b00010000010100000000000001110011".U  // wfi
   csr_regfile.io.is_sfence := io.inst(31, 25) === "b0001001".U && io.inst(14, 0) === "b000000001110011".U // sfence.vma
   csr_regfile.io.int_pend.msip := io.soft_int

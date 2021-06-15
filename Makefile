@@ -96,10 +96,11 @@ generate_chiplink:
 	# scp ./build/verilog/rv64_nstage.core/ysyx_zjv.v ysyx:/home/oscpu/ZJV/phvntom-chiplink/cpu/
 	# scp ./build/verilog/rv64_nstage.core/ysyx_zjv.v jump_ysyx:/home/oscpu/ZJV/hardware/sources/ysyx_zjv.v
 
-
+# Fix a toolchain bug that invalidates BTB
 generate_fpga:
 	sbt "runMain $(TARGET_CORE).fpga"
-	mv ./build/verilog/rv64_nstage.core/fpga_zjv.v ./zjv-fpga-acc/vivado_src/src/Top.v
+	sed -i "/  assign single_port_ram_bpu_dout = 39'h0;/d" ./build/verilog/tile/fpga_zjv.v
+	# mv ./build/verilog/rv64_nstage.core/fpga_zjv.v ./zjv-fpga-acc/vivado_src/src/Top.v
 	# scp ./build/verilog/rv64_nstage.core/ysyx_zjv.v ysyx:/home/oscpu/ZJV/phvntom-chiplink/cpu/
 	# scp ./build/verilog/rv64_nstage.core/ysyx_zjv.v jump_ysyx:/home/oscpu/ZJV/hardware/sources/ysyx_zjv.v
 
