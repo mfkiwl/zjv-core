@@ -535,7 +535,7 @@ class CSRFile extends Module with phvntomParams {
   io.is_ret_out := valid && eret
 
   // Write Signal for MTVAL or STVAL
-  val write_tval = io.mem_af || io.mem_pf || io.mem_ma || io.inst_af || io.inst_pf || io.inst_ma || io.high_pf
+  val write_tval = (io.mem_af || io.mem_pf || io.mem_ma || io.inst_af || io.inst_pf || io.inst_ma || io.high_pf) && !has_int_comb
   val tval_value = Mux(expt_num_comb === Exception.InstAccessFault ||
     expt_num_comb === Exception.InstPageFault,
     Mux(io.high_pf, io.current_pc + 2.U, io.current_pc),
@@ -662,7 +662,7 @@ class CSRFile extends Module with phvntomParams {
     io.rdata := sier
     bad_csr_access := bad_csr_s
   }.elsewhen(io.which_reg === CSR.sip) {
-    io.rdata := sipr
+    io.rdata := Cat(sipr(xlen - 1, 10), seip_for_read, sipr(8, 0))
     bad_csr_access := bad_csr_s
   }.elsewhen(io.which_reg === CSR.scounteren) {
     io.rdata := Cat(Fill(xlen - 32, 0.U), scounterenr)
@@ -828,10 +828,13 @@ class CSRFile extends Module with phvntomParams {
       }.elsewhen(io.which_reg === CSR.mcause) {
         when(io.wen) {
           mcauser_cause := io.wdata(3, 0)
+          mcauser_int := io.wdata(xlen - 1)
         }.elsewhen(io.sen) {
           mcauser_cause := mcauser_cause | io.wdata(3, 0)
+          mcauser_int := mcauser_int | io.wdata(xlen - 1)
         }.elsewhen(io.cen) {
           mcauser_cause := mcauser_cause & (~io.wdata(3, 0))
+          mcauser_int := mcauser_int & (~io.wdata(xlen - 1))
         }
       }.elsewhen(io.which_reg === CSR.mtvec) {
         when(io.wen) {
@@ -1036,12 +1039,21 @@ class CSRFile extends Module with phvntomParams {
           stvecr := stvecr & (~io.wdata)
         }
       }.elsewhen(io.which_reg === CSR.scause) {
+        // Here, we find the "unwritable scauser_int" bug by running Debian
+        // In Linux, the interrupt handling process for RISC-V is
+        // entry.S (check highest bit scause)
+        // riscv_intc_irq in irq_riscv_intc.c
+        // Then check ${SCAUSE} and jump to different handler
+        // Before, scauser is clear, but the highest bit is not, so an interrupt without cause is raised.
         when(io.wen) {
           scauser_cause := io.wdata(3, 0)
+          scauser_int := io.wdata(xlen - 1)
         }.elsewhen(io.sen) {
           scauser_cause := scauser_cause | io.wdata(3, 0)
+          scauser_int := scauser_int | io.wdata(xlen - 1)
         }.elsewhen(io.cen) {
           scauser_cause := scauser_cause & (~io.wdata(3, 0))
+          scauser_int := scauser_int & (~io.wdata(xlen - 1))
         }
       }.elsewhen(io.which_reg === CSR.sepc) {
         when(io.wen) {
