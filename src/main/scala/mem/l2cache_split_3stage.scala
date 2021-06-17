@@ -114,7 +114,6 @@ class L2CacheSplit3Stage(val n_sources: Int = 1)(implicit
   current_request.resp.bits.data := result
   current_request.req.ready := !stall && state =/= s_flush
   current_request.flush_ready := true.B
-  current_request.half_fetched := false.B
 
   io.mem.stall := false.B
   io.mem.flush := false.B

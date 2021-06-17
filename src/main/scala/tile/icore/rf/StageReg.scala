@@ -2,6 +2,7 @@ package tile.icore.rf
 
 import chisel3._
 import chisel3.util._
+import chisel3.util.experimental.BoringUtils
 import tile.common.control._
 import tile.common.control.ControlConst._
 import tile.phvntomParams
@@ -198,7 +199,6 @@ class RegIf3IdIO extends Bundle with phvntomParams {
   val immuio = Flipped(Flipped(new IMMUIO))
   val instio = Flipped(Flipped(new InstIO))
   val bpio = Flipped(Flipped(new BPUPredictIO))
-  val half_fetched_in = Input(Bool())
   val half_fetched_regif3id = Output(Bool())
 }
 
@@ -218,7 +218,8 @@ class RegIf3Id extends Module with phvntomParams {
   val last_delay = RegInit(Bool(), false.B)
   val this_stall = io.bsrio.stall || io.bsrio.last_stage_atomic_stall_req
   val half_fetched = RegInit(Bool(), false.B)
-  val half_fw = io.half_fetched_in
+  val half_fw = WireDefault(false.B)
+  BoringUtils.addSink(half_fw, "half_fetched_if3")
 
   last_delay := this_stall
 

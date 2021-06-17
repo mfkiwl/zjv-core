@@ -2,6 +2,7 @@ package tile
 
 import chisel3._
 import chisel3.stage._
+import chisel3.util.experimental.BoringUtils
 import tile.common.control._
 
 class DiffTestIO extends Bundle with phvntomParams {
@@ -56,47 +57,48 @@ class Top extends Module with phvntomParams {
   val tile = Module(new Tile)
 
   val difftest = WireInit(0.U.asTypeOf(new DiffTestIO))
-  difftest.streqs  := tile.io.streqs
-  difftest.regs    := tile.io.regs
-  difftest.pc      := tile.io.dtest_pc
-  difftest.inst    := tile.io.dtest_inst
-  difftest.valid   := tile.io.dtest_wbvalid
-  difftest.csr_cmd := 0.U
-  difftest.int     := tile.io.dtest_int
-  difftest.mcycle  := tile.io.mcycler 
-  difftest.mstatus := tile.io.mstatusr
-  difftest.priv    := tile.io.current_p
+  BoringUtils.addSink(difftest.streqs,  "difftestStreqs")
+  BoringUtils.addSink(difftest.regs,    "difftestRegs")
+  BoringUtils.addSink(difftest.pc,      "difftestPC")
+  BoringUtils.addSink(difftest.inst,    "difftestInst")
+  BoringUtils.addSink(difftest.valid,   "difftestValid")
+  BoringUtils.addSink(difftest.csr_cmd, "difftestCSRCmd")
+  BoringUtils.addSink(difftest.int,     "difftestInt")
+  BoringUtils.addSink(difftest.mcycle,  "difftestmcycler")
+  BoringUtils.addSink(difftest.mstatus, "difftestmstatusr")
+  BoringUtils.addSink(difftest.priv,    "difftestprivilege")
 
-  difftest.mepc    := tile.io.mepcr
-  difftest.mtval   := tile.io.mtvalr
-  difftest.mcause  := tile.io.mcauser
-  difftest.sstatus := tile.io.sstatusr
-  difftest.sepc    := tile.io.sepcr
-  difftest.stval   := tile.io.stvalr
-  difftest.scause  := tile.io.scauser
-  difftest.stvec   := tile.io.stvecr
-  difftest.mtvec   := tile.io.mtvecr
-  difftest.mideleg := tile.io.midelegr
-  difftest.medeleg := tile.io.medelegr
-  difftest.mip     := tile.io.mipr
-  difftest.mie     := tile.io.mier
-  difftest.sip     := tile.io.sipr
-  difftest.sie     := tile.io.sier
+  BoringUtils.addSink(difftest.mepc,    "difftestmepcr")
+  BoringUtils.addSink(difftest.mtval,   "difftestmtvalr")
+  BoringUtils.addSink(difftest.mcause,  "difftestmcauser")
+  BoringUtils.addSink(difftest.sstatus, "difftestsstatusr")
+  BoringUtils.addSink(difftest.sepc,    "difftestsepcr")
+  BoringUtils.addSink(difftest.stval,   "diffteststvalr")
+  BoringUtils.addSink(difftest.scause,  "difftestscauser")
+  BoringUtils.addSink(difftest.stvec,   "diffteststvecr")
+  BoringUtils.addSink(difftest.mtvec,   "difftestmtvecr")
+  BoringUtils.addSink(difftest.mideleg, "difftestmidelegr")
+  BoringUtils.addSink(difftest.medeleg, "difftestmedelegr")
+  BoringUtils.addSink(difftest.mip,     "difftestmipr")
+  BoringUtils.addSink(difftest.mie,     "difftestmier")
+  BoringUtils.addSink(difftest.sip,     "difftestsipr")
+  BoringUtils.addSink(difftest.sie,     "difftestsier")
 
-  val poweroff = tile.io.poweroff
+  val poweroff = WireInit(0.U(xlen.W))
+  BoringUtils.addSink(poweroff, "difftestpoweroff")
 
-  difftest.uartirq  := tile.io.irq
-  difftest.plicmeip := tile.io.meip
-  difftest.plicseip := tile.io.seip
+  BoringUtils.addSink(difftest.uartirq,  "difftestuartirq")
+  BoringUtils.addSink(difftest.plicmeip, "difftestplicmeip")
+  BoringUtils.addSink(difftest.plicseip, "difftestplicseip")
 
-  difftest.plicip := tile.io.plicip
-  difftest.plicie := tile.io.plicie
-  difftest.plicprio := tile.io.plicprio
-  difftest.plicthrs := tile.io.plicthrs
-  difftest.plicclaim := tile.io.plicclaim
+  BoringUtils.addSink(difftest.plicip,      "difftestplicpend")
+  BoringUtils.addSink(difftest.plicie,      "difftestplicenable")
+  BoringUtils.addSink(difftest.plicprio,    "difftestplicpriority")
+  BoringUtils.addSink(difftest.plicthrs,    "difftestplicthreshold")
+  BoringUtils.addSink(difftest.plicclaim,   "difftestplicclaimed")
 
-  difftest.alu_val := tile.io.dtest_alu
-  difftest.is_mem  := tile.io.dtest_mem
+  BoringUtils.addSink(difftest.alu_val, "difftestALU")
+  BoringUtils.addSink(difftest.is_mem,  "difftestMem")
 
   io.difftest := difftest
   io.poweroff := poweroff

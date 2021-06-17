@@ -5,6 +5,7 @@ import chisel3.util._
 import tile._
 import tile.common.control.ControlConst._
 import bus._
+import chisel3.util.experimental.BoringUtils
 import device._
 import utils._
 
@@ -294,7 +295,11 @@ class ShadowICache(implicit val cacheConfig: CacheConfig)
 
   // FixMe !!!!!!!! need to detect next page and may raise page fault
   val half_fetched = !s3_shadow_hit && !s3_hit
-  io.in.half_fetched := half_fetched
+//  when (half_fetched && io.in.resp.valid) {
+//    printf(p"[${GTimer()}]: ${cacheName} Debug Info----------\n")
+//    printf("cache\n")
+//  }
+  BoringUtils.addSource(half_fetched, "half_fetched_if3")
 
   if (fpga && enable_blockram) {
     val metaArray = List.fill(nWays)(Module(new BRAMSyncReadMem(nSets, (new MetaData).getWidth, 1)))

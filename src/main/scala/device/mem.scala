@@ -27,7 +27,6 @@ class MemIO(val dataWidth: Int = 64) extends Bundle with phvntomParams {
   val stall = Input(Bool())
   val flush = Input(Bool())
   val flush_ready = Output(Bool())
-  val half_fetched = Output(Bool())
 
   override def toPrintable: Printable = p"stall=${stall}, flush=${flush}, flush_ready=${flush_ready}, req: valid=${req.valid}, ready=${req.ready}, ${req.bits}\nresp: valid=${resp.valid}, ready=${resp.ready}, ${resp.bits}\n"
 }

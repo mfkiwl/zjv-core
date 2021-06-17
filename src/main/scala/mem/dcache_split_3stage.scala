@@ -130,7 +130,6 @@ class DCacheSplit3Stsge(implicit val cacheConfig: CacheConfig)
   io.in.resp.bits.data := result
   io.in.req.ready := !stall // && !need_forward
   io.in.flush_ready := true.B
-  io.in.half_fetched := false.B
 
   io.mem.stall := false.B
   io.mem.flush := false.B

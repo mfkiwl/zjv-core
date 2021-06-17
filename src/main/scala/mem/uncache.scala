@@ -36,7 +36,6 @@ class Uncache(val dataWidth: Int = 64, val mname: String = "Uncache")
   io.out.r.ready := false.B
   io.in.resp.valid := false.B // stall
   io.in.flush_ready := true.B
-  io.in.half_fetched := false.B
   io.in.req.ready := (state === s_WAIT_AXI_READY && io.out.ar.ready && !io.in.req.bits.wen) || (state === s_WB_WAIT_AWREADY && io.out.aw.ready && io.in.req.bits.wen)
 
   io.out.aw.bits.id := 0.U

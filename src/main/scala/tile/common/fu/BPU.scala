@@ -2,6 +2,7 @@ package tile.common.fu
 
 import chisel3._
 import chisel3.util._
+import chisel3.util.experimental.BoringUtils
 import config.projectConfig
 import tile._
 
