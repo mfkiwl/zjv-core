@@ -1334,7 +1334,7 @@ class CSRFile extends Module with phvntomParams {
     io.mipr := 0.U
     io.mier := 0.U
     io.mcycler := 0.U
-    io.current_p := current_p
+    io.current_p := 0.U
     io.mepcr := 0.U
     io.mtvalr := 0.U
     io.mcauser := 0.U
@@ -1535,7 +1535,7 @@ class CSR extends Module with phvntomParams {
     io.mipr := 0.U
     io.mier := 0.U
     io.mcycler := 0.U
-    io.current_p := csr_regfile.io.current_p
+    io.current_p := 0.U
     io.mepcr := 0.U
     io.mtvalr := 0.U
     io.mcauser := 0.U
