@@ -38,7 +38,7 @@ class Tile extends Module with phvntomParams {
       )
     )
   } else { Module(new CacheDummy()(CacheConfig(name = "dcache", lines = 1))) }
-  val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024)) // 0x8000000
+  val mem = Module(new TLRAM(memByte = 128 * 1024 * 1024)) // 0x8000000
   core.io.imem <> icache.io.in
   core.io.dmem <> dcache.io.in
 
@@ -48,7 +48,7 @@ class Tile extends Module with phvntomParams {
       val mem_source = List(icache, dcache)
       // val dcache_wb = Module(new WriteBuffer()(WBConfig(wb_name = "dcache write buffer", dataWidth = dcache.lineBits)))
       // dcache_wb.io.in <> dcache.io.mem
-      val memxbar = Module(new CrossbarNto1(1))
+      //val memxbar = Module(new CrossbarNto1(1))
       val l2cache = Module(
         new L2CacheSplit3Stage(4)(
           CacheConfig(
@@ -60,14 +60,15 @@ class Tile extends Module with phvntomParams {
           )
         )
       )
-      val l2cacheBus = Module(new DUncache(l2cache.lineBits, "mem uncache"))
+      val l2cacheBus = Module(new TLUncache(false, l2cache.lineBits, "mem uncache"))
       dcache.io.mem <> l2cache.io.in(0)
       core.io.dmmu <> l2cache.io.in(1)
       icache.io.mem <> l2cache.io.in(2)
       core.io.immu <> l2cache.io.in(3)
       l2cache.io.mem <> l2cacheBus.io.in
-      l2cacheBus.io.out <> memxbar.io.in(0)
-      memxbar.io.out <> mem.io.in
+      //l2cacheBus.io.out <> memxbar.io.in(0)
+      //memxbar.io.out <> mem.io.in
+      l2cacheBus.io.out <> mem.io.in
     } else {
       val icacheBus = Module(new DUncache(icache.lineBits, "inst uncache"))
       val dcacheBus = Module(new DUncache(dcache.lineBits, "mem uncache"))
