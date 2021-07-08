@@ -5,6 +5,4 @@
 [submodule "zjv-soc-test"]
 	path = zjv-soc-test
 	url = https://github.com/phantom-v/zjv-soc-test.git
-[submodule "zjv-fpga-acc"]
-	path = zjv-fpga-acc
-	url = https://github.com/phantom-v/zjv-fpga-acc.git
+

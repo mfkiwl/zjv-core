@@ -25,23 +25,23 @@ class TLUncache(val uncache: Boolean = true, val dataWidth: Int = 64, val mname:
   val burst_length = dataWidth / xlen
 
   // cache states
-  val state = RegInit(0.U(3.W))
+  val state = RegInit(3.U(3.W))
   
-  val readBeatCnt  = RegInit(0.U(4.W))
-  val writeBeatCnt = RegInit(0.U(4.W))
+  val readBeatCnt  = Counter(256)
+  val writeBeatCnt = Counter(256)
   
-  val readBeatTot  = RegInit(0.U(4.W))
-  val writeBeatTot = RegInit(0.U(4.W))
+  val isWrite = io.in.req.bits.wen
+  val beatTot      = Wire(UInt(4.W))
+  val readBeatTot  = Mux(isWrite, 0.U, beatTot)
+  val writeBeatTot = Mux(isWrite, beatTot, 0.U)
   val readLast     = Wire(Bool())
   val writeLast    = Wire(Bool())
 
-  readLast  := readBeatCnt  === readBeatTot
-  writeLast := writeBeatCnt === writeBeatTot
+  readLast  := readBeatCnt.value  === readBeatTot
+  writeLast := writeBeatCnt.value === writeBeatTot
 
-  val offset = writeBeatCnt << 6
+  val offset = writeBeatCnt.value << 6.U
   val byteid = io.in.req.bits.addr(blen - 1, 0)
-
-  val isWrite = io.in.req.bits.wen
 
   val opcode = Wire(UInt(3.W))
   if (uncache) {
@@ -70,9 +70,11 @@ class TLUncache(val uncache: Boolean = true, val dataWidth: Int = 64, val mname:
         memWordU -> 2.U
       )
     )
+    beatTot := 0.U
   }
   else{
-    size := 3.U
+    size := log2Ceil(dataWidth / 8).U
+    beatTot := (dataWidth / xlen - 1).U
   }
 
   val addr_aligned = Wire(UInt(xlen.W))
@@ -118,10 +120,10 @@ class TLUncache(val uncache: Boolean = true, val dataWidth: Int = 64, val mname:
   }
 
   val inDataRaw = io.out.d.data
-  val realData = Wire(UInt(xlen.W))
   val inData = Wire(UInt(dataWidth.W))
   if (uncache)
   {
+    val realData = Wire(UInt(xlen.W))
     switch(io.in.req.bits.memtype) {
       is(memXXX) { inData := inDataRaw }
       is(memByte) {
@@ -169,48 +171,61 @@ class TLUncache(val uncache: Boolean = true, val dataWidth: Int = 64, val mname:
   io.out.a.address  <> addr_aligned
   io.out.a.mask     <> mask
   io.out.a.data     <> outData
+  io.out.a.corrupt  <> false.B
 
   io.out.b.ready    <> false.B
+
   io.out.c.valid    <> false.B
+  io.out.c.opcode   <> 0.U
+  io.out.c.param    <> 0.U
+  io.out.c.size     <> 0.U
+  io.out.c.source   <> 0.U
+  io.out.c.address  <> 0.U
+  io.out.c.data     <> 0.U
+  io.out.c.corrupt  <> false.B
+  
   io.out.d.ready    <> false.B
+
+  io.out.e.valid    <> false.B
+  io.out.e.sink     <> false.B
 
   val fireA = Wire(Bool())
   val fireD = Wire(Bool())
   fireA := false.B
   fireD := false.B
 
-  when (state === 4.U)  // Begin
-  {
-    when(io.in.req.valid) {
-      state := 0.U
-      writeBeatCnt := 0.U
-      readBeatCnt := 0.U
-      writeBeatTot := 0.U
-      readBeatTot := 0.U
-    }
-  }.elsewhen(state === 3.U) {  // End
-    state := 4.U
+  io.in.resp.valid := false.B
+
+  when (state === 3.U) {
+    state := Mux(io.in.req.valid, 0.U, 3.U)
     io.in.resp.valid := true.B
   }
   .otherwise
   {
-    when (!state(0)) {  // Send not finished
+    when (!state(1)) {  // Send not finished
       io.out.a.valid := true.B
       when (io.out.a.ready) {
-        writeBeatCnt := writeBeatCnt + 1.U
+        writeBeatCnt.inc()
+        when(writeLast) {
+          writeBeatCnt.value := 0.U
+        }
         fireA := true.B
       }
     }
-    when (!state(1)) {  // Receive not finished
+    when (!state(0)) {  // Receive not finished
       io.out.d.ready := true.B
       when (io.out.d.valid) {
-        readBeatCnt := readBeatCnt + 1.U
+        readBeatCnt.inc()
+        when(readLast) {
+          readBeatCnt.value := 0.U
+        }
         fireD := true.B
       }
     }
-    state := state | Cat(readLast & fireA, writeLast & fireD)
+    state := state | Cat(writeLast & fireA, readLast & fireD)
   }
 
+  val data_vec = Reg(Vec(burst_length, UInt(xlen.W)))
   if (uncache)
   {
     val data = Reg(UInt(xlen.W))
@@ -220,11 +235,30 @@ class TLUncache(val uncache: Boolean = true, val dataWidth: Int = 64, val mname:
 
     io.in.resp.bits.data := data
   } else {
-    val data_vec = Reg(Vec(burst_length, UInt(xlen.W)))
     when (fireD) {
-      data_vec(readBeatCnt) := inData
+      data_vec(readBeatCnt.value) := inData
     }
     
     io.in.resp.bits.data := data_vec.asUInt
   }
+
+  io.in.flush_ready := true.B
+  io.in.req.ready := io.out.a.ready
+
+
+  printf(p"[${GTimer()}]: TLUncache Debug Start-----------\n")
+  printf("state = %d\n", state);
+  printf(
+    p"write: ${writeBeatCnt.value}/${writeBeatTot}\nread: ${readBeatCnt.value}/${readBeatTot}\n"
+  )
+  printf("in_data_raw = %x\n", inDataRaw)
+  printf("data_vec = (")
+  for (i <- 0 until 8) {
+    printf("%x, ", data_vec(i))
+  }
+  printf(")\n")
+  // printf(p"io.in: \n${io.in}\n")
+  // printf(p"io.out: \n${io.out}\n")
+  // printf("size: %d\n", io.out.a.size)
+  printf("-----------TLUncache Debug Done-----------\n")
 }
